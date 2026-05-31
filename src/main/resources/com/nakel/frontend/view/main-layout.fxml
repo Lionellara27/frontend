@@ -42,7 +42,7 @@
 
                 <ImageView fitHeight="40" preserveRatio="true">
                     <image>
-                        <Image url="@../../../../images/logo.png"/>
+                        <Image url="@../../../../images/Logoo.png"/>
                     </image>
                 </ImageView>
 
