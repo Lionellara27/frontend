@@ -40,12 +40,10 @@
                 <Label text="|"
                        styleClass="logo-separator"/>
 
-                <ImageView fitHeight="55"
-                           preserveRatio="true">
-
+                <ImageView fitHeight="40" preserveRatio="true">
                     <image>
+                        <Image url="@../../../../images/logo.png"/>
                     </image>
-
                 </ImageView>
 
                 <VBox.margin>
