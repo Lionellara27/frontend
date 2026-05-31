@@ -3,6 +3,8 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.nakel.frontend.controller.LoginController"
@@ -11,6 +13,15 @@
       prefWidth="600"
       prefHeight="400"
       styleClass="login-root">
+
+
+    <!-- IMAGEN DEL LOGO -->
+
+    <ImageView fitHeight="100" preserveRatio="true">
+        <image>
+            <Image url="@../../../../images/Logoo.png"/>
+        </image>
+    </ImageView>
 
     <!-- Logo Tipográfico -->
     <Label text="NAKEL"
