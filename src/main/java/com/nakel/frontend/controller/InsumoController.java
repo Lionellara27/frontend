@@ -27,12 +27,27 @@ public class InsumoController {
 
     @FXML
     public void abrirModalNuevoInsumo(ActionEvent event) {
-        System.out.println("Preparando Pop-up de nuevo insumo...");
+        try {
+            // 1. Cargamos el diseño del Modal
+            // OJO: Ajustá la ruta a donde tengas el archivo nuevo-insumo-modal.fxml
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/nuevo-insumo-modal.fxml"));
+            javafx.scene.Parent root = loader.load();
 
-        Alert alerta = new Alert(Alert.AlertType.INFORMATION);
-        alerta.setTitle("Nuevo Insumo");
-        alerta.setHeaderText(null);
-        alerta.setContentText("¡Próximamente! Acá se cargará el nombre, unidad de medida y precio del material.");
-        alerta.showAndWait();
+            // 2. Creamos una nueva ventana (Stage)
+            javafx.stage.Stage modalStage = new javafx.stage.Stage();
+            modalStage.setTitle("Cargar Insumo");
+
+            // 3. Bloqueamos la ventana de atrás (APPLICATION_MODAL) para que no puedan tocar el sistema hasta cerrar esto
+            modalStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+
+            // 4. Le pasamos el diseño a la ventana y la mostramos
+            modalStage.setScene(new javafx.scene.Scene(root));
+            modalStage.setResizable(false); // Para que no la puedan achicar/agrandar y rompan el diseño
+            modalStage.showAndWait(); // showAndWait hace que espere a que se cierre para continuar
+
+        } catch (Exception e) {
+            System.err.println("Error al abrir el Pop-up de Insumos.");
+            e.printStackTrace();
+        }
     }
 }

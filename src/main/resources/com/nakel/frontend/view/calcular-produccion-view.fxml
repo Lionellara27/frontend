@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="20" styleClass="modulo-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nakel.frontend.controller.CalculadoraController">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- ENCABEZADO -->
+    <HBox alignment="CENTER_LEFT">
+        <Label text="🧮 Calculadora de Producción" styleClass="titulo-modulo"/>
+    </HBox>
+
+    <!-- BLOQUE 1: SELECCIÓN DE INSUMOS -->
+    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8;">
+        <Label text="Insumo / Labor:"/>
+        <ComboBox fx:id="cmbInsumo" promptText="Seleccionar de la lista..." prefWidth="250" styleClass="text-field"/>
+
+        <Label text="Cantidad:"/>
+        <TextField fx:id="txtCantidad" promptText="Ej: 0.5 o 3" prefWidth="100" styleClass="text-field"/>
+
+        <Button text="➕ Agregar al Presupuesto" styleClass="btn-secundario" onAction="#agregarInsumoLista"/>
+    </HBox>
+
+    <!-- BLOQUE 2: DETALLE (EL TICKET) -->
+    <TableView fx:id="tablaPresupuesto" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
+        <columns>
+            <TableColumn text="Descripción" prefWidth="250"/>
+            <TableColumn text="Categoría" prefWidth="120"/>
+            <TableColumn text="Cantidad" prefWidth="100"/>
+            <TableColumn text="Precio Unit." prefWidth="120"/>
+            <TableColumn text="Subtotal" prefWidth="120"/>
+            <TableColumn text="Acciones" prefWidth="90"/>
+        </columns>
+    </TableView>
+
+    <!-- BLOQUE 3: TOTALES Y RENTABILIDAD -->
+    <HBox alignment="CENTER_RIGHT" spacing="20" style="-fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
+
+        <!-- Panel de cálculos -->
+        <GridPane vgap="10" hgap="15">
+            <Label text="Costo de Producción:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblCostoTotal" text="/$ 0.00" GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
+
+            <Label text="Margen de Ganancia (%):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <TextField fx:id="txtMargen" promptText="Ej: 50" prefWidth="80" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="text-field"/>
+
+            <Label text="Precio de Venta Sugerido:" GridPane.rowIndex="2" GridPane.columnIndex="0" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
+            <Label fx:id="lblPrecioFinal" text="/$ 0.00" GridPane.rowIndex="2" GridPane.columnIndex="1" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
+        </GridPane>
+
+        <!-- Separador visual -->
+        <Separator orientation="VERTICAL"/>
+
+        <!-- Botón de acción final -->
+        <Button text="💾 Guardar / Exportar" styleClass="btn-primario" onAction="#guardarPresupuesto" prefHeight="50"/>
+
+    </HBox>
+
+</VBox>

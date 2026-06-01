@@ -125,7 +125,8 @@
 
             <Button text="🧮 Calcular Producción"
                     maxWidth="999"
-                    styleClass="menu-button"/>
+                    styleClass="menu-button"
+                    onAction="#mostrarCalculadora"/>
 
             <!-- REPORTES -->
 

@@ -43,6 +43,11 @@ public class MainController {
         cargarVista("/com/nakel/frontend/view/insumo-view.fxml"); // Ajustá la ruta
     }
 
+    @FXML
+    public void mostrarCalculadora(ActionEvent event) {
+        cargarVista("/com/nakel/frontend/view/calcular-produccion-view.fxml");
+    }
+
     // ==========================================================
     // MOTOR DE CAMBIO DE PANTALLAS
     // ==========================================================

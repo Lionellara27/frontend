@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="20" styleClass="modulo-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nakel.frontend.controller.NuevoInsumoController"
+      prefWidth="450">
+
+    <padding>
+        <Insets top="20" right="25" bottom="20" left="25"/>
+    </padding>
+
+    <Label text="➕ Alta de Nuevo Insumo" styleClass="titulo-modulo"/>
+
+    <GridPane vgap="15" hgap="10">
+
+        <Label text="Descripción:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtDescripcion" promptText="Ej: Cuero Negro, Cierre YKK..."
+                   GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" styleClass="text-field"/>
+
+        <Label text="Categoría:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cmbCategoria" promptText="Seleccionar..."
+                  GridPane.rowIndex="1" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
+
+        <Label text="Unidad de Medida:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cmbUnidad" promptText="Seleccionar..."
+                  GridPane.rowIndex="2" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
+
+        <Label text="Costo Unitario ($):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtCosto" promptText="Ej: 15000"
+                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="text-field"/>
+
+    </GridPane>
+
+    <HBox spacing="15" alignment="CENTER_RIGHT">
+        <Button text="Cancelar" styleClass="btn-secundario" onAction="#cerrarModal"/>
+        <Button text="💾 Guardar Insumo" styleClass="btn-primario" onAction="#guardarInsumo"/>
+    </HBox>
+
+</VBox>
