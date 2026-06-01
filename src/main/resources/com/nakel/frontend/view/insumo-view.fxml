@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="15" styleClass="modulo-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nakel.frontend.controller.InsumoController">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <HBox alignment="CENTER_LEFT">
+        <Label text="🧵 Gestión de Insumos y Materia Prima" styleClass="titulo-modulo"/>
+    </HBox>
+
+    <HBox spacing="15" alignment="CENTER_LEFT">
+        <TextField fx:id="txtBuscarInsumo" promptText="Buscar cuero, herraje, etc..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
+        <Button text="🔍 Buscar" styleClass="btn-secundario" onAction="#buscarInsumo"/>
+
+        <Button text="➕ Nuevo Insumo" styleClass="btn-primario" onAction="#abrirModalNuevoInsumo"/>
+    </HBox>
+
+    <TableView fx:id="tablaInsumos" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
+        <columns>
+            <TableColumn text="Cód." prefWidth="50"/>
+            <TableColumn text="Descripción (Ej: Cuero Negro, Cierre YKK)" prefWidth="300"/>
+            <TableColumn text="Categoría" prefWidth="120"/> <TableColumn text="Unidad" prefWidth="100"/> <TableColumn text="Costo Unitario" prefWidth="120"/>
+            <TableColumn text="Acciones" prefWidth="100"/>
+        </columns>
+    </TableView>
+
+</VBox>

@@ -284,3 +284,180 @@
 
     -fx-background-color: transparent;
 }
+
+/* --- ESTILOS DEL MOSTRADOR (VENTAS) --- */
+
+.mostrador-container {
+    -fx-background-color: #F8F9FA; /* Un gris muy sutil para que descanse la vista */
+}
+
+.input-laser {
+    -fx-font-size: 16px;
+    -fx-padding: 10px;
+    -fx-border-color: #155643; /* Verde Nakel */
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.btn-buscar {
+    -fx-font-size: 14px;
+    -fx-padding: 10px 15px;
+    -fx-background-color: #155643;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.btn-buscar:hover {
+    -fx-background-color: #114230; /* Un verde un poco más oscuro al pasar el mouse */
+}
+
+.tabla-ticket {
+    -fx-font-size: 14px;
+    -fx-selection-bar: #D49A54; /* Dorado Nakel cuando selecciona un renglón */
+}
+
+.label-total-texto {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+}
+
+.label-total-numero {
+    -fx-font-size: 32px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #155643; /* Verde Nakel gigante */
+}
+
+.combo-pago {
+    -fx-font-size: 16px;
+    -fx-padding: 5px;
+}
+
+.btn-cobrar {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-background-color: #D49A54; /* Dorado Nakel */
+    -fx-text-fill: white;
+    -fx-padding: 10px 30px;
+    -fx-background-radius: 8px;
+    -fx-cursor: hand;
+}
+
+.btn-cobrar:hover {
+    -fx-background-color: #C28945; /* Dorado más oscuro al pasar el mouse */
+}
+
+/* ==========================================================================
+   🎨 MODULO: AGENDA DE CLIENTES (NAKEL ERP)
+   ========================================================================== */
+
+/* Contenedor principal del módulo */
+.modulo-container {
+    -fx-background-color: #F8F9FA; /* Gris ultra sutil para descansar la vista */
+}
+
+/* Título superior con estilo e ícono */
+.titulo-modulo {
+    -fx-font-family: "Times New Roman", serif;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #155643; /* Verde Nakel */
+    -fx-padding: 0 0 10 0;
+}
+
+/* Campo de texto para la búsqueda */
+.input-busqueda {
+    -fx-font-size: 14px;
+    -fx-padding: 8px 12px;
+    -fx-background-color: white;
+    -fx-border-color: #CED4DA;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+/* Foco del buscador: se pinta el borde verde Nakel al hacer clic */
+.input-busqueda:focused {
+    -fx-border-color: #155643;
+    -fx-border-width: 1.5px;
+}
+
+/* Botón Secundario (Buscar) - Elegante y sutil */
+.btn-secundario {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 20px;
+    -fx-background-color: #155643; /* Verde Nakel */
+    -fx-text-fill: white;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.btn-secundario:hover {
+    -fx-background-color: #114230; /* Verde más oscuro al pasar el mouse */
+}
+
+/* Botón Primario (➕ Nuevo Cliente) - Dorado Destacado */
+.btn-primario {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 20px;
+    -fx-background-color: #D49A54; /* Dorado Nakel */
+    -fx-text-fill: white;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.btn-primario:hover {
+    -fx-background-color: #C28945; /* Dorado más oscuro al pasar el mouse */
+}
+
+
+/* ==========================================================================
+   🗄️ TUNEO AVANZADO DE LA TABLA (TableView)
+   ========================================================================== */
+
+.tabla-estandar {
+    -fx-background-color: white;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: #E9ECEF;
+    -fx-font-size: 14px;
+}
+
+/* Encabezados de la tabla: Fondo Verde Nakel */
+.tabla-estandar .column-header {
+    -fx-background-color: #155643;
+    -fx-size: 35px; /* Más alta para que respire */
+    -fx-border-color: #114230; /* Bordes entre columnas un toque más oscuros */
+}
+
+/* Texto de los encabezados: Blanco y en negrita */
+.tabla-estandar .column-header .label {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+/* Celdas de la tabla: Texto oscuro y buen padding interno */
+.tabla-estandar .table-cell {
+    -fx-text-fill: #333333;
+    -fx-padding: 10px;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* Filas alternas (Zebra striping) para no marearse al leer */
+.tabla-estandar .table-row-cell:odd {
+    -fx-background-color: #F8F9FA;
+}
+
+/* Fila seleccionada: Se viste con el dorado Nakel clásico */
+.tabla-estandar .table-row-cell:filled:selected {
+    -fx-background-color: #D49A54;
+    -fx-background-background-color: #D49A54;
+}
+
+/* Texto de la fila seleccionada cambia a blanco para que contraste */
+.tabla-estandar .table-row-cell:filled:selected .label {
+    -fx-text-fill: white;
+}

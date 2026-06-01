@@ -1,14 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.nakel.frontend.controller.VentaController"
-            prefHeight="400.0" prefWidth="600.0">
+<VBox spacing="15" styleClass="mostrador-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nakel.frontend.controller.VentaController">
 
-</AnchorPane>
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- 1. BARRA SUPERIOR: Buscador y Lector Láser -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <TextField fx:id="txtCodigoBarras" promptText="Escanear código o tipear..." HBox.hgrow="ALWAYS" styleClass="input-laser"/>
+        <Button text="🔍 Buscar Producto (F3)" styleClass="btn-buscar"/>
+    </HBox>
+
+    <!-- 2. CENTRO: La Tabla del Ticket -->
+    <TableView fx:id="tablaTicket" VBox.vgrow="ALWAYS" styleClass="tabla-ticket">
+        <columns>
+            <TableColumn text="Código" prefWidth="120"/>
+            <TableColumn text="Descripción del Artículo" prefWidth="350"/>
+            <TableColumn text="Cant." prefWidth="70"/>
+            <TableColumn text="Precio U." prefWidth="120"/>
+            <TableColumn text="Subtotal" prefWidth="120"/>
+            <TableColumn text="Acción" prefWidth="80"/>
+        </columns>
+    </TableView>
+
+    <!-- 3. INFERIOR: Totales y Cobro -->
+    <HBox spacing="20" alignment="CENTER_RIGHT">
+        <VBox alignment="CENTER_RIGHT" spacing="5">
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Label text="TOTAL:" styleClass="label-total-texto"/>
+                <Label fx:id="lblTotal" text="\$ 0.00" styleClass="label-total-numero"/>
+            </HBox>
+
+            <HBox spacing="15" alignment="CENTER_RIGHT">
+                <ComboBox fx:id="cmbMedioPago" promptText="Medio de Pago" styleClass="combo-pago"/>
+                <Button text="💵 COBRAR (F12)" styleClass="btn-cobrar"/>
+            </HBox>
+        </VBox>
+    </HBox>
+
+</VBox>

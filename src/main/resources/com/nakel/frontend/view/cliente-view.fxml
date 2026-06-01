@@ -1,14 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.nakel.frontend.controller.ClienteController"
-            prefHeight="400.0" prefWidth="600.0" >
+<VBox spacing="15" styleClass="modulo-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nakel.frontend.controller.ClienteController">
 
-</AnchorPane>
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- ENCABEZADO -->
+    <HBox alignment="CENTER_LEFT">
+        <Label text="👥 Agenda de Clientes" styleClass="titulo-modulo"/>
+    </HBox>
+
+    <!-- BARRA DE BÚSQUEDA Y FILTROS -->
+    <HBox spacing="15" alignment="CENTER_LEFT">
+        <TextField fx:id="txtBuscarCliente" promptText="Buscar por Nombre o DNI..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
+        <Button text="🔍 Buscar" styleClass="btn-secundario"/>
+        <!-- Botón principal para el ABM -->
+        <Button text="➕ Nuevo Cliente" styleClass="btn-primario"/>
+    </HBox>
+
+    <!-- TABLA DE CLIENTES -->
+    <TableView fx:id="tablaClientes" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
+        <columns>
+            <TableColumn text="Cód." prefWidth="50"/>
+            <TableColumn text="Nombre / Razón Social" prefWidth="250"/>
+            <TableColumn text="DNI / CUIT" prefWidth="120"/>
+            <TableColumn text="Teléfono" prefWidth="150"/>
+            <TableColumn text="Domicilio" prefWidth="250"/>
+            <TableColumn text="Acciones" prefWidth="100"/>
+        </columns>
+    </TableView>
+
+</VBox>

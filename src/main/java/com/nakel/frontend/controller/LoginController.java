@@ -37,7 +37,7 @@ public class LoginController {
 
                 Scene scene = new Scene(
                         fxmlLoader.load(),
-                        1024,
+                        1224,
                         768
                 );
 
