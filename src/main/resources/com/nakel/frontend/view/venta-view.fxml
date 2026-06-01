@@ -14,10 +14,19 @@
         <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
+    <!-- 0. CABECERA DE FACTURACIÓN (¡Lo nuevo para AFIP!) -->
+    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
+        <Label text="Cliente:" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="cmbCliente" promptText="Consumidor Final" prefWidth="250" styleClass="text-field"/>
+
+        <Label text="Comprobante:" style="-fx-font-weight: bold;"/>
+        <ComboBox fx:id="cmbTipoFactura" promptText="Seleccionar..." prefWidth="150" styleClass="text-field"/>
+    </HBox>
+
     <!-- 1. BARRA SUPERIOR: Buscador y Lector Láser -->
     <HBox spacing="10" alignment="CENTER_LEFT">
-        <TextField fx:id="txtCodigoBarras" promptText="Escanear código o tipear..." HBox.hgrow="ALWAYS" styleClass="input-laser"/>
-        <Button text="🔍 Buscar Producto (F3)" styleClass="btn-buscar"/>
+        <TextField fx:id="txtCodigoBarras" promptText="Escanear código o tipear producto..." HBox.hgrow="ALWAYS" styleClass="input-laser"/>
+        <Button text="🔍 Buscar (F3)" styleClass="btn-buscar" onAction="#buscarProducto"/>
     </HBox>
 
     <!-- 2. CENTRO: La Tabla del Ticket -->
@@ -36,13 +45,13 @@
     <HBox spacing="20" alignment="CENTER_RIGHT">
         <VBox alignment="CENTER_RIGHT" spacing="5">
             <HBox spacing="10" alignment="CENTER_RIGHT">
-                <Label text="TOTAL:" styleClass="label-total-texto"/>
-                <Label fx:id="lblTotal" text="\$ 0.00" styleClass="label-total-numero"/>
+                <Label text="TOTAL:" styleClass="label-total-texto" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+                <Label fx:id="lblTotal" text="/$ 0.00" styleClass="label-total-numero" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
             </HBox>
 
             <HBox spacing="15" alignment="CENTER_RIGHT">
                 <ComboBox fx:id="cmbMedioPago" promptText="Medio de Pago" styleClass="combo-pago"/>
-                <Button text="💵 COBRAR (F12)" styleClass="btn-cobrar"/>
+                <Button text="💵 COBRAR (F12)" styleClass="btn-cobrar" onAction="#cobrarVenta" style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16px; -fx-padding: 10 20;"/>
             </HBox>
         </VBox>
     </HBox>

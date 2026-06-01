@@ -22,9 +22,10 @@
     <!-- BARRA DE BÚSQUEDA Y FILTROS -->
     <HBox spacing="15" alignment="CENTER_LEFT">
         <TextField fx:id="txtBuscarCliente" promptText="Buscar por Nombre o DNI..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
-        <Button text="🔍 Buscar" styleClass="btn-secundario"/>
-        <!-- Botón principal para el ABM -->
-        <Button text="➕ Nuevo Cliente" styleClass="btn-primario"/>
+
+        <Button text="🔍 Buscar" styleClass="btn-secundario" onAction="#buscarCliente"/>
+
+        <Button text="➕ Nuevo Cliente" styleClass="btn-primario" onAction="#abrirModalNuevoCliente"/>
     </HBox>
 
     <!-- TABLA DE CLIENTES -->

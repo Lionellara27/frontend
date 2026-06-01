@@ -48,6 +48,20 @@ public class MainController {
         cargarVista("/com/nakel/frontend/view/calcular-produccion-view.fxml");
     }
 
+    @FXML
+    public void mostrarProveedores(ActionEvent event) {
+        cargarVista("/com/nakel/frontend/view/proveedor-view.fxml");
+    }
+
+    @FXML
+    public void mostrarHistorialVentas(ActionEvent event) {
+        cargarVista("/com/nakel/frontend/view/historial-ventas-view.fxml");
+    }
+
+    @FXML
+    public void mostrarPuntoDeVenta(ActionEvent event) {
+        cargarVista("/com/nakel/frontend/view/venta-view.fxml");
+    }
     // ==========================================================
     // MOTOR DE CAMBIO DE PANTALLAS
     // ==========================================================

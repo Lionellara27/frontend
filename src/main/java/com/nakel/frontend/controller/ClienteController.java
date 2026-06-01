@@ -36,13 +36,20 @@ public class ClienteController {
     // 5. Acción para el botón "➕ Nuevo Cliente"
     @FXML
     public void abrirModalNuevoCliente(ActionEvent event) {
-        System.out.println("Preparando Pop-up de nuevo cliente...");
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/nuevo-cliente-modal.fxml"));
+            javafx.scene.Parent root = loader.load();
 
-        // Una alerta temporal para comprobar que el botón funciona
-        Alert alerta = new Alert(Alert.AlertType.INFORMATION);
-        alerta.setTitle("Nuevo Cliente");
-        alerta.setHeaderText(null);
-        alerta.setContentText("¡Próximamente! Acá se va a abrir la ventanita para cargar Nombre, DNI y Teléfono.");
-        alerta.showAndWait();
+            javafx.stage.Stage modalStage = new javafx.stage.Stage();
+            modalStage.setTitle("Alta de Cliente");
+            modalStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            modalStage.setScene(new javafx.scene.Scene(root));
+            modalStage.setResizable(false);
+            modalStage.showAndWait();
+
+        } catch (Exception e) {
+            System.err.println("Error al abrir el Pop-up de Clientes.");
+            e.printStackTrace();
+        }
     }
 }

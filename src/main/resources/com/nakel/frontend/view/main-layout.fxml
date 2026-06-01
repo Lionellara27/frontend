@@ -82,7 +82,8 @@
 
             <Button text="🚚 Proveedores"
                     maxWidth="999"
-                    styleClass="menu-button"/>
+                    styleClass="menu-button"
+                    onAction="#mostrarProveedores"/>
 
             <!-- VENTAS -->
 
@@ -95,13 +96,15 @@
 
             </Label>
 
-            <Button text="🛍 Ventas"
+            <!--<Button text="🛍 Ventas"
                     maxWidth="999"
-                    styleClass="menu-button"/>
+                    styleClass="menu-button"
+                    onAction="#mostrarPuntoDeVenta"/> -->
 
             <Button text="🧾 Historial de Ventas"
                     maxWidth="999"
-                    styleClass="menu-button"/>
+                    styleClass="menu-button"
+                    onAction="#mostrarHistorialVentas"/>
 
             <Button text="💰 Historial de Cajas"
                     maxWidth="999"

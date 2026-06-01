@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="20" styleClass="modulo-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nakel.frontend.controller.NuevoClienteController"
+      prefWidth="450">
+
+    <padding>
+        <Insets top="20" right="25" bottom="20" left="25"/>
+    </padding>
+
+    <Label text="➕ Alta de Nuevo Cliente" styleClass="titulo-modulo"/>
+
+    <GridPane vgap="15" hgap="10">
+
+        <Label text="Nombre y Apellido:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtNombre" promptText="Ej: María López"
+                   GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" styleClass="text-field"/>
+
+        <Label text="Tipo de Cliente:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cmbTipoCliente" promptText="Seleccionar..."
+                  GridPane.rowIndex="1" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
+
+        <Label text="Teléfono / WhatsApp:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtTelefono" promptText="Ej: 2920-123456"
+                   GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="text-field"/>
+
+        <Label text="DNI / CUIT:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtDni" promptText="Sin puntos ni guiones"
+                   GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="text-field"/>
+
+        <Label text="Email (Opcional):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtEmail" promptText="cliente@email.com"
+                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="text-field"/>
+
+    </GridPane>
+
+    <HBox spacing="15" alignment="CENTER_RIGHT">
+        <Button text="Cancelar" styleClass="btn-secundario" onAction="#cerrarModal"/>
+        <Button text="💾 Guardar Cliente" styleClass="btn-primario" onAction="#guardarCliente"/>
+    </HBox>
+
+</VBox>
