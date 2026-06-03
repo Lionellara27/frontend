@@ -58,7 +58,7 @@
             <Button text="🛒 Mostrador (Nueva Venta)"
                     maxWidth="999"
                     styleClass="primary-button"
-                    onAction="#mostrarMostrador"/>
+                    onAction="#mostrarPuntoDeVenta"/>
 
             <!-- GESTION -->
 
@@ -73,7 +73,8 @@
 
             <Button text="📦 Catálogo (Artículos)"
                     maxWidth="999"
-                    styleClass="menu-button"/>
+                    styleClass="menu-button"
+                    onAction="#mostrarCatalogo"/>
 
             <Button text="👥 Clientes"
                     maxWidth="999"

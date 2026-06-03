@@ -1,14 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.nakel.frontend.controller.ArticuloController"
-            prefHeight="400.0" prefWidth="600.0">
+<VBox spacing="15" styleClass="modulo-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.nakel.frontend.controller.ArticuloController">
 
-</AnchorPane>
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <Label text="📦 Catálogo de Artículos y Stock" styleClass="titulo-modulo"/>
+        <Pane HBox.hgrow="ALWAYS" />
+        <Button text="➕ NUEVO ARTÍCULO" styleClass="btn-primario" onAction="#abrirModalNuevoArticulo"/>
+    </HBox>
+
+    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
+        <TextField fx:id="txtBuscar" promptText="Buscar por Nombre o SKU..." prefWidth="250" styleClass="input-busqueda"/>
+
+        <ComboBox fx:id="cmbCategoria" promptText="Categoría" prefWidth="150" styleClass="text-field"/>
+        <ComboBox fx:id="cmbMaterial" promptText="Material" prefWidth="150" styleClass="text-field"/>
+        <ComboBox fx:id="cmbOrigen" promptText="Origen (Propio/Reventa)" prefWidth="170" styleClass="text-field"/>
+
+        <Button text="🔍 Filtrar" styleClass="btn-secundario" onAction="#buscarArticulos"/>
+        <Button text="🧹 Limpiar" onAction="#limpiarFiltros"/>
+    </HBox>
+
+    <TableView fx:id="tablaArticulos" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
+        <columns>
+            <TableColumn text="Nro." prefWidth="50"/>
+            <TableColumn text="Cód. SKU" prefWidth="120"/>
+            <TableColumn text="Descripción" prefWidth="250"/>
+            <TableColumn text="Categoría" prefWidth="120"/>
+            <TableColumn text="Material" prefWidth="120"/>
+            <TableColumn text="Origen" prefWidth="120"/>
+            <TableColumn text="Stock" prefWidth="70"/>
+            <TableColumn text="Precio Venta" prefWidth="100"/>
+            <TableColumn text="Acciones" prefWidth="100"/> </columns>
+    </TableView>
+
+    <HBox alignment="CENTER_RIGHT" spacing="15" style="-fx-padding: 10 0 0 0;">
+        <Label text="Total de artículos listados:" style="-fx-font-size: 14px;"/>
+        <Label fx:id="lblTotalArticulos" text="0" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+    </HBox>
+
+</VBox>

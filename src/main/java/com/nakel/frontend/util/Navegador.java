@@ -1,26 +1,34 @@
 package com.nakel.frontend.util;
 
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
+
+import java.net.URL;
 
 public class Navegador {
 
-    // Acá guardamos la referencia al centro de tu pantalla principal
-    private static BorderPane panelCentral;
+    // Ahora usa StackPane, igual que tu MainController
+    private static StackPane panelCentral;
 
-    // Se llama una sola vez al arrancar el programa
-    public static void setPanelCentral(BorderPane panel) {
+    public static void setPanelCentral(StackPane panel) {
         panelCentral = panel;
     }
 
-    // El método que van a usar todos los botones del sistema
     public static void cargarVista(String rutaFxml) {
         try {
-            Parent vista = FXMLLoader.load(Navegador.class.getResource(rutaFxml));
+            URL archivoUrl = Navegador.class.getResource(rutaFxml);
+            if (archivoUrl == null) {
+                System.err.println("🔴 Error: No se encontró la vista en: " + rutaFxml);
+                return;
+            }
+
+            Pane nuevaVista = FXMLLoader.load(archivoUrl);
 
             if (panelCentral != null) {
-                panelCentral.setCenter(vista);
+                // Borra lo viejo y pone lo nuevo (La magia del StackPane)
+                panelCentral.getChildren().clear();
+                panelCentral.getChildren().add(nuevaVista);
             } else {
                 System.err.println("🔴 Error: El panel central del Navegador no está configurado.");
             }

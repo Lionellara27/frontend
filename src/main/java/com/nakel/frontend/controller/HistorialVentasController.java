@@ -20,20 +20,9 @@ public class HistorialVentasController {
 
     @FXML
     public void abrirPuntoDeVenta(ActionEvent event) {
-        System.out.println("🚀 Saltando al Mostrador desde el Historial...");
+        System.out.println("🚀 Saltando al Mostrador usando el Router...");
 
-        try {
-            // Lógica para cambiar la vista principal al Punto de Venta
-            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/venta-view.fxml"));
-            javafx.scene.Parent root = loader.load();
-
-            // Acá asumimos que tenés forma de inyectarlo en tu panel central.
-            // Si tenés un gestor de vistas o un BorderPane estático, lo llamás acá.
-            // Ejemplo: MainController.panelCentral.setCenter(root);
-
-        } catch (Exception e) {
-            System.err.println("Error al saltar al POS.");
-            e.printStackTrace();
-        }
+        // ¡Magia! Llamamos al Router para que haga el trabajo sucio
+        com.nakel.frontend.util.Navegador.cargarVista("/com/nakel/frontend/view/venta-view.fxml");
     }
 }

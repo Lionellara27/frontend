@@ -1,89 +1,66 @@
 package com.nakel.frontend.controller;
 
+import com.nakel.frontend.util.Navegador; // ¡Importamos tu Router!
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-import java.io.IOException;
-import java.net.URL;
-
 public class MainController {
 
-    // 1. Enlazamos el espacio central que dejamos preparado en el FXML
+    // Enlazamos el espacio central (StackPane)
     @FXML
     private StackPane areaContenido;
 
-    // 2. Este método se ejecuta solo apenas arranca la pantalla
     @FXML
     public void initialize() {
+        // 1. Le entregamos el panel central al Router para que tome el control
+        Navegador.setPanelCentral(this.areaContenido);
+
+        // 2. Mostramos el mensaje inicial
         mostrarBienvenida();
     }
 
-    // 3. El método que dispara el botón del Mostrador
+    // ==========================================================
+    // NAVEGACIÓN LIMPIA (Usando el Router)
+    // ==========================================================
+
     @FXML
-    public void mostrarMostrador(ActionEvent event) {
-        // RUTA A TU FXML (Ajustala según tu carpeta resources)
-        cargarVista("/com/nakel/frontend/view/venta-view.fxml");
+    public void mostrarPuntoDeVenta(ActionEvent event) {
+        Navegador.cargarVista("/com/nakel/frontend/view/venta-view.fxml");
     }
 
-    // 4. El método que dispara el botón de Clientes
     @FXML
     public void mostrarClientes(ActionEvent event) {
-        // RUTA A TU FXML (Ajustala según tu carpeta resources)
-        cargarVista("/com/nakel/frontend/view/cliente-view.fxml");
+        Navegador.cargarVista("/com/nakel/frontend/view/cliente-view.fxml");
     }
 
     @FXML
     public void mostrarInsumos(ActionEvent event) {
-        cargarVista("/com/nakel/frontend/view/insumo-view.fxml"); // Ajustá la ruta
+        Navegador.cargarVista("/com/nakel/frontend/view/insumo-view.fxml");
     }
 
     @FXML
     public void mostrarCalculadora(ActionEvent event) {
-        cargarVista("/com/nakel/frontend/view/calcular-produccion-view.fxml");
+        Navegador.cargarVista("/com/nakel/frontend/view/calcular-produccion-view.fxml");
     }
 
     @FXML
     public void mostrarProveedores(ActionEvent event) {
-        cargarVista("/com/nakel/frontend/view/proveedor-view.fxml");
+        Navegador.cargarVista("/com/nakel/frontend/view/proveedor-view.fxml");
     }
 
     @FXML
     public void mostrarHistorialVentas(ActionEvent event) {
-        cargarVista("/com/nakel/frontend/view/historial-ventas-view.fxml");
+        Navegador.cargarVista("/com/nakel/frontend/view/historial-ventas-view.fxml");
     }
 
     @FXML
-    public void mostrarPuntoDeVenta(ActionEvent event) {
-        cargarVista("/com/nakel/frontend/view/venta-view.fxml");
-    }
-    // ==========================================================
-    // MOTOR DE CAMBIO DE PANTALLAS
-    // ==========================================================
-    private void cargarVista(String rutaFxml) {
-        try {
-            // Buscamos el archivo FXML
-            URL archivoUrl = getClass().getResource(rutaFxml);
-
-            if (archivoUrl == null) {
-                System.err.println("¡Error! No se encontró el archivo FXML en la ruta: " + rutaFxml);
-                return;
-            }
-
-            // Cargamos la vista y la inyectamos en el centro
-            Pane nuevaVista = FXMLLoader.load(archivoUrl);
-            areaContenido.getChildren().clear();
-            areaContenido.getChildren().add(nuevaVista);
-
-        } catch (IOException e) {
-            System.err.println("¡Ups! Hubo un problema al cargar la pantalla.");
-            e.printStackTrace();
-        }
+    public void mostrarCatalogo(ActionEvent event) {
+        System.out.println("Abriendo Catálogo de Artículos...");
+        Navegador.cargarVista("/com/nakel/frontend/view/articulo-view.fxml");
     }
 
     // ==========================================================
@@ -94,10 +71,10 @@ public class MainController {
         bienvenida.setAlignment(Pos.CENTER);
 
         Label titulo = new Label("Panel Principal");
-        titulo.getStyleClass().add("welcome-title"); // Usa tu CSS
+        titulo.getStyleClass().add("welcome-title");
 
         Label subtitulo = new Label("Bienvenida a Nakel ERP");
-        subtitulo.getStyleClass().add("welcome-subtitle"); // Usa tu CSS
+        subtitulo.getStyleClass().add("welcome-subtitle");
 
         bienvenida.getChildren().addAll(titulo, subtitulo);
 
