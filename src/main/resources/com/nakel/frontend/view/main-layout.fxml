@@ -76,12 +76,14 @@
                     styleClass="menu-button"
                     onAction="#mostrarCatalogo"/>
 
-            <Button text="👥 Clientes"
+            <Button fx:id="btnClientes"
+                    text="Clientes"
                     maxWidth="999"
                     styleClass="menu-button"
                     onAction="#mostrarClientes"/>
 
-            <Button text="🚚 Proveedores"
+            <Button fx:id="btnProveedores"
+                    text="Proveedores"
                     maxWidth="999"
                     styleClass="menu-button"
                     onAction="#mostrarProveedores"/>
@@ -102,12 +104,14 @@
                     styleClass="menu-button"
                     onAction="#mostrarPuntoDeVenta"/> -->
 
-            <Button text="🧾 Historial de Ventas"
+            <Button fx:id="btnHistorialVentas"
+                    text="Historial de Ventas"
                     maxWidth="999"
                     styleClass="menu-button"
                     onAction="#mostrarHistorialVentas"/>
 
-            <Button text="💰 Historial de Cajas"
+            <Button fx:id="btnHistorialCajas"
+                    text="Historial de Cajas"
                     maxWidth="999"
                     styleClass="menu-button"/>
 
@@ -122,12 +126,14 @@
 
             </Label>
 
-            <Button text="🧮 Gestión de Insumos"
+            <Button fx:id="btnInsumos"
+                    text="Gestión de Insumos"
                     maxWidth="999"
                     styleClass="menu-button"
                     onAction="#mostrarInsumos"/>
 
-            <Button text="🧮 Calcular Producción"
+            <Button fx:id="btnCalculadora"
+                    text="Calcular Producción"
                     maxWidth="999"
                     styleClass="menu-button"
                     onAction="#mostrarCalculadora"/>
@@ -143,7 +149,8 @@
 
             </Label>
 
-            <Button text="📊 Estadísticas"
+            <Button fx:id="btnEstadisticas"
+                    text="Estadísticas"
                     maxWidth="999"
                     styleClass="menu-button"/>
 
@@ -151,13 +158,15 @@
 
             <!-- CONFIGURACION -->
 
-            <Button text="⚙ Configuración"
+            <Button fx:id="btnCon"
+                    text="⚙ Configuración"
                     maxWidth="999"
                     styleClass="config-button"/>
 
             <!-- CERRAR CAJA -->
 
-            <Button text="🔒 Cerrar Caja"
+            <Button fx:id="btnCerrarCaja"
+                    text="Cerrar Caja"
                     maxWidth="999"
                     styleClass="danger-button"/>
 
