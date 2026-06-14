@@ -14,62 +14,43 @@
         <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
-    <!-- ENCABEZADO -->
     <HBox alignment="CENTER_LEFT">
         <Label text="🧮 Calculadora de Producción" styleClass="titulo-modulo"/>
     </HBox>
 
-    <!-- BLOQUE 1: PANEL INTELIGENTE DE INGRESO -->
     <VBox spacing="15" style="-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8; -fx-border-color: #e0e0e0; -fx-border-radius: 8;">
 
         <HBox spacing="15" alignment="CENTER_LEFT">
-            <Label text="Categoría:"/>
-            <ComboBox fx:id="cmbCategoriaItem" promptText="Tela / Accesorio / Labor" prefWidth="150" styleClass="text-field"/>
-
             <Label text="Insumo específico:"/>
             <ComboBox fx:id="cmbInsumo" promptText="Seleccionar..." prefWidth="250" styleClass="text-field"/>
         </HBox>
 
         <Separator/>
 
-        <!-- Campos de dimensiones y cantidades (El sistema ocultará los que no sirvan según la categoría) -->
         <HBox spacing="15" alignment="CENTER_LEFT">
-            <!-- Para Telas / Cueros -->
-            <Label text="Medidas del Recorte:"/>
-            <TextField fx:id="txtAncho" promptText="Ancho (cm)" prefWidth="100" styleClass="text-field"/>
-            <Label text="X"/>
-            <TextField fx:id="txtAlto" promptText="Alto (cm)" prefWidth="100" styleClass="text-field"/>
-
-            <!-- Para Accesorios / Horas -->
-            <Label text="  |  O Cantidad / Horas:"/>
-            <TextField fx:id="txtCantidad" promptText="Ej: 2" prefWidth="80" styleClass="text-field"/>
-
-            <Pane HBox.hgrow="ALWAYS" /> <!-- Espaciador para tirar el botón a la derecha -->
-
-            <Button text="➕ Agregar al Presupuesto" styleClass="btn-secundario" onAction="#agregarInsumoLista"/>
+            <Label text="Medidas de los Recortes:"/>
+            <VBox fx:id="contenedorCortes" spacing="10" />
+            <Button text="➕ Añadir otro corte" onAction="#agregarFilaCorte" styleClass="btn-secundario"/>
         </HBox>
-    </VBox>
 
-    <!-- BLOQUE 2: EL TICKET (Acá se van apilando los cálculos) -->
-    <TableView fx:id="tablaPresupuesto" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
-        <columns>
-            <TableColumn text="Descripción" prefWidth="200"/>
-            <TableColumn text="Categoría" prefWidth="100"/>
-            <TableColumn text="Detalle (Recorte/Cant)" prefWidth="150"/>
-            <TableColumn text="Costo Base" prefWidth="100"/>
-            <TableColumn text="Subtotal Calculado" prefWidth="140"/>
-            <TableColumn text="Acciones" prefWidth="80"/>
-        </columns>
-    </TableView>
+    </VBox> <HBox spacing="15" alignment="CENTER_LEFT">
+    <Label text="Mano de Obra (Horas):"/>
+    <TextField fx:id="txtHoras" prefWidth="60" styleClass="text-field"/>
+    <Label text="Valor x Hora: $"/>
+    <TextField fx:id="txtValorHora" prefWidth="90" styleClass="text-field"/>
 
-    <!-- BLOQUE 3: TOTALES Y RENTABILIDAD -->
+    <Separator orientation="VERTICAL"/>
+
+    <Label text="Avíos/Cierres: $"/>
+    <TextField fx:id="txtCostoAvios" prefWidth="90" styleClass="text-field"/>
+</HBox>
+
     <HBox alignment="CENTER_RIGHT" spacing="25" style="-fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">
 
         <GridPane vgap="12" hgap="15">
             <Label text="Costo Total de Producción:" GridPane.rowIndex="0" GridPane.columnIndex="0" style="-fx-font-weight: bold;"/>
-            <Label fx:id="lblCostoTotal" text="/$ 0.00" GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
+            <Label fx:id="lblTotalCosto" text="/$ 0.00" GridPane.rowIndex="0" GridPane.columnIndex="1" style="-fx-font-weight: bold;"/>
 
-            <!-- Tu idea de los impuestos aplicada visualmente -->
             <Label text="Margen de Ganancia (%):" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
             <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="1" GridPane.columnIndex="1">
                 <TextField fx:id="txtMargen" promptText="Ej: 50" prefWidth="70" styleClass="text-field"/>

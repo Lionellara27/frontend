@@ -55,7 +55,8 @@
 
             <!-- MOSTRADOR -->
 
-            <Button text="🛒 Mostrador (Nueva Venta)"
+            <Button fx:id="btnMostrador"
+                    text="Mostrador (Nueva Venta)"
                     maxWidth="999"
                     styleClass="primary-button"
                     onAction="#mostrarPuntoDeVenta"/>
@@ -71,7 +72,8 @@
 
             </Label>
 
-            <Button text="📦 Catálogo (Artículos)"
+            <Button fx:id="btnCatalogo"
+                    text="Catálogo (Artículos)"
                     maxWidth="999"
                     styleClass="menu-button"
                     onAction="#mostrarCatalogo"/>
@@ -158,8 +160,8 @@
 
             <!-- CONFIGURACION -->
 
-            <Button fx:id="btnCon"
-                    text="⚙ Configuración"
+            <Button fx:id="btnConfiguracion"
+                    text="Configuración"
                     maxWidth="999"
                     styleClass="config-button"/>
 

@@ -25,6 +25,7 @@ public class MainController {
     @FXML private Button btnCalculadora;
     @FXML private Button btnEstadisticas;
     @FXML private Button btnCerrarCaja;
+    @FXML private Button btnConfiguracion;
 
     @FXML
     public void initialize() {
@@ -36,7 +37,7 @@ public class MainController {
 
         // ¡INYECTAMOS LOS VECTORES DORADOS A CADA BOTÓN!
         //ufamos un if noNull pro si alguna vez se borra un boton para que nada explote
-        if (btnMostrador != null) btnMostrador.setGraphic(Icono.MOSTRADOR.construir());
+        if (btnMostrador != null) btnMostrador.setGraphic(Icono.MOSTRADOR.construir("#333333"));
         if (btnCatalogo != null) btnCatalogo.setGraphic(Icono.CATALOGO.construir());
         if (btnClientes != null) btnClientes.setGraphic(Icono.CLIENTES.construir());
         if (btnProveedores != null) btnProveedores.setGraphic(Icono.PROVEEDORES.construir());
@@ -46,6 +47,7 @@ public class MainController {
         if (btnCalculadora != null) btnCalculadora.setGraphic(Icono.CALCULADORA.construir());
         if (btnEstadisticas != null) btnEstadisticas.setGraphic(Icono.ESTADISTICAS.construir());
         if (btnCerrarCaja != null) btnCerrarCaja.setGraphic(Icono.CERRAR_CAJA.construir());
+        if (btnConfiguracion != null) btnConfiguracion.setGraphic(Icono.CONFIGURACION.construir());
     }
 
     // ==========================================================
