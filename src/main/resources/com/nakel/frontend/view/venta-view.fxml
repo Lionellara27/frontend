@@ -19,7 +19,9 @@
         <Label text="Cliente:" style="-fx-font-weight: bold;"/>
         <ComboBox fx:id="cmbCliente" promptText="Consumidor Final" prefWidth="250" styleClass="text-field"/>
 
-        <Label text="Comprobante:" style="-fx-font-weight: bold;"/>
+        <Button text="➕ Cliente nuevo" styleClass="btn-secundario" onAction="#abrirClienteExpress" style="-fx-background-color: #1976d2; -fx-text-fill: white;"/>
+
+        <Pane HBox.hgrow="ALWAYS"/> <Label text="Comprobante:" style="-fx-font-weight: bold;"/>
         <ComboBox fx:id="cmbTipoFactura" promptText="Seleccionar..." prefWidth="150" styleClass="text-field"/>
     </HBox>
 
@@ -50,6 +52,8 @@
             </HBox>
 
             <HBox spacing="15" alignment="CENTER_RIGHT">
+                <CheckBox fx:id="chkRegalo" text="🎁 ¿Es para regalo?" style="-fx-font-size: 14px; -fx-padding: 5 10 0 0;"/>
+
                 <ComboBox fx:id="cmbMedioPago" promptText="Medio de Pago" styleClass="combo-pago"/>
                 <Button text="💵 COBRAR (F12)" styleClass="btn-cobrar" onAction="#cobrarVenta" style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16px; -fx-padding: 10 20;"/>
             </HBox>

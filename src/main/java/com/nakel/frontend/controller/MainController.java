@@ -1,5 +1,6 @@
 package com.nakel.frontend.controller;
 
+import com.nakel.frontend.service.ClienteApiService;
 import com.nakel.frontend.util.Icono;
 import com.nakel.frontend.util.Navegador; // ¡Importamos tu Router!
 import javafx.event.ActionEvent;
@@ -29,6 +30,9 @@ public class MainController {
 
     @FXML
     public void initialize() {
+        ClienteApiService api = new ClienteApiService();
+        //api.probarConexion();
+
         // 1. Le entregamos el panel central al Router para que tome el control
         Navegador.setPanelCentral(this.areaContenido);
 
