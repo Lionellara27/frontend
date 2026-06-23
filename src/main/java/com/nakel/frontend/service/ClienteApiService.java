@@ -12,10 +12,9 @@ public class ClienteApiService {
 
     private static final String API_URL = "http://localhost:8080/api/clientes";
     private final HttpClient clienteHttp = HttpClient.newHttpClient();
-    private final Gson gson = new Gson(); // Instanciamos Gson una sola vez para toda la clase
+    private final Gson gson = new Gson();
 
-    // =============== 1. TRAER CLIENTES (GET) ===============
-    // Este método lo usás al abrir la ventana para cargar el ComboBox
+    // =============== 1. TRAER TODOS LOS CLIENTES ===============
     public String obtenerClientes() {
         try {
             HttpRequest peticion = HttpRequest.newBuilder()
@@ -26,43 +25,82 @@ public class ClienteApiService {
             HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
             if (respuesta.statusCode() == 200) {
-                return respuesta.body(); // Devuelve el JSON con todos los clientes
+                return respuesta.body();
             }
         } catch (Exception e) {
             System.out.println("Error al traer los clientes: " + e.getMessage());
         }
-        return "[]"; // Si falla, devuelve una lista vacía para que no explote nada
+        return "[]";
     }
 
-    // =============== 2. GUARDAR CLIENTE (POST BLINDADO) ===============
-    public boolean guardarClienteEnBaseDeDatos(String nombre, String documento, String condicionIva, String telefono) {
+    // =============== 2. NUEVO: BUSCADOR PREDICTIVO ===============
+    public String buscarClientesPorNombre(String nombre) {
         try {
-            // 1. Armamos el "diccionario" de datos (Las claves deben coincidir con tu Backend)
-            Map<String, String> datosCliente = new HashMap<>();
-            datosCliente.put("nombre", nombre);
-            datosCliente.put("documento", documento);
-            datosCliente.put("condicionIva", condicionIva);
-            datosCliente.put("telefono", telefono);
-
-            // 2. Gson hace la magia: convierte el Mapa en un JSON inquebrantable
-            String jsonMandar = gson.toJson(datosCliente);
-
-            // 3. Preparamos el envío
+            // Reemplazamos los espacios por %20 para que la URL no explote (ej: "Juan Perez" -> "Juan%20Perez")
+            String parametro = nombre.replace(" ", "%20");
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(jsonMandar))
+                    .uri(URI.create(API_URL + "/buscar?nombre=" + parametro))
+                    .GET()
                     .build();
 
-            // 4. Mandamos el paquete
             HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-            // Si respondió 200 (OK) o 201 (Creado), es un éxito
-            return respuesta.statusCode() == 200 || respuesta.statusCode() == 201;
-
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
         } catch (Exception e) {
-            System.out.println("Error al mandar el cliente: " + e.getMessage());
-            return false;
+            System.out.println("Error en la búsqueda predictiva: " + e.getMessage());
         }
+        return "[]";
+    }
+
+    // =============== 3. GUARDAR CLIENTE (POST BLINDADO) ===============
+    // Ahora devuelve 'void' pero lanza un Exception si el Backend se queja
+    public void guardarClienteEnBaseDeDatos(String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
+
+        Map<String, String> datosCliente = new HashMap<>();
+        datosCliente.put("nombre", nombre);
+        datosCliente.put("cuit", cuit); // ⚠️ CAMBIADO: 'documento' -> 'cuit'
+        datosCliente.put("condicionIva", condicionIva);
+        datosCliente.put("telefono", telefono);
+        datosCliente.put("email", email); // Te sumé el email que faltaba
+
+        String jsonMandar = gson.toJson(datosCliente);
+
+        HttpRequest peticion = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonMandar))
+                .build();
+
+        HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+        // 🛡️ Si el Backend devuelve Error 400 (CUIT Duplicado), lanzamos el mensaje a JavaFX
+        if (respuesta.statusCode() == 400) {
+            throw new RuntimeException(respuesta.body());
+        }
+        // Si no es ni 200 ni 201 y tampoco 400, es otro error raro
+        else if (respuesta.statusCode() != 200 && respuesta.statusCode() != 201) {
+            throw new RuntimeException("Error al comunicarse con el servidor (Código: " + respuesta.statusCode() + ")");
+        }
+    }
+
+    // =============== 4. VERIFICAR SI EXISTE POR DNI ===============
+    public String buscarClientePorCuit(String cuit) {
+        try {
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/cuit/" + cuit))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body(); // ¡Existe! Devolvemos los datos de Pepe
+            }
+        } catch (Exception e) {
+            System.out.println("Error al verificar DNI: " + e.getMessage());
+        }
+        return null; // No existe (dio 404 Not Found)
     }
 }

@@ -3,18 +3,23 @@ package com.nakel.frontend.controller;
 import com.google.gson.Gson;
 import com.nakel.frontend.model.Articulo;
 import com.nakel.frontend.model.DetalleVenta;
+import com.nakel.frontend.model.LineaTicket;
 import com.nakel.frontend.service.ArticuloApiService;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class VentaController {
+
+    private final ArticuloApiService apiService = new ArticuloApiService();
 
     // Cabecera AFIP
     @FXML private ComboBox<String> cmbCliente;
@@ -22,7 +27,10 @@ public class VentaController {
 
     // Buscador y Tabla
     @FXML private TextField txtCodigoBarras;
-    @FXML private TableView<Articulo> tablaTicket;
+    @FXML private TableView<LineaTicket> tablaTicket;
+    //
+    @FXML
+    private TableView<Articulo> tablaInventario;
 
     // Totales y Cobro
     @FXML private Label lblTotal;
@@ -30,53 +38,123 @@ public class VentaController {
     //check para el regalo
     @FXML private javafx.scene.control.CheckBox chkRegalo;
 
+    @FXML
+    private TableView<Articulo> tablaProductosPOS;
+
+    //segunda tabla
+    @FXML private TableColumn<Articulo, String> colInvCodigo;
+    @FXML private TableColumn<Articulo, String> colInvNombre;
+    @FXML private TableColumn<Articulo, Double> colInvPrecio;
+
     // Instanciamos el servicio y Gson para procesar
     private final ArticuloApiService articuloApi = new ArticuloApiService();
     private final Gson gson = new Gson();
 
+    @FXML private TableColumn<LineaTicket, String> colCodigo;
+    @FXML private TableColumn<LineaTicket, String> colNombre;
+    @FXML private TableColumn<LineaTicket, Integer> colCantidad;
+    @FXML private TableColumn<LineaTicket, Double> colPrecio; // <--- Cambió
+    @FXML private TableColumn<LineaTicket, Double> colSubtotal;
+    @FXML private TableColumn<LineaTicket, Void> colAccion;
+
     @FXML
     public void initialize() {
 
-        configurarEventos();
-        configurarTabla();
-        cargarDatosIniciales();
+        configurarEventos(); //"enchufa" EJ: el "texfield" del codigo de barra que "ProcesarBUSQUEDA"
+        configurarTabla(); // logica visual7
+        configurarTablaInventario();
+        cargarInventarioCompleto();
 
+        cargarDatosIniciales(); //carga los datos
+        cargarInventarioParaVenta();
         System.out.println("Terminal de Punto de Venta (POS) Iniciada.");
     }
 
     private void configurarEventos() {
 
+        // Buscar por código o nombre cuando presionan Enter
         txtCodigoBarras.setOnAction(event ->
                 procesarBusqueda(txtCodigoBarras.getText())
         );
+
+        /* Doble click en un producto del inventario
+        tablaInventario.setOnMouseClicked(event -> {
+
+            if (event.getClickCount() == 2) {
+
+                Articulo seleccionado =
+                        tablaInventario.getSelectionModel().getSelectedItem();
+
+                if (seleccionado != null) {
+
+                    tablaTicket.getItems().add(seleccionado);
+
+                    actualizarTotal();
+
+                    System.out.println("✅ Agregado al ticket: "
+                            + seleccionado.getNombre());
+                }
+            }
+        });*/
+        // DOBLE CLICK en inventario
+        tablaInventario.setOnMouseClicked(event -> {
+
+            if (event.getClickCount() == 2) {
+
+                Articulo seleccionado =
+                        tablaInventario.getSelectionModel().getSelectedItem();
+
+                if (seleccionado != null) {
+                    agregarAlTicket(seleccionado);
+                }
+            }
+        });
+
+        // ENTER en inventario
+        tablaInventario.setOnKeyPressed(event -> {
+
+            if (event.getCode() == javafx.scene.input.KeyCode.ENTER) {
+
+                Articulo seleccionado =
+                        tablaInventario.getSelectionModel().getSelectedItem();
+
+                if (seleccionado != null) {
+                    agregarAlTicket(seleccionado);
+                }
+
+                event.consume(); // evita comportamiento default de TableView
+            }
+        });
     }
 
     private void procesarBusqueda(String texto) {
-
-        if (texto == null || texto.isBlank()) {
-            return;
-        }
+        if (texto == null || texto.isBlank()) return;
 
         System.out.println("Buscando: " + texto);
 
-        String jsonArticulo =
-                articuloApi.buscarArticuloPorCodigo(texto);
+        // Llamamos una sola vez a la API
+        String json = articuloApi.buscarArticuloPorCodigo(texto);
+        System.out.println("DEBUG - JSON recibido: " + json);
 
-        if (jsonArticulo == null || jsonArticulo.isBlank()) {
-            System.out.println("❌ Producto no encontrado");
+        if (json == null || json.isBlank() || json.equals("null")) {
+            System.out.println("❌ Producto no encontrado en el Backend");
             return;
         }
 
-        Articulo item = gson.fromJson(jsonArticulo, Articulo.class);
+        try {
+            Articulo item = gson.fromJson(json, Articulo.class);
 
-        tablaTicket.getItems().add(item);
-
-        actualizarTotal();
-
-        txtCodigoBarras.clear();
-
-        System.out.println("✅ Producto agregado: "
-                + item.getNombre());
+            if (item.getNombre() == null) {
+                System.out.println("⚠️ Objeto creado, pero el nombre está vacío...");
+            } else {
+                // Ya no hacemos add directo, llamamos a la función inteligente
+                agregarAlTicket(item);
+                txtCodigoBarras.clear();
+            }
+        }catch (Exception e) {
+            System.out.println("❌ ERROR FATAL en GSON: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @FXML
@@ -86,9 +164,52 @@ public class VentaController {
     }
 
     private void configurarTabla() {
+        tablaTicket.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        tablaTicket.setColumnResizePolicy(
-                TableView.CONSTRAINED_RESIZE_POLICY);
+        // 1. Datos que están adentro del Articulo, que está adentro de LineaTicket
+        colCodigo.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getArticulo().getCodigo()));
+        colNombre.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
+        colPrecio.setCellValueFactory(cell -> new SimpleDoubleProperty(cell.getValue().getArticulo().getPrecio()).asObject());
+
+        // 2. Datos que le pertenecen directamente a la LineaTicket
+        colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
+        colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotal")); // Magia de Java: llama a getSubtotal()
+
+        // 3. 💥 ¡NUEVO! El Botón de Eliminar (El punto de tu PDF)
+        colAccion.setCellFactory(param -> new TableCell<LineaTicket, Void>() {
+            private final Button btnEliminar = new Button("❌");
+            {
+                btnEliminar.getStyleClass().add("btn-eliminar"); // Ponele estilo rojo en el CSS
+                btnEliminar.setOnAction(e -> {
+                    LineaTicket linea = getTableView().getItems().get(getIndex());
+                    tablaTicket.getItems().remove(linea);
+                    actualizarTotal();
+                });
+            }
+            @Override
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) setGraphic(null);
+                else setGraphic(btnEliminar);
+            }
+        });
+    }
+
+    private void configurarTablaInventario() {
+
+        tablaInventario.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        colInvCodigo.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getCodigo())
+        );
+
+        colInvNombre.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getNombre())
+        );
+
+        colInvPrecio.setCellValueFactory(cell ->
+                new SimpleDoubleProperty(cell.getValue().getPrecio()).asObject()
+        );
     }
 
     private void cargarDatosIniciales() {
@@ -99,9 +220,49 @@ public class VentaController {
         cmbMedioPago.setValue("Efectivo");
     }
 
+    private void cargarInventarioCompleto() {
+        System.out.println("Cargando inventario completo para el POS...");
+        // Usamos el mismo servicio que el catálogo, porque es la misma API
+        System.out.println("DEBUG - llamando backend...");
+        List<Articulo> inventario = apiService.obtenerTodos();
+        System.out.println("DEBUG - respuesta: " + inventario);
+
+        if (inventario != null && !inventario.isEmpty()) {
+            System.out.println("SIZE: " + inventario.size());
+
+            // Acá podrías cargar una lista oculta o un ComboBox gigante
+            // para que la clienta busque/seleccione los productos
+            System.out.println("✅ Mostrador listo con " + inventario.size() + " productos.");
+        } else {
+            System.out.println("⚠️ El inventario está vacío.");
+        }
+    }
+
+    private void cargarInventarioParaVenta() {
+
+        List<Articulo> inventario = apiService.obtenerTodos();
+
+        if (inventario != null && !inventario.isEmpty()) {
+            System.out.println("SIZE: " + inventario.size());
+
+            ObservableList<Articulo> listaObservable =
+                    FXCollections.observableArrayList(inventario);
+
+            tablaInventario.setItems(listaObservable);
+
+            System.out.println("✅ Inventario cargado: "
+                    + inventario.size() + " productos.");
+        } else {
+            System.out.println("⚠️ El inventario está vacío.");
+        }
+    }
+
     //---------------------------------------------------------------------------------------------------------------------------
     private double obtenerTotalNumerico() {
-        return tablaTicket.getItems().stream().mapToDouble(Articulo::getPrecio).sum();
+        // AHORA recorre LineaTicket y suma los subtotales reales (precio * cantidad)
+        return tablaTicket.getItems().stream()
+                .mapToDouble(LineaTicket::getSubtotal)
+                .sum();
     }
 
     // 2. Así queda tu cobrarVenta modificado
@@ -114,9 +275,13 @@ public class VentaController {
         } else {
             // A. Armamos los detalles
             List<DetalleVenta> detalles = new ArrayList<>();
-            for (Articulo art : tablaTicket.getItems()) {
-                // Asumimos cantidad 1 por ahora, ajustá si tenés lógica de cantidad
-                detalles.add(new com.nakel.frontend.model.DetalleVenta(1, art.getPrecio(), art.getPrecio(), art));
+            for (LineaTicket linea : tablaTicket.getItems()) {
+                detalles.add(new com.nakel.frontend.model.DetalleVenta(
+                        linea.getCantidad(),
+                        linea.getArticulo().getPrecio(),
+                        linea.getSubtotal(),
+                        linea.getArticulo()
+                ));
             }
 
             // B. Armamos el pago
@@ -186,17 +351,55 @@ public class VentaController {
 
         dialog.getDialogPane().setContent(grid);
 
+        // 🧠 4. ACÁ SUCEDE LA MAGIA ANTI-FRICCIÓN
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == btnGuardar) {
-                com.nakel.frontend.service.ClienteApiService api = new com.nakel.frontend.service.ClienteApiService();
-                boolean exito = api.guardarClienteEnBaseDeDatos(txtNombre.getText(), txtDni.getText(), "CONSUMIDOR_FINAL", "");
+                String dni = txtDni.getText();
+                String nombreIngresado = txtNombre.getText();
 
-                if(exito) {
-                    cmbCliente.getItems().add(txtNombre.getText() + " - " + txtDni.getText());
-                    cmbCliente.getSelectionModel().selectLast();
-                    System.out.println("Cliente rápido guardado y seleccionado.");
+                com.nakel.frontend.service.ClienteApiService api = new com.nakel.frontend.service.ClienteApiService();
+
+                // PREGUNTAMOS: ¿Pepe ya vino alguna vez?
+                String clienteJson = api.buscarClientePorCuit(dni);
+
+                if (clienteJson != null && !clienteJson.isBlank()) {
+                    // 💥 ¡PEPE YA EXISTE! Lo reciclamos
+                    com.nakel.frontend.model.Cliente pepeHistorico = gson.fromJson(clienteJson, com.nakel.frontend.model.Cliente.class);
+                    String itemCombo = pepeHistorico.getNombre() + " - " + pepeHistorico.getCuit();
+
+                    // Cartelito para avisar al cajero que ahorró tiempo
+                    Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+                    alerta.setTitle("Cliente Existente");
+                    alerta.setHeaderText("¡" + pepeHistorico.getNombre() + " ya estaba registrado!");
+                    alerta.setContentText("Se cargará automáticamente en el mostrador.");
+                    alerta.showAndWait();
+
+                    // Lo metemos en el ComboBox si no estaba y lo seleccionamos
+                    if (!cmbCliente.getItems().contains(itemCombo)) {
+                        cmbCliente.getItems().add(itemCombo);
+                    }
+                    cmbCliente.setValue(itemCombo);
+
+                } else {
+                    // 🆕 NO EXISTE: LO CREAMOS NUEVO
+                    try {
+                        // Recordá: la nueva firma pide 5 datos (nombre, cuit, iva, telefono, email). Mandamos vacío lo que no tenemos.
+                        api.guardarClienteEnBaseDeDatos(nombreIngresado, dni, "CONSUMIDOR_FINAL", "", "");
+
+                        String nuevoItem = nombreIngresado + " - " + dni;
+                        cmbCliente.getItems().add(nuevoItem);
+                        cmbCliente.setValue(nuevoItem);
+                        System.out.println("✅ Cliente rápido creado y seleccionado.");
+
+                    } catch (Exception e) {
+                        // Si el backend explota por otra cosa (ej. se cortó internet), atajamos el error acá
+                        Alert error = new Alert(Alert.AlertType.ERROR);
+                        error.setTitle("Error al guardar");
+                        error.setHeaderText("No se pudo crear el cliente");
+                        error.setContentText(e.getMessage());
+                        error.showAndWait();
+                    }
                 }
-                return null;
             }
             return null;
         });
@@ -292,14 +495,40 @@ public class VentaController {
     // 🧮 Método para sumar los precios de la tabla
     private void actualizarTotal() {
         double total = 0.0;
-
-        // Recorremos todos los elementos que hay en la tabla
-        for (Articulo item : tablaTicket.getItems()) {
-            total += item.getPrecio(); // Sumamos el precio de cada artículo
+        for (LineaTicket item : tablaTicket.getItems()) { // AHORA RECORRE LineaTicket
+            total += item.getSubtotal();
         }
-
-        // Actualizamos el label con el nuevo total formateado
         lblTotal.setText("Total: $" + String.format("%.2f", total));
     }
 
+    private void agregarAlTicket(Articulo articulo) {
+        if (articulo == null) return;
+
+        // Buscamos si el producto ya está en el ticket
+        for (LineaTicket linea : tablaTicket.getItems()) {
+            if (linea.getArticulo().getCodigo().equals(articulo.getCodigo())) {
+                // 🔥 VALIDACIÓN DE STOCK (Deuda del PDF saldada)
+                if (linea.getCantidad() + 1 > articulo.getStockActual()) {
+                    System.out.println("❌ ¡NO HAY STOCK SUFICIENTE! Quedan: " + articulo.getStockActual());
+                    // Acá le podrías meter un Alert de JavaFX a futuro
+                    return;
+                }
+
+                linea.sumarCantidad();
+                tablaTicket.refresh();
+                actualizarTotal();
+                return;
+            }
+        }
+
+        // Si es la primera vez que lo escanea, validamos stock igual
+        if (articulo.getStockActual() < 1) {
+            System.out.println("❌ ESTE PRODUCTO NO TIENE STOCK (0).");
+            return;
+        }
+
+        // Si no existe, lo metemos adentro de una LineaTicket nueva
+        tablaTicket.getItems().add(new LineaTicket(articulo));
+        actualizarTotal();
+    }
 }

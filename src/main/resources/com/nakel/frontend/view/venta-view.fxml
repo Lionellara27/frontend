@@ -32,16 +32,39 @@
     </HBox>
 
     <!-- 2. CENTRO: La Tabla del Ticket -->
-    <TableView fx:id="tablaTicket" VBox.vgrow="ALWAYS" styleClass="tabla-ticket">
-        <columns>
-            <TableColumn text="Código" prefWidth="120"/>
-            <TableColumn text="Descripción del Artículo" prefWidth="350"/>
-            <TableColumn text="Cant." prefWidth="70"/>
-            <TableColumn text="Precio U." prefWidth="120"/>
-            <TableColumn text="Subtotal" prefWidth="120"/>
-            <TableColumn text="Acción" prefWidth="80"/>
-        </columns>
-    </TableView>
+    <HBox spacing="10" VBox.vgrow="ALWAYS">
+
+        <VBox HBox.hgrow="ALWAYS">
+            <Label text="Inventario"/>
+            <TableView fx:id="tablaInventario">
+
+                <columns>
+                    <TableColumn fx:id="colInvCodigo" text="Código" prefWidth="100"/>
+                    <TableColumn fx:id="colInvNombre" text="Producto" prefWidth="200"/>
+                    <TableColumn fx:id="colInvPrecio" text="Precio" prefWidth="100"/>
+                </columns>
+
+            </TableView>
+        </VBox>
+
+        <VBox HBox.hgrow="ALWAYS">
+            <Label text="Ticket Actual"/>
+
+            <TableView fx:id="tablaTicket">
+
+                <columns>
+                    <TableColumn fx:id="colCodigo" text="Código" prefWidth="120"/>
+                    <TableColumn fx:id="colNombre" text="Descripción" prefWidth="350"/>
+                    <TableColumn fx:id="colCantidad" text="Cant." prefWidth="70"/>
+                    <TableColumn fx:id="colPrecio" text="Precio U." prefWidth="120"/>
+                    <TableColumn fx:id="colSubtotal" text="Subtotal" prefWidth="120"/>
+                    <TableColumn fx:id="colAccion" text="Acción" prefWidth="80"/>
+                </columns>
+
+            </TableView>
+        </VBox>
+
+    </HBox>
 
     <!-- 3. INFERIOR: Totales y Cobro -->
     <HBox spacing="20" alignment="CENTER_RIGHT">

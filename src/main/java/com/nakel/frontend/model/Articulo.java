@@ -9,6 +9,8 @@ public class Articulo {
     private Integer stockActual; // Agregado para el catálogo
     private Double alicuotaIva;  // Agregado
     private String origen;       // Agregado para filtrar (Reventa/Propia)
+    //para hacer calculos
+    private transient Integer cantidad = 1;
 
     // Clases anidadas para recibir los objetos del JSON
     private Categoria categoria;
@@ -38,6 +40,9 @@ public class Articulo {
     public void setCategoria(Categoria categoria) { this.categoria = categoria; }
     public void setMaterial(Material material) { this.material = material; }
 
+    // --- GETTERS Y SETTERS PARA LA CANTIDAD Y HACER CALCULOS ---
+    public Integer getCantidad() { return cantidad; }
+    public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
     // =========================================================
     // SUB-CLASES para mapear los objetos que vienen del Backend
     // =========================================================
