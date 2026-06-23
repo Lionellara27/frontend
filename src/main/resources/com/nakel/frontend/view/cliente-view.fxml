@@ -31,12 +31,12 @@
     <!-- TABLA DE CLIENTES -->
     <TableView fx:id="tablaClientes" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
         <columns>
-            <TableColumn text="Cód." prefWidth="50"/>
-            <TableColumn text="Nombre / Razón Social" prefWidth="250"/>
-            <TableColumn text="DNI / CUIT" prefWidth="120"/>
-            <TableColumn text="Teléfono" prefWidth="150"/>
-            <TableColumn text="Domicilio" prefWidth="250"/>
-            <TableColumn text="Acciones" prefWidth="100"/>
+            <TableColumn fx:id="colCod" text="Cód." prefWidth="50"/>
+            <TableColumn fx:id="colNombre" text="Nombre / Razón Social" prefWidth="250"/>
+            <TableColumn fx:id="colDni" text="DNI / CUIT" prefWidth="120"/>
+            <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="150"/>
+            <TableColumn fx:id="colEmail" text="Email" prefWidth="250"/>
+            <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
         </columns>
     </TableView>
 

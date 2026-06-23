@@ -79,4 +79,17 @@ public class ArticuloApiService {
             return false;
         }
     }
+    // 🗑️ NUEVO: Eliminar artículo de la base de datos
+    public void eliminarArticuloDeBaseDeDatos(Long id) throws Exception {
+        HttpRequest peticion = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL + "/" + id))
+                .DELETE()
+                .build();
+
+        HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+        if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
+            throw new Exception("Error " + respuesta.statusCode() + " del servidor al eliminar el artículo.");
+        }
+    }
 }

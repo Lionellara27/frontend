@@ -163,7 +163,8 @@
             <Button fx:id="btnConfiguracion"
                     text="Configuración"
                     maxWidth="999"
-                    styleClass="config-button"/>
+                    styleClass="config-button"
+                    onAction="#mostrarConfiguracion"/>
 
             <!-- CERRAR CAJA -->
 

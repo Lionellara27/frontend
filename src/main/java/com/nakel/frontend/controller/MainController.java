@@ -94,6 +94,12 @@ public class MainController {
         Navegador.cargarVista("/com/nakel/frontend/view/articulo-view.fxml");
     }
 
+    @FXML
+    public void mostrarConfiguracion(ActionEvent event) {
+        System.out.println("Abriendo Configuración...");
+        Navegador.cargarVista("/com/nakel/frontend/view/configuracion.fxml");
+    }
+
     // ==========================================================
     // MENSAJE DE INICIO (Por defecto)
     // ==========================================================

@@ -1,7 +1,5 @@
 package com.nakel.frontend.model;
 
-// ⚠️ Esta clase solo vive en el Frontend para recibir los datos de la API.
-// No lleva anotaciones de base de datos (@Entity, @Table, etc.)
 public class Cliente {
 
     private Long id;
@@ -11,7 +9,15 @@ public class Cliente {
     private String telefono;
     private String email;
 
-    // --- GETTERS (Mínimos necesarios para el mostrador) ---
+    // Constructores vacíos para que Gson pueda trabajar tranquilo
+    public Cliente() {
+    }
+
+    // --- GETTERS (Lo que JavaFX necesita para leer los datos y pintar la tabla) ---
+    public Long getId() {
+        return id;
+    }
+
     public String getNombre() {
         return nombre;
     }
@@ -20,9 +26,40 @@ public class Cliente {
         return cuit;
     }
 
-    public Long getId() {
-        return id;
+    public String getCondicionIva() {
+        return condicionIva;
     }
 
-    // Podés generarle los setters y el resto de los getters con tu IDE si querés
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    // --- SETTERS (Por si en el futuro necesitas editar al cliente en la tabla) ---
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public void setCuit(String cuit) {
+        this.cuit = cuit;
+    }
+
+    public void setCondicionIva(String condicionIva) {
+        this.condicionIva = condicionIva;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
 }

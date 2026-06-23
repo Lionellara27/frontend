@@ -3,6 +3,7 @@ module com.nakel.frontend {
     requires javafx.fxml;
     requires java.net.http;
     requires com.google.gson;
+    requires org.kordamp.ikonli.javafx;
 
     opens com.nakel.frontend to javafx.fxml;
     // Le damos permiso a JavaFX para leer tu carpeta de controladores

@@ -12,6 +12,11 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.util.Callback;
+import org.kordamp.ikonli.javafx.FontIcon;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import java.util.Optional;
+
 
 import java.util.List;
 
@@ -85,32 +90,51 @@ public class ArticuloController {
 
         // 4. 🔥 LA MAGIA: Botones en la columna de Acciones
         // IMPORTANTE: Definimos la columna como <Articulo, Articulo> para poder acceder al objeto
+        // 4. 🔥 LA MAGIA: Botones en la columna de Acciones con IKONLI
         colAcciones.setCellValueFactory(param -> new javafx.beans.property.ReadOnlyObjectWrapper<>(param.getValue()));
 
+        // Le damos espacio para que no se corten los íconos
+        colAcciones.setPrefWidth(150);
+
         colAcciones.setCellFactory(param -> new TableCell<Articulo, Articulo>() {
-            private final Button btnEditar = new Button("✏️");
-            private final Button btnAjuste = new Button("🔄");
-            private final Button btnEliminar = new Button("🗑️");
-            private final HBox pane = new HBox(5, btnEditar, btnAjuste, btnEliminar);
+
+            // Creamos los botones con los íconos
+            private final Button btnVer = new Button("", new FontIcon("fas-eye"));
+            private final Button btnEditar = new Button("", new FontIcon("fas-pen"));
+
+            // Usamos la variante '-alt' y le damos color rojo
+            private final FontIcon iconoTacho = new FontIcon("fas-trash-alt");
 
             {
+                iconoTacho.setIconColor(javafx.scene.paint.Color.web("#e74c3c"));
+            }
+
+            private final Button btnEliminar = new Button("", iconoTacho);
+
+            private final HBox pane = new HBox(10, btnVer, btnEditar, btnEliminar);
+
+            {
+                pane.setAlignment(javafx.geometry.Pos.CENTER);
+
+                // Hacemos el fondo de los botones invisible
+                btnVer.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
                 btnEditar.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
-                btnAjuste.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
                 btnEliminar.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
+
+                // Conectamos las acciones a los métodos
+                btnVer.setOnAction(e -> {
+                    Articulo art = getItem();
+                    if (art != null) mostrarDetalle(art);
+                });
 
                 btnEditar.setOnAction(e -> {
                     Articulo art = getItem();
-                    if (art != null) System.out.println("✏️ Editar: " + art.getNombre());
-                });
-
-                btnAjuste.setOnAction(e -> {
-                    Articulo art = getItem();
-                    if (art != null) System.out.println("🔄 Ajuste para: " + art.getNombre());
+                    if (art != null) editarArticulo(art);
                 });
 
                 btnEliminar.setOnAction(e -> {
                     Articulo art = getItem();
-                    if (art != null) System.out.println("🗑️ Borrar ID: " + art.getId());
+                    if (art != null) eliminarArticulo(art);
                 });
             }
 
@@ -120,6 +144,47 @@ public class ArticuloController {
                 setGraphic(empty || item == null ? null : pane);
             }
         });
+    }
+
+    // --- ACCIONES DE LOS BOTONES ---
+
+    private void mostrarDetalle(Articulo articulo) {
+        Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+        alerta.setTitle("Detalle del Artículo");
+        alerta.setHeaderText(articulo.getNombre() + " (SKU: " + articulo.getCodigo() + ")");
+
+        String info = "Precio: $" + articulo.getPrecio() + "\n"
+                + "Stock Actual: " + articulo.getStockActual() + " unidades\n"
+                + "Origen: " + articulo.getOrigen() + "\n\n"
+                + "--- ESTADÍSTICAS ---\n"
+                + "Ventas Históricas: (Próximamente)\n";
+
+        alerta.setContentText(info);
+        alerta.showAndWait();
+    }
+
+    private void editarArticulo(Articulo articulo) {
+        System.out.println("Abriendo editor para: " + articulo.getNombre());
+        // TODO: Acá en el futuro abriremos el mismo Dialog (o FXML) pero precargando los datos
+    }
+
+    private void eliminarArticulo(Articulo articulo) {
+        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION);
+        alerta.setTitle("Confirmar Eliminación");
+        alerta.setHeaderText("Vas a eliminar " + articulo.getNombre());
+        alerta.setContentText("¿Estás seguro? Esta acción no se puede deshacer.");
+
+        Optional<ButtonType> resultado = alerta.showAndWait();
+        if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
+            try {
+                // Ahora sí, llamamos al método real
+                apiService.eliminarArticuloDeBaseDeDatos(articulo.getId());
+                cargarTabla(); // Y recargamos la tabla para que desaparezca visualmente
+            } catch (Exception e) {
+                Alert error = new Alert(Alert.AlertType.ERROR, "No se pudo eliminar: " + e.getMessage());
+                error.showAndWait();
+            }
+        }
     }
 
     private void cargarTabla() {

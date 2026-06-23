@@ -33,10 +33,9 @@ public class ClienteApiService {
         return "[]";
     }
 
-    // =============== 2. NUEVO: BUSCADOR PREDICTIVO ===============
+    // =============== 2. BUSCADOR PREDICTIVO ===============
     public String buscarClientesPorNombre(String nombre) {
         try {
-            // Reemplazamos los espacios por %20 para que la URL no explote (ej: "Juan Perez" -> "Juan%20Perez")
             String parametro = nombre.replace(" ", "%20");
             HttpRequest peticion = HttpRequest.newBuilder()
                     .uri(URI.create(API_URL + "/buscar?nombre=" + parametro))
@@ -55,15 +54,14 @@ public class ClienteApiService {
     }
 
     // =============== 3. GUARDAR CLIENTE (POST BLINDADO) ===============
-    // Ahora devuelve 'void' pero lanza un Exception si el Backend se queja
     public void guardarClienteEnBaseDeDatos(String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
 
         Map<String, String> datosCliente = new HashMap<>();
         datosCliente.put("nombre", nombre);
-        datosCliente.put("cuit", cuit); // ⚠️ CAMBIADO: 'documento' -> 'cuit'
+        datosCliente.put("cuit", cuit);
         datosCliente.put("condicionIva", condicionIva);
         datosCliente.put("telefono", telefono);
-        datosCliente.put("email", email); // Te sumé el email que faltaba
+        datosCliente.put("email", email);
 
         String jsonMandar = gson.toJson(datosCliente);
 
@@ -75,12 +73,9 @@ public class ClienteApiService {
 
         HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-        // 🛡️ Si el Backend devuelve Error 400 (CUIT Duplicado), lanzamos el mensaje a JavaFX
         if (respuesta.statusCode() == 400) {
             throw new RuntimeException(respuesta.body());
-        }
-        // Si no es ni 200 ni 201 y tampoco 400, es otro error raro
-        else if (respuesta.statusCode() != 200 && respuesta.statusCode() != 201) {
+        } else if (respuesta.statusCode() != 200 && respuesta.statusCode() != 201) {
             throw new RuntimeException("Error al comunicarse con el servidor (Código: " + respuesta.statusCode() + ")");
         }
     }
@@ -96,11 +91,26 @@ public class ClienteApiService {
             HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
             if (respuesta.statusCode() == 200) {
-                return respuesta.body(); // ¡Existe! Devolvemos los datos de Pepe
+                return respuesta.body();
             }
         } catch (Exception e) {
             System.out.println("Error al verificar DNI: " + e.getMessage());
         }
-        return null; // No existe (dio 404 Not Found)
+        return null;
+    }
+
+    // =============== 5. ¡NUEVO! ELIMINAR CLIENTE DE LA BASE DE DATOS ===============
+    public void eliminarClienteDeBaseDeDatos(Long id) throws Exception {
+        HttpRequest peticion = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL + "/" + id))
+                .DELETE() // Tipo de petición HTTP para borrar
+                .build();
+
+        HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+        // Si el servidor no responde 200 (OK) o 204 (No Content), significa que falló
+        if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
+            throw new Exception("Error del servidor al eliminar el cliente.");
+        }
     }
 }

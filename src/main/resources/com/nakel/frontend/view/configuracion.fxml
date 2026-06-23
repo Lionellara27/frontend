@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<AnchorPane prefHeight="550.0" prefWidth="750.0"
+            styleClass="mostrador-container"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.nakel.frontend.controller.ConfiguracionController">
+
+    <children>
+        <TabPane fx:id="tabPaneConfig" prefHeight="522.0" prefWidth="722.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0">
+            <tabs>
+                <Tab text="Precios y Divisas">
+                    <graphic>
+                        <FontIcon iconLiteral="fas-dollar-sign" />
+                    </graphic>
+                    <content>
+                        <fx:include source="tab_divisas.fxml" />
+                    </content>
+                </Tab>
+
+                <Tab text="Seguridad">
+                    <graphic>
+                        <FontIcon iconLiteral="fas-lock" />
+                    </graphic>
+                    <content>
+                        <fx:include source="tab_seguridad.fxml" />
+                    </content>
+                </Tab>
+
+                <Tab text="Categorías y Parámetros">
+                    <graphic>
+                        <FontIcon iconLiteral="fas-boxes" />
+                    </graphic>
+                    <content>
+                        <fx:include source="tab_parametros.fxml" />
+                    </content>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </children>
+</AnchorPane>
