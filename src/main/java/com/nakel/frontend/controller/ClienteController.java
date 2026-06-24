@@ -1,6 +1,9 @@
 package com.nakel.frontend.controller;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Cliente;
 import com.nakel.frontend.service.ClienteApiService;
@@ -103,16 +106,26 @@ public class ClienteController {
     private void cargarClientesEnTabla() {
         String json = apiService.obtenerClientes();
 
-        if (json != null && !json.equals("[]")) {
+        if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
-                Type tipoLista = new TypeToken<List<Cliente>>(){}.getType();
-                List<Cliente> listaClientes = gson.fromJson(json, tipoLista);
+                // 1. Leemos la respuesta del servidor como un Objeto JSON completo
+                JsonObject respuestaServidor = JsonParser.parseString(json).getAsJsonObject();
 
+                // 2. Extraemos ÚNICAMENTE la lista que está adentro de "content"
+                JsonArray arregloClientes = respuestaServidor.getAsJsonArray("content");
+
+                // 3. Convertimos ese arreglo a nuestra lista de Java
+                Type tipoLista = new TypeToken<List<Cliente>>(){}.getType();
+                List<Cliente> listaClientes = gson.fromJson(arregloClientes, tipoLista);
+
+                // 4. Llenamos la tabla de JavaFX
                 ObservableList<Cliente> datosObservable = FXCollections.observableArrayList(listaClientes);
                 tablaClientes.setItems(datosObservable);
+
                 System.out.println("✅ Tabla cargada con " + listaClientes.size() + " clientes.");
             } catch (Exception e) {
                 System.out.println("❌ Error al convertir el JSON a la tabla: " + e.getMessage());
+                e.printStackTrace(); // Opcional: te ayuda a ver en la consola dónde falló exactamente
             }
         } else {
             System.out.println("⚠️ La base de datos está vacía o el JSON vino nulo.");

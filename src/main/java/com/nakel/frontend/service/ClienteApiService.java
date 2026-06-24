@@ -80,6 +80,34 @@ public class ClienteApiService {
         }
     }
 
+    // =============== 3.5. ACTUALIZAR CLIENTE (PUT) ===============
+    public void actualizarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
+
+        Map<String, Object> datosCliente = new HashMap<>(); // Usamos Object por si el ID es numérico
+        datosCliente.put("id", id);
+        datosCliente.put("nombre", nombre);
+        datosCliente.put("cuit", cuit);
+        datosCliente.put("condicionIva", condicionIva);
+        datosCliente.put("telefono", telefono);
+        datosCliente.put("email", email);
+
+        String jsonMandar = gson.toJson(datosCliente);
+
+        HttpRequest peticion = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL + "/" + id)) // ¡Ojo a la URL! Le pasamos el ID
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(jsonMandar)) // Usamos PUT para modificar
+                .build();
+
+        HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+        if (respuesta.statusCode() == 400 || respuesta.statusCode() == 500) {
+            throw new RuntimeException("Error del servidor: " + respuesta.body());
+        } else if (respuesta.statusCode() != 200) {
+            throw new RuntimeException("Error al comunicarse con el servidor (Código: " + respuesta.statusCode() + ")");
+        }
+    }
+
     // =============== 4. VERIFICAR SI EXISTE POR DNI ===============
     public String buscarClientePorCuit(String cuit) {
         try {
@@ -103,14 +131,14 @@ public class ClienteApiService {
     public void eliminarClienteDeBaseDeDatos(Long id) throws Exception {
         HttpRequest peticion = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL + "/" + id))
-                .DELETE() // Tipo de petición HTTP para borrar
+                .DELETE()
                 .build();
 
         HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-        // Si el servidor no responde 200 (OK) o 204 (No Content), significa que falló
+        // Si falló (código 400 o 500) leemos el mensaje exacto que manda el backend
         if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
-            throw new Exception("Error del servidor al eliminar el cliente.");
+            throw new Exception("Error " + respuesta.statusCode() + ": " + respuesta.body());
         }
     }
 }

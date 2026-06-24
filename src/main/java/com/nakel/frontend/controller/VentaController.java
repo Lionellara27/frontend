@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 import com.nakel.frontend.model.Articulo;
 import com.nakel.frontend.model.DetalleVenta;
 import com.nakel.frontend.model.LineaTicket;
+import com.nakel.frontend.model.Pago;
 import com.nakel.frontend.service.ArticuloApiService;
+import com.nakel.frontend.service.VentaApiService;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -171,15 +173,73 @@ public class VentaController {
         colNombre.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
         colPrecio.setCellValueFactory(cell -> new SimpleDoubleProperty(cell.getValue().getArticulo().getPrecio()).asObject());
 
-        // 2. Datos que le pertenecen directamente a la LineaTicket
-        colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
-        colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotal")); // Magia de Java: llama a getSubtotal()
+        // 2. Datos de Cantidad + 💥 ¡BOTONES MAS Y MENOS!
+        colCantidad.setCellValueFactory(new javafx.scene.control.cell.PropertyValueFactory<>("cantidad"));
+        colCantidad.setCellFactory(param -> new TableCell<LineaTicket, Integer>() {
+            private final Button btnMenos = new Button("-");
+            private final Label lblCantidad = new Label();
+            private final Button btnMas = new Button("+");
+            // Metemos los tres elementos en una cajita horizontal con 8px de separación
+            private final javafx.scene.layout.HBox panel = new javafx.scene.layout.HBox(8, btnMenos, lblCantidad, btnMas);
 
-        // 3. 💥 ¡NUEVO! El Botón de Eliminar (El punto de tu PDF)
+            {
+                panel.setAlignment(javafx.geometry.Pos.CENTER);
+                btnMenos.getStyleClass().add("btn-cantidad-accion"); // Clases para darles estilo en el CSS
+                btnMas.getStyleClass().add("btn-cantidad-accion");
+
+                // LÓGICA DEL BOTÓN "+"
+                btnMas.setOnAction(e -> {
+                    LineaTicket linea = getTableView().getItems().get(getIndex());
+
+                    // 🛑 CONTROL DE STOCK: Solo suma si no supera el stock actual del artículo
+                    if (linea.getCantidad() < linea.getArticulo().getStockActual()) {
+                        linea.setCantidad(linea.getCantidad() + 1);
+
+                        // Recalculamos el subtotal de este renglón
+                        //linea.setSubtotal(linea.getArticulo().getPrecio() * linea.getCantidad());
+
+                        getTableView().refresh(); // Refresca la vista de la tabla
+                        actualizarTotal();        // 🔥 Llama a tu método para actualizar el número gigante
+                    } else {
+                        System.out.println("❌ No podés agregar más, es el límite del stock.");
+                    }
+                });
+
+                // LÓGICA DEL BOTÓN "-"
+                btnMenos.setOnAction(e -> {
+                    LineaTicket linea = getTableView().getItems().get(getIndex());
+
+                    // Solo restamos si es mayor a 1 (si quieren dejarlo en 0 usan la ❌)
+                    if (linea.getCantidad() > 1) {
+                        linea.setCantidad(linea.getCantidad() - 1);
+                        //linea.setSubtotal(linea.getArticulo().getPrecio() * linea.getCantidad());
+
+                        getTableView().refresh();
+                        actualizarTotal();
+                    }
+                });
+            }
+
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                } else {
+                    lblCantidad.setText(String.valueOf(item));
+                    setGraphic(panel);
+                }
+            }
+        });
+
+        // 3. Subtotal
+        colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotal"));
+
+        // 4. El Botón de Eliminar (Tu código original intacto)
         colAccion.setCellFactory(param -> new TableCell<LineaTicket, Void>() {
             private final Button btnEliminar = new Button("❌");
             {
-                btnEliminar.getStyleClass().add("btn-eliminar"); // Ponele estilo rojo en el CSS
+                btnEliminar.getStyleClass().add("btn-eliminar");
                 btnEliminar.setOnAction(e -> {
                     LineaTicket linea = getTableView().getItems().get(getIndex());
                     tablaTicket.getItems().remove(linea);
@@ -265,6 +325,77 @@ public class VentaController {
                 .sum();
     }
 
+
+
+
+
+    //
+    private void ejecutarProcesoDeCierreDeVenta(List<com.nakel.frontend.model.Pago> listaPagos) {
+        // 1. Validación de seguridad básica: que no cobren un ticket vacío
+        if (tablaTicket.getItems().isEmpty()) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Ticket vacío", "No hay productos en el mostrador para cobrar.");
+            return;
+        }
+
+        // 2. Mapeamos las líneas del ticket visual a objetos puros de DetalleVenta
+        List<com.nakel.frontend.model.DetalleVenta> detalles = new ArrayList<>();
+        for (LineaTicket linea : tablaTicket.getItems()) {
+            detalles.add(new com.nakel.frontend.model.DetalleVenta(
+                    linea.getCantidad(),
+                    linea.getArticulo().getPrecio(),
+                    linea.getSubtotal(),
+                    linea.getArticulo()
+            ));
+        }
+
+        // 3. Extraemos el Cliente seleccionado (limpiando el String del ComboBox)
+        String clienteSeleccionado = cmbCliente.getValue();
+        com.nakel.frontend.model.Cliente clienteParaBackend = new com.nakel.frontend.model.Cliente();
+
+        if (clienteSeleccionado != null && clienteSeleccionado.contains(" - ")) {
+            String[] partes = clienteSeleccionado.split(" - ");
+            // Guardamos solo el CUIT/DNI en el objeto (la posición 1 del corte)
+            clienteParaBackend.setCuit(partes[1].trim());
+        }
+
+        // 4. Armamos el objeto Venta consolidado para mandar al Backend
+        com.nakel.frontend.model.Venta ventaFinal = new com.nakel.frontend.model.Venta(
+                clienteParaBackend, // 🔥 ACÁ PASAMOS EL OBJETO, YA NO ES UN STRING
+                obtenerTotalNumerico(),
+                true, // esFiscal (el VentaService del backend recalculará esto)
+                chkRegalo.isSelected(),
+                detalles,
+                listaPagos
+        );
+
+        // 5. Impactamos en la API
+        VentaApiService apiVentas = new VentaApiService();
+        boolean exito = apiVentas.registrarVenta(ventaFinal);
+
+        if (exito) {
+            mostrarAlerta(Alert.AlertType.INFORMATION, "¡Venta Exitosa!", "La transacción se registró correctamente en el sistema.");
+
+            // 🧼 LIMPIEZA POST-VENTA: Dejamos la caja lista para la próxima clienta
+            tablaTicket.getItems().clear();
+            actualizarTotal();
+            chkRegalo.setSelected(false);
+            cmbCliente.setValue(null); // O el cliente por defecto que manejes
+        } else {
+            mostrarAlerta(Alert.AlertType.ERROR, "Error de Red", "No se pudo guardar la venta. Revisá si el Backend está encendido.");
+        }
+    }
+
+    // Método auxiliar rápido para los Pop-ups de aviso
+    private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {
+        Alert alerta = new Alert(tipo);
+        alerta.setTitle(titulo);
+        alerta.setHeaderText(null);
+        alerta.setContentText(mensaje);
+        alerta.showAndWait();
+    }
+
+    //
+
     // 2. Así queda tu cobrarVenta modificado
     @FXML
     public void cobrarVenta(ActionEvent event) {
@@ -273,224 +404,111 @@ public class VentaController {
         if ("Pago Mixto".equals(medioPago)) {
             abrirVentanaPagoMixto();
         } else {
-            // A. Armamos los detalles
-            List<DetalleVenta> detalles = new ArrayList<>();
-            for (LineaTicket linea : tablaTicket.getItems()) {
-                detalles.add(new com.nakel.frontend.model.DetalleVenta(
-                        linea.getCantidad(),
-                        linea.getArticulo().getPrecio(),
-                        linea.getSubtotal(),
-                        linea.getArticulo()
-                ));
-            }
-
-            // B. Armamos el pago
+            // Es un pago simple de un solo método. Armamos la lista con un único pago.
             List<com.nakel.frontend.model.Pago> pagos = new ArrayList<>();
             pagos.add(new com.nakel.frontend.model.Pago(medioPago, obtenerTotalNumerico()));
 
-            // C. Armamos el objeto Venta (tu molde)
-            com.nakel.frontend.model.Venta venta = new com.nakel.frontend.model.Venta(
-                    cmbCliente.getValue(),
-                    obtenerTotalNumerico(),
-                    true, // esFiscal: dejalo en true o vinculalo a tu cmbTipoFactura
-                    chkRegalo.isSelected(),
-                    detalles,
-                    pagos
-            );
-
-            // D. Mandamos a la API
-            com.nakel.frontend.service.VentaApiService api = new com.nakel.frontend.service.VentaApiService();
-            boolean exito = api.registrarVenta(venta);
-
-            if (exito) {
-                System.out.println("✅ Venta enviada correctamente al Backend.");
-                tablaTicket.getItems().clear();
-                actualizarTotal();
-            } else {
-                System.out.println("❌ Error: No se pudo conectar con el Backend.");
-            }
+            // Disparamos el proceso central
+            ejecutarProcesoDeCierreDeVenta(pagos);
         }
     }
 
     @FXML
     public void abrirClienteExpress(ActionEvent event) {
-        javafx.scene.control.Dialog<String> dialog = new javafx.scene.control.Dialog<>();
+        try {
+            // 1. Cargamos el diseño visual desde el archivo FXML
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/cliente-express-modal.fxml"));
+            javafx.scene.Parent root = loader.load();
 
-        // 1. APLICAMOS EL CSS BASE AL CONTENEDOR
-        dialog.getDialogPane().getStylesheets().add(
-                getClass().getResource("/css/nakel.css").toExternalForm()
-        );
-        dialog.getDialogPane().getStyleClass().add("mostrador-container");
+            // 2. Preparamos el Pop-up (Dialog)
+            javafx.scene.control.Dialog<String> dialog = new javafx.scene.control.Dialog<>();
+            dialog.setTitle("Alta Exprés");
+            dialog.setHeaderText("Cargar nuevo cliente rápido");
+            dialog.getDialogPane().setContent(root);
 
-        dialog.setTitle("Alta Exprés");
-        dialog.setHeaderText("Cargar nuevo cliente rápido");
+            // 3. Agregamos los botones
+            javafx.scene.control.ButtonType btnGuardar = new javafx.scene.control.ButtonType("💾 Guardar", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+            dialog.getDialogPane().getButtonTypes().addAll(btnGuardar, javafx.scene.control.ButtonType.CANCEL);
 
-        javafx.scene.control.ButtonType btnGuardar = new javafx.scene.control.ButtonType("💾 Guardar", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(btnGuardar, javafx.scene.control.ButtonType.CANCEL);
+            // Le damos tu estilo dorado Nakel al botón Guardar
+            javafx.scene.Node botonGuardarNode = dialog.getDialogPane().lookupButton(btnGuardar);
+            botonGuardarNode.getStyleClass().add("btn-primario");
 
-        // 2. APLICAMOS EL CSS AL BOTÓN GUARDAR (Dorado Nakel)
-        javafx.scene.Node botonGuardarNode = dialog.getDialogPane().lookupButton(btnGuardar);
-        botonGuardarNode.getStyleClass().add("btn-primario");
+            // 4. Conectamos con el nuevo Controlador del Modal
+            ClienteExpressController controladorModal = loader.getController();
 
-        javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
-        grid.setHgap(10); grid.setVgap(10); grid.setPadding(new javafx.geometry.Insets(20, 20, 10, 10));
-
-        // 3. APLICAMOS EL CSS A LOS CAMPOS DE TEXTO
-        javafx.scene.control.TextField txtDni = new javafx.scene.control.TextField();
-        txtDni.setPromptText("Ej: 20123456789");
-        txtDni.getStyleClass().add("text-field");
-
-        javafx.scene.control.TextField txtNombre = new javafx.scene.control.TextField();
-        txtNombre.setPromptText("Nombre y Apellido");
-        txtNombre.getStyleClass().add("text-field");
-
-        grid.add(new javafx.scene.control.Label("DNI/CUIT:"), 0, 0);
-        grid.add(txtDni, 1, 0);
-        grid.add(new javafx.scene.control.Label("Nombre:"), 0, 1);
-        grid.add(txtNombre, 1, 1);
-
-        dialog.getDialogPane().setContent(grid);
-
-        // 🧠 4. ACÁ SUCEDE LA MAGIA ANTI-FRICCIÓN
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == btnGuardar) {
-                String dni = txtDni.getText();
-                String nombreIngresado = txtNombre.getText();
-
-                com.nakel.frontend.service.ClienteApiService api = new com.nakel.frontend.service.ClienteApiService();
-
-                // PREGUNTAMOS: ¿Pepe ya vino alguna vez?
-                String clienteJson = api.buscarClientePorCuit(dni);
-
-                if (clienteJson != null && !clienteJson.isBlank()) {
-                    // 💥 ¡PEPE YA EXISTE! Lo reciclamos
-                    com.nakel.frontend.model.Cliente pepeHistorico = gson.fromJson(clienteJson, com.nakel.frontend.model.Cliente.class);
-                    String itemCombo = pepeHistorico.getNombre() + " - " + pepeHistorico.getCuit();
-
-                    // Cartelito para avisar al cajero que ahorró tiempo
-                    Alert alerta = new Alert(Alert.AlertType.INFORMATION);
-                    alerta.setTitle("Cliente Existente");
-                    alerta.setHeaderText("¡" + pepeHistorico.getNombre() + " ya estaba registrado!");
-                    alerta.setContentText("Se cargará automáticamente en el mostrador.");
-                    alerta.showAndWait();
-
-                    // Lo metemos en el ComboBox si no estaba y lo seleccionamos
-                    if (!cmbCliente.getItems().contains(itemCombo)) {
-                        cmbCliente.getItems().add(itemCombo);
-                    }
-                    cmbCliente.setValue(itemCombo);
-
-                } else {
-                    // 🆕 NO EXISTE: LO CREAMOS NUEVO
-                    try {
-                        // Recordá: la nueva firma pide 5 datos (nombre, cuit, iva, telefono, email). Mandamos vacío lo que no tenemos.
-                        api.guardarClienteEnBaseDeDatos(nombreIngresado, dni, "CONSUMIDOR_FINAL", "", "");
-
-                        String nuevoItem = nombreIngresado + " - " + dni;
-                        cmbCliente.getItems().add(nuevoItem);
-                        cmbCliente.setValue(nuevoItem);
-                        System.out.println("✅ Cliente rápido creado y seleccionado.");
-
-                    } catch (Exception e) {
-                        // Si el backend explota por otra cosa (ej. se cortó internet), atajamos el error acá
-                        Alert error = new Alert(Alert.AlertType.ERROR);
-                        error.setTitle("Error al guardar");
-                        error.setHeaderText("No se pudo crear el cliente");
-                        error.setContentText(e.getMessage());
-                        error.showAndWait();
-                    }
+            // 5. ¿Qué pasa cuando el cajero presiona "Guardar"?
+            dialog.setResultConverter(btn -> {
+                if (btn == btnGuardar) {
+                    // Delegamos toda la lógica de la API al otro controlador
+                    return controladorModal.procesarGuardado(); // Devuelve "Nombre - CUIT"
                 }
-            }
-            return null;
-        });
+                return null;
+            });
 
-        dialog.showAndWait();
+            // 6. Si el proceso fue exitoso, metemos al cliente en el ComboBox del mostrador
+            dialog.showAndWait().ifPresent(resultado -> {
+                if (resultado != null) {
+                    if (!cmbCliente.getItems().contains(resultado)) {
+                        cmbCliente.getItems().add(resultado);
+                    }
+                    cmbCliente.setValue(resultado);
+                    System.out.println("✅ Cliente rápido seleccionado en el mostrador.");
+                }
+            });
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al abrir la ventana de Alta Exprés.");
+            e.printStackTrace();
+        }
     }
 
-    private void abrirVentanaPagoMixto() {
+//
+private void abrirVentanaPagoMixto() {
+    try {
+        // 1. Cargamos el diseño visual desde el archivo FXML (¡Adiós a dibujar con código!)
+        javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/pago-mixto-modal.fxml"));
+        javafx.scene.Parent root = loader.load();
+
         javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
-
-        // 1. APLICAMOS EL CSS BASE (¡Esto lo hiciste perfecto!)
-        dialog.getDialogPane().getStylesheets().add(
-                getClass().getResource("/css/nakel.css").toExternalForm()
-        );
-        dialog.getDialogPane().getStyleClass().add("mostrador-container");
-
         dialog.setTitle("Cobro Dividido / Mixto");
         dialog.setHeaderText("Agregá los pagos hasta completar el total");
 
-        // Botón para facturar
         javafx.scene.control.ButtonType btnFacturar = new javafx.scene.control.ButtonType("✅ Emitir Factura", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(btnFacturar, javafx.scene.control.ButtonType.CANCEL);
 
-        // ESTILO BOTÓN FACTURAR: Le ponemos tu clase dorada
         javafx.scene.Node botonFacturarNode = dialog.getDialogPane().lookupButton(btnFacturar);
-        botonFacturarNode.getStyleClass().add("btn-primario"); // <-- FALTABA ESTO
-        botonFacturarNode.setDisable(true);
+        botonFacturarNode.getStyleClass().add("btn-primario");
+        botonFacturarNode.setDisable(true); // Arranca deshabilitado hasta que complete el pago
 
-        final double[] faltaCobrar = {60000.00};
+        // 2. 🔥 MAGIA PURA: Le pasamos el total REAL de la venta al nuevo controlador
+        PagoMixtoController controladorModal = loader.getController();
+        controladorModal.inicializarValores(obtenerTotalNumerico(), (javafx.scene.control.Button) botonFacturarNode);
 
-        javafx.scene.control.Label lblTotal = new javafx.scene.control.Label("Total de la Venta: $ 60000.00");
-        lblTotal.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        // 3. Metemos el diseño FXML adentro del Pop-up
+        dialog.getDialogPane().setContent(root);
 
-        javafx.scene.control.Label lblFalta = new javafx.scene.control.Label("Falta Cobrar: $ 60000.00");
-        lblFalta.setStyle("-fx-font-size: 18px; -fx-text-fill: #d32f2f; -fx-font-weight: bold;");
-
-        // ESTILO CAMPO MONTO
-        javafx.scene.control.TextField txtMonto = new javafx.scene.control.TextField();
-        txtMonto.setPromptText("Ej: 20000");
-        txtMonto.getStyleClass().add("text-field"); // <-- FALTABA ESTO
-
-        // ESTILO COMBOBOX Y DEBITO/CREDITO SEPARADO
-        javafx.scene.control.ComboBox<String> cmbMetodo = new javafx.scene.control.ComboBox<>();
-        cmbMetodo.getItems().addAll("Efectivo", "Transferencia", "MercadoPago", "Tarjeta de Débito", "Tarjeta de Crédito");
-        cmbMetodo.getStyleClass().add("combo-pago"); // <-- FALTABA ESTO
-
-        // ESTILO BOTÓN AGREGAR
-        javafx.scene.control.Button btnAgregar = new javafx.scene.control.Button("➕ Agregar");
-        btnAgregar.getStyleClass().add("btn-secundario"); // <-- FALTABA ESTO
-
-        javafx.scene.layout.HBox cajaAgregar = new javafx.scene.layout.HBox(10, txtMonto, cmbMetodo, btnAgregar);
-
-        javafx.scene.control.ListView<String> listaPagos = new javafx.scene.control.ListView<>();
-        listaPagos.setPrefHeight(120);
-
-        btnAgregar.setOnAction(e -> {
-            try {
-                double monto = Double.parseDouble(txtMonto.getText());
-                if (monto > 0 && monto <= faltaCobrar[0] && cmbMetodo.getValue() != null) {
-                    listaPagos.getItems().add(cmbMetodo.getValue() + " -> $ " + monto);
-                    faltaCobrar[0] -= monto;
-                    lblFalta.setText("Falta Cobrar: $ " + faltaCobrar[0]);
-                    txtMonto.clear();
-
-                    if (faltaCobrar[0] == 0) {
-                        lblFalta.setText("¡Pago Completo, listo para facturar!");
-                        lblFalta.setStyle("-fx-font-size: 18px; -fx-text-fill: #2e7d32; -fx-font-weight: bold;");
-                        botonFacturarNode.setDisable(false);
-                        cajaAgregar.setDisable(true);
-                    }
-                }
-            } catch (Exception ex) {
-                System.out.println("El cajero escribió letras en vez de números");
-            }
-        });
-
-        javafx.scene.layout.VBox vbox = new javafx.scene.layout.VBox(15, lblTotal, lblFalta, cajaAgregar, listaPagos);
-        vbox.setPadding(new javafx.geometry.Insets(20));
-        dialog.getDialogPane().setContent(vbox);
-
+        // 4. ¿Qué pasa cuando hacen clic en "Emitir Factura"?
         dialog.setResultConverter(btn -> {
-            if (btn == btnFacturar) {
+            if (btn == btnFacturar && controladorModal.isPagoCompleto()) {
                 System.out.println("=====================================");
                 System.out.println("💸 FACTURANDO PAGO MIXTO CON ÉXITO");
                 System.out.println("=====================================");
+
+                // 🚀 Próximo paso: Acá llamaremos al backend con la lista de pagos
+                List<Pago> pagos = controladorModal.getPagosRegistrados();
+                ejecutarProcesoDeCierreDeVenta(pagos);
             }
             return null;
         });
 
         dialog.showAndWait();
+
+    } catch (Exception e) {
+        System.err.println("Error al abrir la ventana de pago mixto.");
+        e.printStackTrace();
     }
+}
 
     // 🧮 Método para sumar los precios de la tabla
     private void actualizarTotal() {

@@ -29,11 +29,11 @@ public class LineaTicket {
     }
 
     // 🔥 EL TRUCO DE MAGIA: El subtotal se calcula solo
+// 🔥 EL TRUCO DE MAGIA: El subtotal se calcula solo
     public double getSubtotal() {
-        if (articulo != null && articulo.getPrecio() != null) {
-            return articulo.getPrecio() * cantidad;
-        }
-        return 0.0;
+        return (articulo != null && articulo.getPrecio() != null)
+                ? articulo.getPrecio() * cantidad
+                : 0.0;
     }
 
     // Método útil para cuando hacen doble clic repetido

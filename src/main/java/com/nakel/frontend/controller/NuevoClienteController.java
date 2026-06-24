@@ -4,6 +4,7 @@ import com.nakel.frontend.service.ClienteApiService;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
@@ -16,6 +17,11 @@ public class NuevoClienteController {
     @FXML private TextField txtTelefono;
     @FXML private TextField txtDni;
     @FXML private TextField txtEmail;
+
+    //nuevo
+    @FXML private TextField txtCuit;
+    @FXML private ComboBox<String> cmbIva;
+    @FXML private Button btnGuardar;
 
     private Long idClienteEditando = null;
 
@@ -33,15 +39,23 @@ public class NuevoClienteController {
 
     //
     public void cargarDatosParaEditar(com.nakel.frontend.model.Cliente cliente) {
-        this.idClienteEditando = cliente.getId(); // Guardamos el ID para saber que estamos actualizando
+        // 1. Guardamos el ID para saber que estamos actualizando
+        this.idClienteEditando = cliente.getId();
 
+        // 2. Llenamos los campos
         txtNombre.setText(cliente.getNombre());
-        txtDni.setText(cliente.getCuit());
         txtTelefono.setText(cliente.getTelefono());
         txtEmail.setText(cliente.getEmail());
-        if (cliente.getCondicionIva() != null && !cliente.getCondicionIva().isEmpty()) {
+
+        // 3. Manejo seguro del ComboBox
+        if (cliente.getCondicionIva() != null) {
             cmbTipoCliente.setValue(cliente.getCondicionIva());
         }
+
+        // 4. 🔥 BLINDAJE: El DNI/CUIT no se toca en modo edición
+        txtDni.setText(cliente.getCuit());
+        txtDni.setDisable(true);
+        txtDni.setStyle("-fx-opacity: 0.7; -fx-background-color: #f0f0f0;"); // Lo ponemos gris claro para que se note
     }
 
     @FXML
