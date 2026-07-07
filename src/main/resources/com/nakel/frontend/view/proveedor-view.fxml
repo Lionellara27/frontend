@@ -27,12 +27,12 @@
 
     <TableView fx:id="tablaProveedores" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
         <columns>
-            <TableColumn text="Razón Social / Empresa" prefWidth="200"/>
-            <TableColumn text="Nombre Contacto" prefWidth="150"/>
-            <TableColumn text="Teléfono" prefWidth="120"/>
-            <TableColumn text="Rubro (Ej: Cueros)" prefWidth="120"/>
-            <TableColumn text="Saldo Cta. Cte." prefWidth="120"/>
-            <TableColumn text="Acciones" prefWidth="100"/>
+            <TableColumn fx:id="colRazonSocial" text="Razón Social / Empresa" prefWidth="200"/>
+            <TableColumn fx:id="colNombreContacto" text="Nombre Contacto" prefWidth="150"/>
+            <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="120"/>
+            <TableColumn fx:id="colRubro" text="Rubro (Ej: Cueros)" prefWidth="120"/>
+            <TableColumn fx:id="colSaldo" text="Saldo Cta. Cte." prefWidth="120"/>
+            <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
         </columns>
     </TableView>
 

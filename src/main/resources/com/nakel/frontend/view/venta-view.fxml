@@ -54,8 +54,8 @@
 
                 <columns>
                     <TableColumn fx:id="colCodigo" text="Código" prefWidth="120"/>
-                    <TableColumn fx:id="colNombre" text="Descripción" prefWidth="350"/>
-                    <TableColumn fx:id="colCantidad" text="Cant." prefWidth="70"/>
+                    <TableColumn fx:id="colNombre" text="Descripción" prefWidth="300"/>
+                    <TableColumn fx:id="colCantidad" text="Cant." prefWidth="100"/>
                     <TableColumn fx:id="colPrecio" text="Precio U." prefWidth="120"/>
                     <TableColumn fx:id="colSubtotal" text="Subtotal" prefWidth="120"/>
                     <TableColumn fx:id="colAccion" text="Acción" prefWidth="80"/>

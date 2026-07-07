@@ -49,6 +49,7 @@ public class ClienteController {
     @FXML
     public void initialize() {
         System.out.println("¡Módulo de Clientes cargado con éxito!");
+        tablaClientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarTabla();
         cargarClientesEnTabla();
     }

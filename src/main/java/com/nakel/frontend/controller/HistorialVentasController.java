@@ -39,6 +39,7 @@ public class HistorialVentasController {
     @FXML
     public void initialize() {
         System.out.println("Módulo de Historial de Ventas listo.");
+        tablaVentas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarColumnas();
         cargarVentas();
     }

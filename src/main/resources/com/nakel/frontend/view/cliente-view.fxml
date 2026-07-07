@@ -35,7 +35,7 @@
             <TableColumn fx:id="colNombre" text="Nombre / Razón Social" prefWidth="250"/>
             <TableColumn fx:id="colDni" text="DNI / CUIT" prefWidth="120"/>
             <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="150"/>
-            <TableColumn fx:id="colEmail" text="Email" prefWidth="250"/>
+            <TableColumn fx:id="colEmail" text="Email" prefWidth="150"/>
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
         </columns>
     </TableView>
