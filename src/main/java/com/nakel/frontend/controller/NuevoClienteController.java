@@ -71,6 +71,7 @@ public class NuevoClienteController {
 
             // 🚀 3. Disparamos los datos reales a la base de datos a través de la API
             apiService.guardarClienteEnBaseDeDatos(
+                    this.idClienteEditando, // 🔥 ¡AHORA SÍ MANDAMOS EL ID! (Puede ser null o el número)
                     txtNombre.getText(),
                     txtDni.getText(),
                     cmbTipoCliente.getValue(),

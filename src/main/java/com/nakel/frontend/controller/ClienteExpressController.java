@@ -41,7 +41,7 @@ public class ClienteExpressController {
                 return pepeHistorico.getNombre() + " - " + pepeHistorico.getCuit();
             } else {
                 // 🆕 NO EXISTE: LO CREAMOS NUEVO
-                api.guardarClienteEnBaseDeDatos(nombreIngresado, dni, "CONSUMIDOR_FINAL", "", "");
+                api.guardarClienteEnBaseDeDatos(null, nombreIngresado, dni, "CONSUMIDOR_FINAL", "", "");
                 return nombreIngresado + " - " + dni;
             }
         } catch (Exception e) {

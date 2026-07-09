@@ -54,9 +54,16 @@ public class ClienteApiService {
     }
 
     // =============== 3. GUARDAR CLIENTE (POST BLINDADO) ===============
-    public void guardarClienteEnBaseDeDatos(String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
+    public void guardarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
 
-        Map<String, String> datosCliente = new HashMap<>();
+        // 🔥 1. CAMBIO CLAVE: Usamos <String, Object> para que acepte el Long del ID
+        Map<String, Object> datosCliente = new HashMap<>();
+
+        // 🔥 2. LA MAGIA: Si el ID existe, lo inyectamos al JSON
+        if (id != null) {
+            datosCliente.put("id", id);
+        }
+
         datosCliente.put("nombre", nombre);
         datosCliente.put("cuit", cuit);
         datosCliente.put("condicionIva", condicionIva);

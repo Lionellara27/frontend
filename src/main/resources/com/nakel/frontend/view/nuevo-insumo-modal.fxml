@@ -23,9 +23,10 @@
 
         <!-- 1. CATEGORÍA (Ahora va primero) -->
         <Label text="Categoría:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="cmbCategoria" promptText="Seleccionar..."
-                  GridPane.rowIndex="0" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
-
+        <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
+            <ComboBox fx:id="cmbCategoria" promptText="Seleccionar..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="text-field"/>
+            <Button text="+" onAction="#abrirModalNuevaCategoria" styleClass="btn-primario" prefWidth="40"/>
+        </HBox>
         <!-- 2. DESCRIPCIÓN -->
         <Label text="Descripción:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
         <TextField fx:id="txtDescripcion" promptText="Ej: Cuero Negro, Cierre YKK..."

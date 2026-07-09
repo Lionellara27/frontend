@@ -27,10 +27,12 @@
 
     <TableView fx:id="tablaInsumos" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
         <columns>
-            <TableColumn text="Cód." prefWidth="50"/>
-            <TableColumn text="Descripción (Ej: Cuero Negro, Cierre YKK)" prefWidth="300"/>
-            <TableColumn text="Categoría" prefWidth="120"/> <TableColumn text="Unidad" prefWidth="100"/> <TableColumn text="Costo Unitario" prefWidth="120"/>
-            <TableColumn text="Acciones" prefWidth="100"/>
+            <TableColumn fx:id="colId" text="Cód." prefWidth="50"/>
+            <TableColumn fx:id="colDescripcion" text="Descripción (Ej: Cuero Negro, Cierre YKK)" prefWidth="300"/>
+            <TableColumn fx:id="colCategoria" text="Categoría" prefWidth="120"/>
+            <TableColumn fx:id="colUnidad" text="Unidad" prefWidth="100"/>
+            <TableColumn fx:id="colCosto" text="Costo Unitario" prefWidth="120"/>
+            <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="100"/>
         </columns>
     </TableView>
 
