@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="500.0" prefWidth="550.0" style="-fx-background-color: #F8F9FA; -fx-border-color: #CCCCCC; -fx-border-width: 1;" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nakel.frontend.controller.DetalleVentaController">
+    <children>
+        <VBox spacing="15.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+            <children>
+                <HBox alignment="CENTER_LEFT" spacing="20.0">
+                    <children>
+                        <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label fx:id="lblTitulo" text="Detalle de Venta #0000" textFill="#2e7d32">
+                                    <font>
+                                        <Font name="System Bold" size="20.0" />
+                                    </font>
+                                </Label>
+                                <Label fx:id="lblFecha" text="Fecha: 23/06/2026 - 22:06" textFill="#555555" />
+                                <Label fx:id="lblCliente" text="Cliente: Consumidor Final" textFill="#555555" />
+                            </children>
+                        </VBox>
+                        <Label fx:id="lblRegalo" alignment="CENTER" managed="false" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 5 10;" text="🎁 ES PARA REGALO" visible="false">
+                            <font>
+                                <Font name="System Bold" size="14.0" />
+                            </font>
+                        </Label>
+                    </children>
+                </HBox>
+
+                <TableView fx:id="tablaDetalles" prefHeight="250.0" prefWidth="510.0" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="colCantidad" prefWidth="70.0" text="Cant." />
+                        <TableColumn fx:id="colDescripcion" prefWidth="240.0" text="Descripción" />
+                        <TableColumn fx:id="colPrecioUni" prefWidth="100.0" text="Precio Unit." />
+                        <TableColumn fx:id="colSubtotal" prefWidth="100.0" text="Subtotal" />
+                    </columns>
+                </TableView>
+
+                <HBox alignment="CENTER_RIGHT" spacing="20.0">
+                    <children>
+                        <Label text="TOTAL:" textFill="#333333">
+                            <font>
+                                <Font name="System Bold" size="18.0" />
+                            </font>
+                        </Label>
+                        <Label fx:id="lblTotal" text="\$ 0.00" textFill="#2e7d32">
+                            <font>
+                                <Font name="System Bold" size="22.0" />
+                            </font>
+                        </Label>
+                    </children>
+                </HBox>
+                <HBox alignment="CENTER_RIGHT">
+                    <children>
+                        <Button mnemonicParsing="false" onAction="#cerrarModal" prefHeight="35.0" prefWidth="120.0" style="-fx-background-color: #E0E0E0; -fx-font-weight: bold;" text="Cerrar" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

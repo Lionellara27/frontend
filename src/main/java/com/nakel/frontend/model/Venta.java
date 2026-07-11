@@ -56,4 +56,9 @@ public class Venta {
     public void setFechaHora(String fechaHora) {
         this.fechaHora = fechaHora;
     }
+
+    // 🔥 AGREGAR ESTO EN Venta.java para que Gson pueda setearlo desde el JSON
+    public void setEsTicketCambio(Boolean esTicketCambio) {
+        this.esTicketCambio = esTicketCambio;
+    }
 }
