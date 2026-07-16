@@ -46,4 +46,28 @@ public class Insumo {
         }
         return nombre;
     }
+
+    // 🔥 CALCULA CUÁNTO VALE 1 CM CUADRADO DE ESTA TELA
+    public BigDecimal getCostoPorCm2() {
+        if (anchoCm != null && largoCm != null && anchoCm > 0 && largoCm > 0 && costoTotal != null) {
+            BigDecimal areaTotal = new BigDecimal(anchoCm * largoCm);
+            // Usamos RoundingMode.HALF_UP para redondear correctamente los centavos
+            return costoTotal.divide(areaTotal, 4, java.math.RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
+    }
+
+    // 🔥 CALCULA CUÁNTO VALE 1 SOLA UNIDAD (EJ: 1 CIERRE O 1 HORA)
+    public BigDecimal getCostoPorUnidad() {
+        if (cantidad != null && cantidad > 0 && costoTotal != null) {
+            return costoTotal.divide(new BigDecimal(cantidad), 4, java.math.RoundingMode.HALF_UP);
+        }
+        return BigDecimal.ZERO;
+    }
+
+
+    @Override
+    public String toString() {
+        return getDescripcionCompleta();
+    }
 }

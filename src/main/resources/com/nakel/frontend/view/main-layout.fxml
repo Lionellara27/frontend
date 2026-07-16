@@ -153,6 +153,7 @@
 
             <Button fx:id="btnEstadisticas"
                     text="Estadísticas"
+                    onAction="#mostrarEstadisticas"
                     maxWidth="999"
                     styleClass="menu-button"/>
 

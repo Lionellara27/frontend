@@ -1,154 +1,174 @@
 package com.nakel.frontend.controller;
 
+import com.nakel.frontend.model.DetalleCalculadora;
+import com.nakel.frontend.model.Insumo;
+import com.nakel.frontend.model.Categoria;
+import com.nakel.frontend.service.InsumoApiService;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import java.util.ArrayList;
-import java.util.List;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+
+import java.math.BigDecimal;
 
 public class CalculadoraController {
 
-    // ==========================================
-    // 1. ENLACES CON EL FXML
-    // ==========================================
-    @FXML private ComboBox<String> cmbInsumo;
-    @FXML private VBox contenedorCortes; // El lienzo vacío para inyectar cortes
-    @FXML private TextField txtHoras;
-    @FXML private TextField txtValorHora;
-    @FXML private TextField txtCostoAvios;
+    @FXML private ComboBox<Insumo> cmbInsumo;
+    @FXML private TextField txtAncho;
+    @FXML private TextField txtLargo;
+    @FXML private TextField txtCantidad;
+
+    @FXML private TableView<DetalleCalculadora> tablaReceta;
+    @FXML private TableColumn<DetalleCalculadora, String> colInsumo;
+    @FXML private TableColumn<DetalleCalculadora, String> colUso;
+    @FXML private TableColumn<DetalleCalculadora, String> colSubtotal;
+
     @FXML private Label lblTotalCosto;
+    @FXML private TextField txtMargen;
+    @FXML private Label lblPrecioFinal;
 
-    // ==========================================
-    // 2. VARIABLES PARA LA MEMORIA DINÁMICA
-    // ==========================================
-    private final List<TextField> listaTxtLargos = new ArrayList<>();
-    private final List<TextField> listaTxtAnchos = new ArrayList<>();
+    private ObservableList<DetalleCalculadora> listaReceta = FXCollections.observableArrayList();
+    private double costoTotalReceta = 0.0;
+//
+    private final InsumoApiService insumoApi = new InsumoApiService();
 
-    // Simulación de costo por cm² (En Fase 2 esto viene de la Base de Datos)
-    private final double COSTO_CM2_CUERO = 0.50;
-
-    // ==========================================
-    // 3. INICIALIZACIÓN
-    // ==========================================
     @FXML
     public void initialize() {
-        System.out.println("¡Calculadora Dinámica lista para operar!");
+        // 1. Configurar la tabla
+        colInsumo.setCellValueFactory(new PropertyValueFactory<>("nombreInsumo"));
+        colUso.setCellValueFactory(new PropertyValueFactory<>("descripcionUso"));
+        colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotalFormateado"));
+        tablaReceta.setItems(listaReceta);
+        tablaReceta.setPlaceholder(new Label("Agregue telas, avíos o mano de obra a la receta."));
 
-        if (cmbInsumo != null) {
-            cmbInsumo.getItems().addAll("Cuero Vacuno Texturado", "Lona Premium", "Forrería Microfibra");
-        }
+        // 2. Simular carga de insumos (A futuro, acá llamás a InsumoApiService)
+        //simularCargaInsumos();
+        cargarInsumosDesdeBD();
 
-        // Arrancamos con un corte por defecto
-        agregarFilaCorte();
 
-        // Escuchamos si tipea en las horas o avíos para recalcular al instante
-        configurarEscuchadores();
+        // 3. Escuchar la selección del ComboBox para bloquear/desbloquear cajitas
+        cmbInsumo.getSelectionModel().selectedItemProperty().addListener((obs, viejo, nuevo) -> prepararCampos(nuevo));
+
+        // 4. Escuchar cuando escriben el Margen de Ganancia para recalcular el precio final
+        txtMargen.textProperty().addListener((obs, viejo, nuevo) -> calcularPrecioSugerido());
     }
 
-    // ==========================================
-    // 4. LÓGICA DE CORTES INFINITOS
-    // ==========================================
-    @FXML
-    public void agregarFilaCorte() {
-        int numeroCorte = listaTxtLargos.size() + 1;
-
-        // Creamos las cajitas de texto desde el código
-        Label lblNombre = new Label("Corte " + numeroCorte + ":");
-        lblNombre.setStyle("-fx-text-fill: white; -fx-pref-width: 70;");
-
-        TextField txtLargo = new TextField();
-        txtLargo.setPromptText("Largo (cm)");
-        txtLargo.setPrefWidth(100);
-        txtLargo.getStyleClass().add("text-field");
-
-        Label lblX = new Label("x");
-        lblX.setStyle("-fx-text-fill: #D4AF37; -fx-font-weight: bold;");
-
-        TextField txtAncho = new TextField();
-        txtAncho.setPromptText("Ancho (cm)");
-        txtAncho.setPrefWidth(100);
-        txtAncho.getStyleClass().add("text-field");
-
-        Label lblCm = new Label("cm");
-        lblCm.setStyle("-fx-text-fill: #cccccc;");
-
-        // Hacemos que avisen si alguien escribe números ahí
-        txtLargo.textProperty().addListener((obs, oldVal, newVal) -> calcularTotal());
-        txtAncho.textProperty().addListener((obs, oldVal, newVal) -> calcularTotal());
-
-        // Guardamos las cajas en nuestra lista
-        listaTxtLargos.add(txtLargo);
-        listaTxtAnchos.add(txtAncho);
-
-        // Armamos la fila horizontal y la metemos en la pantalla
-        HBox filaCorte = new HBox(10);
-        filaCorte.setAlignment(Pos.CENTER_LEFT);
-        filaCorte.getChildren().addAll(lblNombre, txtLargo, lblX, txtAncho, lblCm);
-
-        contenedorCortes.getChildren().add(filaCorte);
-    }
-
-    // ==========================================
-    // 5. MOTOR MATEMÁTICO EN TIEMPO REAL
-    // ==========================================
-    private void calcularTotal() {
-        double totalMaterialArea = 0;
-
-        // Sumamos todos los pedacitos de cuero que agregó
-        for (int i = 0; i < listaTxtLargos.size(); i++) {
-            try {
-                String largoStr = listaTxtLargos.get(i).getText();
-                String anchoStr = listaTxtAnchos.get(i).getText();
-
-                if (!largoStr.isEmpty() && !anchoStr.isEmpty()) {
-                    double largo = Double.parseDouble(largoStr);
-                    double ancho = Double.parseDouble(anchoStr);
-                    totalMaterialArea += (largo * ancho);
-                }
-            } catch (NumberFormatException e) {
-                // Ignoramos si tipeó letras
-            }
-        }
-
-        double costoMaterial = totalMaterialArea * COSTO_CM2_CUERO;
-        double costoManoObra = 0;
-        double costoAvios = 0;
+    private void cargarInsumosDesdeBD() {
 
         try {
-            if (txtHoras != null && !txtHoras.getText().isEmpty() && txtValorHora != null && !txtValorHora.getText().isEmpty()) {
-                costoManoObra = Double.parseDouble(txtHoras.getText()) * Double.parseDouble(txtValorHora.getText());
+
+            cmbInsumo.getItems().clear();
+
+            cmbInsumo.getItems().addAll(
+                    insumoApi.obtenerListaInsumos()
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            mostrarError("No se pudieron cargar los insumos.");
+
+        }
+    }
+
+    private void prepararCampos(Insumo insumo) {
+        if (insumo == null || insumo.getCategoria() == null) return;
+
+        txtAncho.clear(); txtLargo.clear(); txtCantidad.clear();
+
+        if ("SUPERFICIE".equals(insumo.getCategoria().getTipoMedicion())) {
+            txtAncho.setDisable(false);
+            txtLargo.setDisable(false);
+            txtCantidad.setDisable(true);
+        } else {
+            txtAncho.setDisable(true);
+            txtLargo.setDisable(true);
+            txtCantidad.setDisable(false);
+        }
+    }
+
+    @FXML
+    public void agregarInsumoAReceta(ActionEvent event) {
+        Insumo insumo = cmbInsumo.getValue();
+        if (insumo == null) {
+            mostrarError("Seleccione un insumo primero.");
+            return;
+        }
+
+        try {
+            double subtotal = 0.0;
+            DetalleCalculadora detalle = null;
+
+            if ("SUPERFICIE".equals(insumo.getCategoria().getTipoMedicion())) {
+                int ancho = Integer.parseInt(txtAncho.getText());
+                int largo = Integer.parseInt(txtLargo.getText());
+                int cm2Usados = ancho * largo;
+
+                // Usamos la matemática que agregaste en el frontend
+                subtotal = insumo.getCostoPorCm2().doubleValue() * cm2Usados;
+                detalle = new DetalleCalculadora(insumo, cm2Usados, "Superficie", subtotal, ancho, largo);
+
+            } else {
+                double cantidad = Double.parseDouble(txtCantidad.getText());
+                subtotal = insumo.getCostoPorUnidad().doubleValue() * cantidad;
+                detalle = new DetalleCalculadora(insumo, cantidad, "Unidad", subtotal, null, null);
             }
-            if (txtCostoAvios != null && !txtCostoAvios.getText().isEmpty()) {
-                costoAvios = Double.parseDouble(txtCostoAvios.getText());
+
+            listaReceta.add(detalle);
+            recalcularCostoTotal();
+
+            // Limpiamos la selección
+            txtAncho.clear(); txtLargo.clear(); txtCantidad.clear();
+
+        } catch (NumberFormatException e) {
+            mostrarError("Llene correctamente los campos numéricos.");
+        }
+    }
+
+    @FXML
+    public void eliminarFila(ActionEvent event) {
+        DetalleCalculadora seleccionado = tablaReceta.getSelectionModel().getSelectedItem();
+        if (seleccionado != null) {
+            listaReceta.remove(seleccionado);
+            recalcularCostoTotal();
+        }
+    }
+
+    private void recalcularCostoTotal() {
+        costoTotalReceta = 0.0;
+        for (DetalleCalculadora det : listaReceta) {
+            costoTotalReceta += det.getSubtotal();
+        }
+        lblTotalCosto.setText(String.format("$ %.2f", costoTotalReceta));
+        calcularPrecioSugerido(); // Actualiza el precio final también
+    }
+
+    private void calcularPrecioSugerido() {
+        try {
+            if (txtMargen.getText() != null && !txtMargen.getText().isBlank()) {
+                double margen = Double.parseDouble(txtMargen.getText());
+                double gananciaPlata = costoTotalReceta * (margen / 100);
+                double precioSugerido = costoTotalReceta + gananciaPlata;
+                lblPrecioFinal.setText(String.format("$ %.2f", precioSugerido));
+            } else {
+                lblPrecioFinal.setText(String.format("$ %.2f", costoTotalReceta));
             }
         } catch (NumberFormatException e) {
-            // Ignoramos errores de tipeo
-        }
-
-        double costoTotalGral = costoMaterial + costoManoObra + costoAvios;
-
-        if (lblTotalCosto != null) {
-            lblTotalCosto.setText(String.format("$ %.2f", costoTotalGral));
+            lblPrecioFinal.setText("$ ---"); // Si pone letras, mostramos rayitas
         }
     }
 
-    private void configurarEscuchadores() {
-        if (txtHoras != null) txtHoras.textProperty().addListener((o, old, n) -> calcularTotal());
-        if (txtValorHora != null) txtValorHora.textProperty().addListener((o, old, n) -> calcularTotal());
-        if (txtCostoAvios != null) txtCostoAvios.textProperty().addListener((o, old, n) -> calcularTotal());
-    }
-
-    // ==========================================
-    // 6. GUARDAR (Acción del botón final)
-    // ==========================================
     @FXML
     public void guardarPresupuesto(ActionEvent event) {
-        System.out.println("Convirtiendo presupuesto en nuevo Artículo...");
-        // Acá a futuro abrimos un popup para pedirle el nombre de la cartera y guardarlo en la Base de Datos
+        System.out.println("Costo Base: " + costoTotalReceta + " | Guardando Receta en BD...");
+        // Acá podrías abrir un modal para ponerle nombre "Cartera Modelo X" y guardarlo como Articulo nuevo.
+    }
+
+    private void mostrarError(String msj) {
+        Alert a = new Alert(Alert.AlertType.WARNING, msj);
+        a.setHeaderText(null);
+        a.showAndWait();
     }
 }

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="650.0" prefWidth="1000.0" style="-fx-background-color: #F8F9FA;" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nakel.frontend.controller.CambioVentaController">
+    <children>
+        <VBox spacing="15.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
+            <children>
+                <HBox alignment="CENTER_LEFT" spacing="20.0">
+                    <children>
+                        <Label fx:id="lblTituloVenta" text="Gestión de Cambio - Venta #0000" textFill="#1565c0">
+                            <font>
+                                <Font name="System Bold" size="24.0" />
+                            </font>
+                        </Label>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Label fx:id="lblCliente" text="Cliente: Cargando..." textFill="#555555">
+                            <font>
+                                <Font size="16.0" />
+                            </font>
+                        </Label>
+                    </children>
+                </HBox>
+
+                <Separator prefWidth="200.0" />
+
+                <HBox spacing="20.0" VBox.vgrow="ALWAYS">
+                    <children>
+
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS" style="-fx-background-color: #ffffff; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
+                            <children>
+                                <Label text="1. Artículos que devuelve (Ingresan a Stock)" textFill="#d32f2f">
+                                    <font><Font name="System Bold" size="16.0" /></font>
+                                </Label>
+                                <TableView fx:id="tablaDevolucion" VBox.vgrow="ALWAYS">
+                                    <columns>
+                                        <TableColumn fx:id="colDevCant" prefWidth="100.0" text="Cant." />
+                                        <TableColumn fx:id="colDevDesc" prefWidth="200.0" text="Descripción" />
+                                        <TableColumn fx:id="colDevPrecio" prefWidth="100.0" text="Precio Unit." />
+                                    </columns>
+                                </TableView>
+                                <HBox alignment="CENTER_RIGHT">
+                                    <Label text="Saldo a Favor: "><font><Font name="System Bold" size="14.0" /></font></Label>
+                                    <Label fx:id="lblSaldoFavor" text="/$ 0.00" textFill="#d32f2f"><font><Font name="System Bold" size="16.0" /></font></Label>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="10.0" HBox.hgrow="ALWAYS" style="-fx-background-color: #ffffff; -fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
+                            <children>
+                                <Label text="2. Nuevos Artículos (Salen de Stock)" textFill="#388e3c">
+                                    <font><Font name="System Bold" size="16.0" /></font>
+                                </Label>
+                                <HBox spacing="10.0">
+                                    <TextField fx:id="txtBuscarNuevo" promptText="Buscar producto nuevo (Cod o Nombre)..." HBox.hgrow="ALWAYS" />
+                                    <Button mnemonicParsing="false" text="Buscar" />
+                                </HBox>
+                                <TableView fx:id="tablaNuevos" VBox.vgrow="ALWAYS">
+                                    <columns>
+                                        <TableColumn fx:id="colNueCant" prefWidth="100.0" text="Cant." />
+                                        <TableColumn fx:id="colNueDesc" prefWidth="200.0" text="Descripción" />
+                                        <TableColumn fx:id="colNuePrecio" prefWidth="100.0" text="Precio Unit." />
+                                    </columns>
+                                </TableView>
+                                <HBox alignment="CENTER_RIGHT">
+                                    <Label text="Costo Nuevos: "><font><Font name="System Bold" size="14.0" /></font></Label>
+                                    <Label fx:id="lblCostoNuevos" text="/$ 0.00" textFill="#388e3c"><font><Font name="System Bold" size="16.0" /></font></Label>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </HBox>
+
+                <VBox alignment="CENTER" style="-fx-background-color: #eeeeee; -fx-padding: 20; -fx-border-radius: 10;">
+                    <children>
+                        <HBox alignment="CENTER" spacing="50.0">
+                            <children>
+                                <Label fx:id="lblDiferenciaTexto" text="DIFERENCIA A COBRAR:" textFill="#333333">
+                                    <font><Font name="System Bold" size="24.0" /></font>
+                                </Label>
+                                <Label fx:id="lblDiferenciaMonto" text="/$ 0.00" textFill="#333333">
+                                    <font><Font name="System Bold" size="30.0" /></font>
+                                </Label>
+                            </children>
+                        </HBox>
+                        <Label fx:id="lblMensajeVoucher" text="Se generará un VOUCHER a favor del cliente." textFill="#ff9800" visible="false">
+                            <font><Font name="System Bold" size="16.0" /></font>
+                        </Label>
+                    </children>
+                </VBox>
+
+                <HBox alignment="CENTER_RIGHT" spacing="15.0">
+                    <children>
+                        <Button mnemonicParsing="false" onAction="#cerrarModal" prefHeight="40.0" prefWidth="120.0" style="-fx-background-color: #B0BEC5; -fx-text-fill: white; -fx-font-weight: bold;" text="Cancelar" />
+                        <Button mnemonicParsing="false" onAction="#confirmarCambio" prefHeight="40.0" prefWidth="200.0" style="-fx-background-color: #1976D2; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16px;" text="✅ Confirmar Cambio" />
+                    </children>
+                </HBox>
+
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

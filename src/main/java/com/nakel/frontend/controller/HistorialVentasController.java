@@ -109,9 +109,32 @@ public class HistorialVentasController {
                         @Override
                         public void updateItem(Void item, boolean empty) {
                             super.updateItem(item, empty);
-                            if (empty) {
+                            // Verificamos que la fila no esté vacía ni sea nula
+                            if (empty || getTableView().getItems().get(getIndex()) == null) {
                                 setGraphic(null);
                             } else {
+                                // Agarramos la venta de esta fila específica
+                                Venta ventaFila = getTableView().getItems().get(getIndex());
+
+                                try {
+                                    // 🔥 ACÁ OCURRE LA MAGIA DEL CÁLCULO
+                                    java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(ventaFila.getFechaHora());
+                                    java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30); // Le sumamos 30 días a la fecha original
+
+                                    // Comparamos la fecha límite con el instante exacto de AHORA
+                                    if (java.time.LocalDateTime.now().isAfter(fechaLimite)) {
+                                        // 🛑 Pasaron los 30 días -> Pintamos el botón de GRIS
+                                        btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #9E9E9E; -fx-font-size: 14px;");
+                                    } else {
+                                        // ✅ Está dentro del plazo -> Pintamos el botón de VERDE
+                                        btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #4CAF50; -fx-font-size: 14px;");
+                                    }
+                                } catch (Exception e) {
+                                    // Si por algún motivo la fecha viene mal o vacía, lo dejamos naranja por defecto
+                                    btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #FF9800; -fx-font-size: 14px;");
+                                }
+
+                                // Finalmente, metemos la caja con los 3 botones en la celda
                                 setGraphic(panelAcciones);
                             }
                         }
@@ -189,13 +212,100 @@ public class HistorialVentasController {
         }
     }
 
-    private void abrirOpcionesImpresionEnvio(Venta venta) {
-        System.out.println("🖨️/📧 Abriendo opciones de imprimir/mail para la venta: " + venta.getId());
-        // (Acá irá la Etapa 4)
+    private void iniciarProcesoCambio(Venta venta) {
+        try {
+            java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(venta.getFechaHora());
+            java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30);
+
+            if (java.time.LocalDateTime.now().isAfter(fechaLimite)) {
+                // 🛑 ESTÁ VENCIDO: Invocamos el Pop-up de Administrador
+                Dialog<String> dialog = new Dialog<>();
+                dialog.setTitle("Autorización Requerida");
+                dialog.setHeaderText("El plazo de 30 días ha vencido.\nIngrese contraseña de Administrador para forzar el cambio:");
+
+                // Botones del pop-up
+                ButtonType btnAutorizar = new ButtonType("Autorizar", ButtonBar.ButtonData.OK_DONE);
+                dialog.getDialogPane().getButtonTypes().addAll(btnAutorizar, ButtonType.CANCEL);
+
+                // Campo de contraseña oculta
+                PasswordField txtClave = new PasswordField();
+                txtClave.setPromptText("Contraseña...");
+                dialog.getDialogPane().setContent(txtClave);
+
+                // Capturamos el resultado
+                dialog.setResultConverter(dialogButton -> {
+                    if (dialogButton == btnAutorizar) return txtClave.getText();
+                    return null;
+                });
+
+                // Mostramos y evaluamos
+                dialog.showAndWait().ifPresent(clave -> {
+                    // TODO: A futuro validar esto contra el backend o una variable encriptada
+                    if ("admin123".equals(clave)) {
+                        System.out.println("✅ Autorizado por la dueña.");
+                        abrirPantallaCambio(venta); // Avanza
+                    } else {
+                        Alert error = new Alert(Alert.AlertType.ERROR, "Contraseña incorrecta. Operación cancelada.");
+                        error.showAndWait();
+                    }
+                });
+
+            } else {
+                // ✅ ESTÁ DENTRO DE LOS 30 DÍAS: Pasa directo
+                System.out.println("En regla. Abriendo módulo de cambio...");
+                abrirPantallaCambio(venta);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error al procesar la fecha de cambio: " + e.getMessage());
+        }
     }
 
-    private void iniciarProcesoCambio(Venta venta) {
-        System.out.println("🔄 Evaluando los 30 días para cambio/devolución de la venta: " + venta.getId());
-        // (Acá irá la Etapa 3)
+    // El método que va a abrir la ventana pesada de stock (La armamos en el próximo paso)
+    private void abrirPantallaCambio(Venta venta) {
+        System.out.println("🚀 ¡Abriendo el módulo maestro de Cambios y Devoluciones para la venta: " + venta.getId() + "!");
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/cambio-venta-modal.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            // Le pasamos la venta al controlador del módulo de cambios
+            CambioVentaController controller = loader.getController();
+            controller.cargarVentaOriginal(venta);
+
+            javafx.stage.Stage modalStage = new javafx.stage.Stage();
+            modalStage.setTitle("Gestión de Cambios y Devoluciones");
+            modalStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            modalStage.setScene(new javafx.scene.Scene(root));
+            modalStage.setResizable(false);
+            modalStage.showAndWait();
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al abrir la pantalla de cambios.");
+            e.printStackTrace();
+        }
+    }
+
+
+    private void abrirOpcionesImpresionEnvio(Venta venta) {
+        System.out.println("🖨️/📧 Abriendo opciones de imprimir/mail para la venta: " + venta.getId());
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/opciones-impresion-modal.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            // Pasamos la venta seleccionada al controlador
+            OpcionesImpresionController controller = loader.getController();
+            controller.cargarVenta(venta);
+
+            javafx.stage.Stage modalStage = new javafx.stage.Stage();
+            modalStage.setTitle("Opciones de Impresión");
+            modalStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            modalStage.setScene(new javafx.scene.Scene(root));
+            modalStage.setResizable(false);
+            modalStage.showAndWait();
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al abrir la pantalla de opciones de impresión.");
+            e.printStackTrace();
+        }
     }
 }

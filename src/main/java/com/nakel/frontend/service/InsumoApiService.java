@@ -1,12 +1,16 @@
 package com.nakel.frontend.service;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Insumo;
 
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Collections;
+import java.util.List;
 
 public class InsumoApiService {
 
@@ -112,5 +116,31 @@ public class InsumoApiService {
         if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
             throw new Exception("Error " + respuesta.statusCode() + ": " + respuesta.body());
         }
+    }
+    //---------------------
+    public List<Insumo> obtenerListaInsumos() {
+
+        try {
+
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/lista"))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta =
+                    insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            if (respuesta.statusCode() == 200) {
+
+                Type tipo = new TypeToken<List<Insumo>>() {}.getType();
+
+                return gson.fromJson(respuesta.body(), tipo);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return Collections.emptyList();
     }
 }

@@ -92,4 +92,24 @@ public class ArticuloApiService {
             throw new Exception("Error " + respuesta.statusCode() + " del servidor al eliminar el artículo.");
         }
     }
+
+    // 🔍 NUEVO: Buscar producto para la pantalla de Cambios (por código)
+    public String buscarProducto(String busqueda) throws Exception {
+        // Nota: Si en tu backend (Spring Boot) tenés una ruta específica para buscar
+        // por nombre, podés cambiar esta URL. Por ahora, usamos la de código que ya tenés:
+        HttpRequest peticion = HttpRequest.newBuilder()
+                .uri(URI.create(API_URL + "/codigo/" + busqueda))
+                .GET()
+                .build();
+
+        HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+        if (respuesta.statusCode() == 200) {
+            return respuesta.body(); // Devuelve el JSON exitosamente
+        } else if (respuesta.statusCode() == 404) {
+            return null; // No lo encontró, le avisamos al controlador para que tire cartel rojo
+        } else {
+            throw new Exception("Error del servidor: " + respuesta.statusCode());
+        }
+    }
 }
