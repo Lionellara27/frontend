@@ -27,6 +27,11 @@ public class NuevoInsumoController {
 
     private final InsumoApiService insumoApi = new InsumoApiService();
     private Insumo insumoEnEdicion = null;
+
+
+    @FXML private TextField txtCantidad; // Asegurate de tener esto declarado
+    @FXML private Label lblCantidad;
+
     // 1. AHORA EL COMBOBOX MANEJA OBJETOS "Categoria", NO STRINGS SUELTOS
     @FXML
     private ComboBox<Categoria> cmbCategoria;
@@ -107,10 +112,16 @@ public class NuevoInsumoController {
         lblMedidas.setManaged(false);
         boxMedidas.setVisible(false);
         boxMedidas.setManaged(false);
+
+        // 🔥 OCULTAMOS CANTIDAD POR DEFECTO
+        lblCantidad.setVisible(false);
+        lblCantidad.setManaged(false);
+        txtCantidad.setVisible(false);
+        txtCantidad.setManaged(false);
+
         txtDescripcion.setDisable(false);
         txtDescripcion.clear();
 
-        // MAGIA ESCALABLE: Ya no importa el nombre, importa la REGLA de la categoría.
         String regla = categoriaSeleccionada.getTipoMedicion();
 
         if ("SUPERFICIE".equals(regla)) {
@@ -126,6 +137,12 @@ public class NuevoInsumoController {
             cmbUnidad.setValue("Horas");
 
         } else if ("UNIDAD".equals(regla)) {
+            // 🔥 MOSTRAMOS CANTIDAD SOLO SI ES UNIDAD
+            lblCantidad.setVisible(true);
+            lblCantidad.setManaged(true);
+            txtCantidad.setVisible(true);
+            txtCantidad.setManaged(true);
+
             cmbUnidad.setValue("Unidades");
         }
     }
@@ -176,15 +193,28 @@ public class NuevoInsumoController {
             }
 
             // 3. Lógica dinámica
+            // 3. Lógica dinámica
             String tipoMedicion = cmbCategoria.getValue().getTipoMedicion();
 
             if ("SUPERFICIE".equals(tipoMedicion)) {
                 String ancho = (txtAnchoPlancha.getText() != null && !txtAnchoPlancha.getText().isEmpty()) ? txtAnchoPlancha.getText() : "0";
                 String largo = (txtLargoPlancha.getText() != null && !txtLargoPlancha.getText().isEmpty()) ? txtLargoPlancha.getText() : "0";
-                insumoAGuardar.setAnchoCm(Integer.parseInt(ancho));
-                insumoAGuardar.setLargoCm(Integer.parseInt(largo));
+
+                // Nuevos métodos de lote
+                insumoAGuardar.setAnchoLoteCm(Integer.parseInt(ancho));
+                insumoAGuardar.setLargoLoteCm(Integer.parseInt(largo));
+                // Opcional: Si es nuevo, inicializamos el área actual
+                if (insumoAGuardar.getAreaActualCm2() == null) {
+                    insumoAGuardar.setAreaActualCm2(Integer.parseInt(ancho) * Integer.parseInt(largo));
+                }
+
             } else if ("UNIDAD".equals(tipoMedicion)) {
-                insumoAGuardar.setCantidad(1);
+                // Leemos el valor del TextField. Si está vacío, por defecto ponemos 1
+                String cantStr = (txtCantidad.getText() != null) ? txtCantidad.getText().trim() : "1";
+                int cant = cantStr.isEmpty() ? 1 : Integer.parseInt(cantStr);
+
+                insumoAGuardar.setCantidadLote(cant);
+                insumoAGuardar.setCantidadActual(cant); // Arranca igual al lote
             }
 
             // 4. Mandamos a la base de datos
@@ -221,11 +251,12 @@ public class NuevoInsumoController {
             }
         }
 
-        if (insumo.getAnchoCm() != null && insumo.getAnchoCm() > 0) {
-            txtAnchoPlancha.setText(insumo.getAnchoCm().toString());
+        if (insumo.getAnchoLoteCm() != null && insumo.getAnchoLoteCm() > 0) {
+            txtAnchoPlancha.setText(insumo.getAnchoLoteCm().toString());
         }
-        if (insumo.getLargoCm() != null && insumo.getLargoCm() > 0) {
-            txtLargoPlancha.setText(insumo.getLargoCm().toString());
+
+        if (insumo.getLargoLoteCm() != null && insumo.getLargoLoteCm() > 0) {
+            txtLargoPlancha.setText(insumo.getLargoLoteCm().toString());
         }
     }
 
@@ -245,6 +276,4 @@ public class NuevoInsumoController {
         alert.setContentText(mensaje);
         alert.showAndWait();
     }
-
-
 }

@@ -6,65 +6,116 @@ public class Insumo {
     private Long id;
     private String nombre;
 
-    // 🔥 CAMBIO CLAVE: Ahora es el objeto Categoria (ya no es un String)
     private Categoria categoria;
-
     private BigDecimal costoTotal;
-    private Integer anchoCm;
-    private Integer largoCm;
-    private Integer cantidad;
+
+    // ==========================================
+    // 📦 CAMPOS NUEVOS: UNIDAD
+    // ==========================================
+    private Integer cantidadLote;
+    private Integer cantidadActual;
+
+    // ==========================================
+    // 📏 CAMPOS NUEVOS: SUPERFICIE
+    // ==========================================
+    private Integer anchoLoteCm;
+    private Integer largoLoteCm;
+    private Integer areaActualCm2;
 
     public Insumo() {}
 
-    // Getters y Setters
+    // ==========================================
+    // GETTERS Y SETTERS BÁSICOS
+    // ==========================================
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
 
-    // 🔥 ACÁ ESTÁN LOS MÉTODOS QUE TE FALTABAN
     public Categoria getCategoria() { return categoria; }
     public void setCategoria(Categoria categoria) { this.categoria = categoria; }
 
     public BigDecimal getCostoTotal() { return costoTotal; }
     public void setCostoTotal(BigDecimal costoTotal) { this.costoTotal = costoTotal; }
 
-    public Integer getAnchoCm() { return anchoCm; }
-    public void setAnchoCm(Integer anchoCm) { this.anchoCm = anchoCm; }
+    // ==========================================
+    // GETTERS Y SETTERS NUEVOS
+    // ==========================================
+    public Integer getCantidadLote() { return cantidadLote; }
+    public void setCantidadLote(Integer cantidadLote) { this.cantidadLote = cantidadLote; }
 
-    public Integer getLargoCm() { return largoCm; }
-    public void setLargoCm(Integer largoCm) { this.largoCm = largoCm; }
+    public Integer getCantidadActual() { return cantidadActual; }
+    public void setCantidadActual(Integer cantidadActual) { this.cantidadActual = cantidadActual; }
 
-    public Integer getCantidad() { return cantidad; }
-    public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
+    public Integer getAnchoLoteCm() { return anchoLoteCm; }
+    public void setAnchoLoteCm(Integer anchoLoteCm) { this.anchoLoteCm = anchoLoteCm; }
 
-    // Método calculado auxiliar para mostrar la descripción formateada
-    public String getDescripcionCompleta() {
-        if (categoria != null && "SUPERFICIE".equals(categoria.getTipoMedicion())) {
-            return nombre + " (" + anchoCm + "x" + largoCm + " cm)";
-        }
-        return nombre;
-    }
+    public Integer getLargoLoteCm() { return largoLoteCm; }
+    public void setLargoLoteCm(Integer largoLoteCm) { this.largoLoteCm = largoLoteCm; }
 
-    // 🔥 CALCULA CUÁNTO VALE 1 CM CUADRADO DE ESTA TELA
+    public Integer getAreaActualCm2() { return areaActualCm2; }
+    public void setAreaActualCm2(Integer areaActualCm2) { this.areaActualCm2 = areaActualCm2; }
+
+    // ==========================================
+    // 🔥 MOTORES DE CÁLCULO (Usan el LOTE comprado)
+    // ==========================================
     public BigDecimal getCostoPorCm2() {
-        if (anchoCm != null && largoCm != null && anchoCm > 0 && largoCm > 0 && costoTotal != null) {
-            BigDecimal areaTotal = new BigDecimal(anchoCm * largoCm);
-            // Usamos RoundingMode.HALF_UP para redondear correctamente los centavos
+        if (anchoLoteCm != null && largoLoteCm != null && anchoLoteCm > 0 && largoLoteCm > 0 && costoTotal != null) {
+            BigDecimal areaTotal = new BigDecimal(anchoLoteCm * largoLoteCm);
             return costoTotal.divide(areaTotal, 4, java.math.RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }
 
-    // 🔥 CALCULA CUÁNTO VALE 1 SOLA UNIDAD (EJ: 1 CIERRE O 1 HORA)
     public BigDecimal getCostoPorUnidad() {
-        if (cantidad != null && cantidad > 0 && costoTotal != null) {
-            return costoTotal.divide(new BigDecimal(cantidad), 4, java.math.RoundingMode.HALF_UP);
+        if (cantidadLote != null && cantidadLote > 0 && costoTotal != null) {
+            return costoTotal.divide(new BigDecimal(cantidadLote), 4, java.math.RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }
 
+    // ==========================================
+    // 🏷️ MAGIA VISUAL (Usa lo ACTUAL para mostrar qué queda)
+    // ==========================================
+   // public String getDescripcionCompleta() {
+     //   if (categoria != null && "SUPERFICIE".equals(categoria.getTipoMedicion())) {
+       //     return nombre + " (Quedan: " + (areaActualCm2 != null ? areaActualCm2 : 0) + " cm²)";
+        //} else if (categoria != null && "UNIDAD".equals(categoria.getTipoMedicion())) {
+          //  return nombre + " (Quedan: " + (cantidadActual != null ? cantidadActual : 0) + " u.)";
+        //}
+        //return nombre;
+    //}
+
+    public String getDescripcionCompleta() {
+        if (categoria != null) {
+            if ("SUPERFICIE".equals(categoria.getTipoMedicion())) {
+                return nombre + " (Quedan: " + (areaActualCm2 != null ? areaActualCm2 : 0) + " cm²)";
+            } else if ("UNIDAD".equals(categoria.getTipoMedicion())) {
+                return nombre + " (Quedan: " + (cantidadActual != null ? cantidadActual : 0) + " u.)";
+            } else if ("SERVICIO".equals(categoria.getTipoMedicion())) {
+                // 🔥 MAGIA: Si es servicio/tiempo, no mostramos stock, mostramos el precio x hora.
+                return nombre + " (Valor: $" + getCostoTotal() + "/hr)";
+            }
+        }
+        return nombre;
+    }
+
+
+    // ==========================================
+    // 🔥 EL CEREBRO DE LA TABLA (NUEVO)
+    // ==========================================
+    public BigDecimal getCostoCalculado() {
+        if (categoria != null) {
+            String tipo = categoria.getTipoMedicion();
+            if ("SUPERFICIE".equals(tipo)) {
+                return getCostoPorCm2();
+            } else if ("UNIDAD".equals(tipo)) {
+                return getCostoPorUnidad();
+            }
+        }
+        return costoTotal; // Si es Servicio/Tiempo, el costo es el total (la hora)
+    }
 
     @Override
     public String toString() {

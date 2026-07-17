@@ -74,7 +74,27 @@ public class InsumoController {
                     )
             );
         }
-        if (colCosto != null) colCosto.setCellValueFactory(new PropertyValueFactory<>("costoTotal"));
+        // PEGÁ ESTO:
+        if (colCosto != null) {
+            // 1. Le decimos de dónde sacar el dato exacto
+            colCosto.setCellValueFactory(cellData ->
+                    new javafx.beans.property.SimpleObjectProperty<>(cellData.getValue().getCostoCalculado())
+            );
+
+            // 2. Le damos el formato visual lindo para que borre el ".0000" y ponga el "$"
+            colCosto.setCellFactory(col -> new javafx.scene.control.TableCell<Insumo, java.math.BigDecimal>() {
+                @Override
+                protected void updateItem(java.math.BigDecimal item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        // Acá ocurre la magia visual: lo deja con 2 decimales y el signo pesos
+                        setText(String.format("$ %.2f", item));
+                    }
+                }
+            });
+        }
 
         // Asignamos una unidad de medida por defecto según la regla (Opcional, hasta que el modelo lo traiga directo)
         if (colUnidad != null) {
@@ -199,9 +219,11 @@ public class InsumoController {
                 + "Costo Total: $" + insumo.getCostoTotal() + "\n\n";
 
         if ("SUPERFICIE".equals(tipoMedicion)) {
-            info += "Dimensiones: " + insumo.getAnchoCm() + "x" + insumo.getLargoCm() + " cm\n";
+            info += "Dimensiones Originales: " + insumo.getAnchoLoteCm() + "x" + insumo.getLargoLoteCm() + " cm\n";
+            info += "Área Actual Disponible: " + insumo.getAreaActualCm2() + " cm²\n";
         } else if ("UNIDAD".equals(tipoMedicion)) {
-            info += "Cantidad original: " + insumo.getCantidad() + " unidades\n";
+            info += "Cantidad Original (Lote): " + insumo.getCantidadLote() + " unidades\n";
+            info += "Stock Actual: " + insumo.getCantidadActual() + " unidades\n";
         }
 
         alerta.setContentText(info);

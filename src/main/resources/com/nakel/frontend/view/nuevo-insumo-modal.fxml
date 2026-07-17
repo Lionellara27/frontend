@@ -21,18 +21,16 @@
     <!-- FORMULARIO -->
     <GridPane vgap="15" hgap="10">
 
-        <!-- 1. CATEGORÍA (Ahora va primero) -->
         <Label text="Categoría:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
         <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
             <ComboBox fx:id="cmbCategoria" promptText="Seleccionar..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="text-field"/>
             <Button text="+" onAction="#abrirModalNuevaCategoria" styleClass="btn-primario" prefWidth="40"/>
         </HBox>
-        <!-- 2. DESCRIPCIÓN -->
+
         <Label text="Descripción:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
         <TextField fx:id="txtDescripcion" promptText="Ej: Cuero Negro, Cierre YKK..."
                    GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" styleClass="text-field"/>
 
-        <!-- 3. CAMPOS DINÁMICOS (Arrancan ocultos) -->
         <Label fx:id="lblMedidas" text="Medidas Totales (cm):" GridPane.rowIndex="2" GridPane.columnIndex="0" visible="false" managed="false"/>
         <HBox fx:id="boxMedidas" spacing="10" GridPane.rowIndex="2" GridPane.columnIndex="1" visible="false" managed="false">
             <TextField fx:id="txtAnchoPlancha" promptText="Ancho" prefWidth="80" styleClass="text-field"/>
@@ -40,14 +38,16 @@
             <TextField fx:id="txtLargoPlancha" promptText="Largo" prefWidth="80" styleClass="text-field"/>
         </HBox>
 
-        <!-- 4. UNIDAD Y COSTO -->
-        <Label text="Unidad de Medida:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="cmbUnidad" promptText="Seleccionar..."
-                  GridPane.rowIndex="3" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
+        <Label fx:id="lblCantidad" text="Cantidad de unidades:" GridPane.rowIndex="3" GridPane.columnIndex="0" visible="false" managed="false"/>
+        <TextField fx:id="txtCantidad" promptText="Ej: 100" GridPane.rowIndex="3" GridPane.columnIndex="1" visible="false" managed="false" styleClass="text-field"/>
 
-        <Label text="Costo Total ($):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <Label text="Unidad de Medida:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cmbUnidad" promptText="Seleccionar..."
+                  GridPane.rowIndex="4" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
+
+        <Label text="Costo Total ($):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
         <TextField fx:id="txtCosto" promptText="Ej: 15000"
-                   GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="text-field"/>
+                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="text-field"/>
 
     </GridPane>
 
