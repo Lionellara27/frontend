@@ -34,6 +34,9 @@
         <Label text="Email:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
         <TextField fx:id="txtEmail" promptText="ventas@proveedor.com" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="text-field"/>
 
+        <Label text="Saldo ($):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtSaldo" promptText="Ej: 0.00 o -5000" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="text-field"/>
+
     </GridPane>
 
     <HBox spacing="15" alignment="CENTER_RIGHT">

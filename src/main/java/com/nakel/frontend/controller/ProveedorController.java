@@ -55,7 +55,7 @@ public class ProveedorController {
         colNombreContacto.setCellValueFactory(new PropertyValueFactory<>("nombreContacto"));
         colTelefono.setCellValueFactory(new PropertyValueFactory<>("telefono"));
         colRubro.setCellValueFactory(new PropertyValueFactory<>("rubro"));
-        colSaldo.setCellValueFactory(new PropertyValueFactory<>("saldoPendiente"));
+        colSaldo.setCellValueFactory(new PropertyValueFactory<>("saldo"));
 
         // 2. LA FÁBRICA DE BOTONES CON IKONLI
         javafx.util.Callback<TableColumn<Proveedor, Void>, javafx.scene.control.TableCell<Proveedor, Void>> cellFactory = new javafx.util.Callback<>() {
@@ -162,7 +162,7 @@ public class ProveedorController {
                 + "📧 Email: " + email + "\n"
                 + "📄 CUIT: " + cuit + "\n\n"
                 + "--- ESTADO DE CUENTA ---\n"
-                + "💰 Saldo Cta. Cte.: $" + proveedor.getSaldoPendiente() + "\n";
+                + "💰 Saldo Cta. Cte.: $" + proveedor.getSaldo() + "\n";
 
         alerta.setContentText(info);
         alerta.showAndWait();

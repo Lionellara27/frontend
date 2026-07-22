@@ -1,7 +1,10 @@
 package com.nakel.frontend.controller;
 
 import com.nakel.frontend.model.Articulo;
+import com.nakel.frontend.model.Categoria;
+import com.nakel.frontend.model.Material;
 import com.nakel.frontend.service.ArticuloApiService;
+import com.nakel.frontend.service.ParametrosApiService;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -11,63 +14,61 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
-import javafx.util.Callback;
 import org.kordamp.ikonli.javafx.FontIcon;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
-import java.util.Optional;
-
 
 import java.util.List;
+import java.util.Optional;
 
 public class ArticuloController {
 
-    // Filtros de búsqueda
+    // --- FILTROS DE BÚSQUEDA REALES ---
     @FXML private TextField txtBuscar;
-    @FXML private ComboBox<String> cmbCategoria;
-    @FXML private ComboBox<String> cmbMaterial;
+    @FXML private ComboBox<Categoria> cmbCategoria; // Ahora tipados con el objeto real
+    @FXML private ComboBox<Material> cmbMaterial;   // Ahora tipados con el objeto real
     @FXML private ComboBox<String> cmbOrigen;
 
-    // Tabla y Columnas
-    @FXML private TableView<Articulo> tablaArticulos; // <-- Ahora sabe que guarda Artículos
+    // --- TABLA Y COLUMNAS ---
+    @FXML private TableView<Articulo> tablaArticulos;
+    @FXML private TableColumn<Articulo, String> colNro;
     @FXML private TableColumn<Articulo, String> colCodigo;
     @FXML private TableColumn<Articulo, String> colNombre;
     @FXML private TableColumn<Articulo, String> colCategoria;
+
+    // Agregamos estas dos columnas que pedía tu PDF para que no queden en blanco
+    @FXML private TableColumn<Articulo, String> colMaterial;
+    @FXML private TableColumn<Articulo, String> colOrigen;
+
     @FXML private TableColumn<Articulo, Integer> colStock;
     @FXML private TableColumn<Articulo, Double> colPrecio;
-    @FXML private TableColumn<Articulo, Articulo> colAcciones; // <-- Columna vacía para meter los botones
+    @FXML private TableColumn<Articulo, Articulo> colAcciones;
 
     @FXML private Label lblTotalArticulos;
 
-    //nuevas columnas:
-    @FXML private TableColumn<Articulo, String> colNro;
-
-
-    // Instanciamos el servicio
+    // --- INSTANCIAMOS LOS DOS SERVICIOS ---
     private final ArticuloApiService apiService = new ArticuloApiService();
-
-
+    private final ParametrosApiService parametrosService = new ParametrosApiService();
 
     @FXML
     public void initialize() {
-        System.out.println("Módulo de Catálogo Iniciado.");
+        System.out.println("Módulo de Catálogo Iniciado. Cargando Filtros reales...");
 
         tablaArticulos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // Llenamos los combos provisorios
-        cmbCategoria.getItems().addAll("Billeteras", "Mates", "Lámparas");
-        cmbMaterial.getItems().addAll("Cuero Liso", "Cuero Peludo", "Madera", "Metal");
+        // 📋 CARGA DE COMBOS DE FILTROS DESDE SQLITE (Fase 3)
+        cmbCategoria.getItems().addAll(parametrosService.obtenerCategorias());
+        cmbMaterial.getItems().addAll(parametrosService.obtenerMateriales());
+
+        // El origen queda fijo porque es un Enum ("PRODUCCION_PROPIA" o "REVENTA")
         cmbOrigen.getItems().addAll("PRODUCCION_PROPIA", "REVENTA");
 
-        // 1. Configuramos cómo se lee cada columna
+        // Configuramos bindings de las columnas
         configurarColumnas();
 
-        // 2. Traemos los datos del Backend
+        // Traemos los datos del Backend
         cargarTabla();
     }
 
     private void configurarColumnas() {
-        // 1. Columna Nro: Autogenera el número de fila (1, 2, 3...)
         colNro.setCellFactory(col -> new TableCell<Articulo, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -76,66 +77,52 @@ public class ArticuloController {
             }
         });
 
-        // 2. Datos simples: Vinculamos el nombre de la variable de la clase Articulo
         colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
         colStock.setCellValueFactory(new PropertyValueFactory<>("stockActual"));
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
 
-        // 3. Datos anidados: Categoría
+        // Binding de datos anidados: Categoría (Real)
         colCategoria.setCellValueFactory(cellData -> {
-            Articulo.Categoria cat = cellData.getValue().getCategoria();
-            return new javafx.beans.property.SimpleStringProperty(cat != null ? cat.getNombre() : "Sin Categoría");
+            Categoria cat = cellData.getValue().getCategoria();
+            return new SimpleStringProperty(cat != null ? cat.getNombre() : "Sin Categoría");
         });
 
-        // 4. 🔥 LA MAGIA: Botones en la columna de Acciones
-        // IMPORTANTE: Definimos la columna como <Articulo, Articulo> para poder acceder al objeto
-        // 4. 🔥 LA MAGIA: Botones en la columna de Acciones con IKONLI
+        // 🛠️ SOLUCIÓN A COLUMNAS EN BLANCO (Binding de Material y Origen)
+        if (colMaterial != null) {
+            colMaterial.setCellValueFactory(cellData -> {
+                Material mat = cellData.getValue().getMaterial();
+                return new SimpleStringProperty(mat != null ? mat.getNombre() : "Sin Material");
+            });
+        }
+
+        if (colOrigen != null) {
+            colOrigen.setCellValueFactory(cellData -> {
+                String origen = cellData.getValue().getOrigen();
+                return new SimpleStringProperty(origen != null ? origen : "Sin Origen");
+            });
+        }
+
+        // Botones de acción (Ver, Editar, Eliminar)
         colAcciones.setCellValueFactory(param -> new javafx.beans.property.ReadOnlyObjectWrapper<>(param.getValue()));
-
-        // Le damos espacio para que no se corten los íconos
         colAcciones.setPrefWidth(150);
-
         colAcciones.setCellFactory(param -> new TableCell<Articulo, Articulo>() {
-
-            // Creamos los botones con los íconos
             private final Button btnVer = new Button("", new FontIcon("fas-eye"));
             private final Button btnEditar = new Button("", new FontIcon("fas-pen"));
-
-            // Usamos la variante '-alt' y le damos color rojo
             private final FontIcon iconoTacho = new FontIcon("fas-trash-alt");
-
-            {
-                iconoTacho.setIconColor(javafx.scene.paint.Color.web("#e74c3c"));
-            }
-
+            { iconoTacho.setIconColor(javafx.scene.paint.Color.web("#e74c3c")); }
             private final Button btnEliminar = new Button("", iconoTacho);
-
             private final HBox pane = new HBox(10, btnVer, btnEditar, btnEliminar);
 
             {
                 pane.setAlignment(javafx.geometry.Pos.CENTER);
-
-                // Hacemos el fondo de los botones invisible
                 btnVer.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
                 btnEditar.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
                 btnEliminar.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
 
-                // Conectamos las acciones a los métodos
-                btnVer.setOnAction(e -> {
-                    Articulo art = getItem();
-                    if (art != null) mostrarDetalle(art);
-                });
-
-                btnEditar.setOnAction(e -> {
-                    Articulo art = getItem();
-                    if (art != null) editarArticulo(art);
-                });
-
-                btnEliminar.setOnAction(e -> {
-                    Articulo art = getItem();
-                    if (art != null) eliminarArticulo(art);
-                });
+                btnVer.setOnAction(e -> { Articulo art = getItem(); if (art != null) mostrarDetalle(art); });
+                btnEditar.setOnAction(e -> { Articulo art = getItem(); if (art != null) editarArticulo(art); });
+                btnEliminar.setOnAction(e -> { Articulo art = getItem(); if (art != null) eliminarArticulo(art); });
             }
 
             @Override
@@ -146,85 +133,12 @@ public class ArticuloController {
         });
     }
 
-    // --- ACCIONES DE LOS BOTONES ---
-
-    private void mostrarDetalle(Articulo articulo) {
-        Alert alerta = new Alert(Alert.AlertType.INFORMATION);
-        alerta.setTitle("Detalle del Artículo");
-        alerta.setHeaderText(articulo.getNombre() + " (SKU: " + articulo.getCodigo() + ")");
-
-        String info = "Precio: $" + articulo.getPrecio() + "\n"
-                + "Stock Actual: " + articulo.getStockActual() + " unidades\n"
-                + "Origen: " + articulo.getOrigen() + "\n\n"
-                + "--- ESTADÍSTICAS ---\n"
-                + "Ventas Históricas: (Próximamente)\n";
-
-        alerta.setContentText(info);
-        alerta.showAndWait();
-    }
-
-    private void editarArticulo(Articulo articulo) {
-        System.out.println("Abriendo editor para: " + articulo.getNombre());
-        // TODO: Acá en el futuro abriremos el mismo Dialog (o FXML) pero precargando los datos
-    }
-
-    private void eliminarArticulo(Articulo articulo) {
-        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION);
-        alerta.setTitle("Confirmar Eliminación");
-        alerta.setHeaderText("Vas a eliminar " + articulo.getNombre());
-        alerta.setContentText("¿Estás seguro? Esta acción no se puede deshacer.");
-
-        Optional<ButtonType> resultado = alerta.showAndWait();
-        if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
-            try {
-                // Ahora sí, llamamos al método real
-                apiService.eliminarArticuloDeBaseDeDatos(articulo.getId());
-                cargarTabla(); // Y recargamos la tabla para que desaparezca visualmente
-            } catch (Exception e) {
-                Alert error = new Alert(Alert.AlertType.ERROR, "No se pudo eliminar: " + e.getMessage());
-                error.showAndWait();
-            }
-        }
-    }
-
-    private void cargarTabla() {
-        System.out.println("Conectando con Backend para traer catálogo...");
-        List<Articulo> listaBackend = apiService.obtenerTodos();
-
-        if (listaBackend != null && !listaBackend.isEmpty()) {
-            ObservableList<Articulo> articulosObservables = FXCollections.observableArrayList(listaBackend);
-            tablaArticulos.setItems(articulosObservables);
-            lblTotalArticulos.setText("Total en catálogo: " + listaBackend.size() + " artículos");
-            System.out.println("✅ Catálogo cargado. (" + listaBackend.size() + " ítems)");
-        } else {
-            System.out.println("⚠️ El catálogo está vacío o no hay conexión.");
-            lblTotalArticulos.setText("Total en catálogo: 0 artículos");
-        }
-    }
-
-    // --- MÉTODOS DE BOTONES (Se mantienen iguales) ---
-
-    @FXML
-    public void buscarArticulos(ActionEvent event) {
-        System.out.println("Buscando artículos...");
-        // Futuro: Filtrar la listaObservable localmente o ir al backend
-    }
-
-    @FXML
-    public void limpiarFiltros(ActionEvent event) {
-        txtBuscar.clear();
-        cmbCategoria.setValue(null);
-        cmbMaterial.setValue(null);
-        cmbOrigen.setValue(null);
-        // Volver a cargar la tabla completa
-        cargarTabla();
-    }
-
+    // --- MODAL NUEVO ARTÍCULO REFACTORIZADO (Fase 3 y 4) ---
     @FXML
     public void abrirModalNuevoArticulo(ActionEvent event) {
         Dialog<Articulo> dialog = new Dialog<>();
         dialog.setTitle("Nuevo Artículo");
-        dialog.setHeaderText("Cargar nuevo producto");
+        dialog.setHeaderText("Cargar nuevo producto al catálogo");
         dialog.getDialogPane().getStylesheets().add(getClass().getResource("/css/nakel.css").toExternalForm());
         dialog.getDialogPane().getStyleClass().add("mostrador-container");
 
@@ -235,9 +149,9 @@ public class ArticuloController {
         grid.setHgap(10); grid.setVgap(10);
         grid.setPadding(new javafx.geometry.Insets(20, 20, 10, 10));
 
-        // Campos
-        TextField txtCodigo = new TextField(); txtCodigo.setPromptText("Se autogenera...");
-        TextField txtNombre = new TextField(); txtNombre.setPromptText("Ej: Cartera Negra");
+        // Campos de texto
+        TextField txtCodigo = new TextField(); txtCodigo.setPromptText("Escriba el SKU final...");
+        TextField txtNombre = new TextField(); txtNombre.setPromptText("Ej: Cartera Negra Imperial");
         TextField txtPrecio = new TextField(); txtPrecio.setPromptText("Ej: 50000");
         TextField txtStock = new TextField(); txtStock.setPromptText("Ej: 10");
 
@@ -245,31 +159,32 @@ public class ArticuloController {
         cmbOrigenDialog.getItems().addAll("PRODUCCION_PROPIA", "REVENTA");
         cmbOrigenDialog.setValue("PRODUCCION_PROPIA");
 
-        // LOS COMBOS QUE FALTABAN
-        ComboBox<String> cmbCatTemporal = new ComboBox<>();
-        cmbCatTemporal.getItems().addAll("Billeteras", "Mates", "Carteras");
-        cmbCatTemporal.setPromptText("Elegir...");
+        // 🚀 COMBOS REALES CON OBJETOS DESDE LA BASE DE DATOS
+        ComboBox<Categoria> cmbCategoriaDialog = new ComboBox<>();
+        cmbCategoriaDialog.getItems().addAll(parametrosService.obtenerCategorias());
+        cmbCategoriaDialog.setPromptText("Elegir Categoría...");
 
-        // 🔥 LA MAGIA DEL SKU 🔥
-        cmbCatTemporal.setOnAction(e -> {
-            String seleccion = cmbCatTemporal.getValue();
-            if ("Billeteras".equals(seleccion)) {
-                txtCodigo.setText("1111-"); // Le pre-escribe el inicio
-            } else if ("Mates".equals(seleccion)) {
-                txtCodigo.setText("2222-");
-            } else if ("Carteras".equals(seleccion)) {
-                txtCodigo.setText("3333-");
+        ComboBox<Material> cmbMaterialDialog = new ComboBox<>();
+        cmbMaterialDialog.getItems().addAll(parametrosService.obtenerMateriales());
+        cmbMaterialDialog.setPromptText("Elegir Material...");
+
+        // 🔥 LA MAGIA DEL SKU REAL (Usa el prefijo guardado en la base de datos)
+        cmbCategoriaDialog.setOnAction(e -> {
+            Categoria seleccionada = cmbCategoriaDialog.getValue();
+            if (seleccionada != null && seleccionada.getPrefijoSku() != null) {
+                txtCodigo.setText(seleccionada.getPrefijoSku() + "-"); // Pre-escribe ej: "1111-"
+                txtCodigo.positionCaret(txtCodigo.getText().length()); // Cursor al final
             }
-            // Manda el cursor al final para que la dueña siga escribiendo
-            txtCodigo.positionCaret(txtCodigo.getText().length());
         });
 
-        grid.add(new Label("Categoría:"), 0, 0); grid.add(cmbCatTemporal, 1, 0);
-        grid.add(new Label("Código/SKU:"), 0, 1); grid.add(txtCodigo, 1, 1);
-        grid.add(new Label("Nombre:"), 0, 2); grid.add(txtNombre, 1, 2);
-        grid.add(new Label("Precio ($):"), 0, 3); grid.add(txtPrecio, 1, 3);
-        grid.add(new Label("Stock Inic:"), 0, 4); grid.add(txtStock, 1, 4);
-        grid.add(new Label("Origen:"), 0, 5); grid.add(cmbOrigenDialog, 1, 5);
+        // Posiciones en la grilla del formulario
+        grid.add(new Label("Categoría:"), 0, 0);  grid.add(cmbCategoriaDialog, 1, 0);
+        grid.add(new Label("Material:"), 0, 1);   grid.add(cmbMaterialDialog, 1, 1); // ➕ Nuevo campo Material
+        grid.add(new Label("Código/SKU:"), 0, 2);  grid.add(txtCodigo, 1, 2);
+        grid.add(new Label("Nombre:"), 0, 3);     grid.add(txtNombre, 1, 3);
+        grid.add(new Label("Precio ($):"), 0, 4);  grid.add(txtPrecio, 1, 4);
+        grid.add(new Label("Stock Inic:"), 0, 5);  grid.add(txtStock, 1, 5);
+        grid.add(new Label("Origen:"), 0, 6);      grid.add(cmbOrigenDialog, 1, 6);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -277,19 +192,20 @@ public class ArticuloController {
             if (dialogButton == btnGuardar) {
                 try {
                     Articulo nuevo = new Articulo();
-                    nuevo.setCodigo(txtCodigo.getText());
-                    nuevo.setNombre(txtNombre.getText());
+                    nuevo.setCodigo(txtCodigo.getText().trim());
+                    nuevo.setNombre(txtNombre.getText().trim());
                     nuevo.setPrecio(Double.parseDouble(txtPrecio.getText()));
                     nuevo.setStockActual(Integer.parseInt(txtStock.getText()));
                     nuevo.setOrigen(cmbOrigenDialog.getValue());
                     nuevo.setAlicuotaIva(21.0);
 
-                    /* NOTA: Acá a futuro asociaremos el objeto Categoría real de la base de datos
-                       buscando el ID correspondiente según lo que eligió en cmbCatTemporal. */
+                    // 💾 ASIGNAMOS LOS OBJETOS COMPLETOS (Fase 4: Se envían como sub-objetos en el JSON)
+                    nuevo.setCategoria(cmbCategoriaDialog.getValue());
+                    nuevo.setMaterial(cmbMaterialDialog.getValue());
 
                     return nuevo;
                 } catch (Exception e) {
-                    System.out.println("⚠️ Error en los datos ingresados");
+                    System.out.println("⚠️ Error al validar datos del formulario");
                     return null;
                 }
             }
@@ -297,10 +213,51 @@ public class ArticuloController {
         });
 
         dialog.showAndWait().ifPresent(nuevoArticulo -> {
-            boolean exito = apiService.guardarArticulo(nuevoArticulo);
-            if (exito) {
-                cargarTabla();
+            if (nuevoArticulo != null) {
+                boolean exito = apiService.guardarArticulo(nuevoArticulo);
+                if (exito) {
+                    cargarTabla(); // Refresca catálogo
+                }
             }
         });
     }
+
+    // --- SE MANTIENEN IGUALES EL RESTO DE MÉTODOS ---
+    private void mostrarDetalle(Articulo articulo) {
+        Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+        alerta.setTitle("Detalle del Artículo");
+        alerta.setHeaderText(articulo.getNombre() + " (SKU: " + articulo.getCodigo() + ")");
+        String info = "Precio: $" + articulo.getPrecio() + "\n"
+                + "Stock Actual: " + articulo.getStockActual() + " unidades\n"
+                + "Categoría: " + (articulo.getCategoria() != null ? articulo.getCategoria().getNombre() : "N/A") + "\n"
+                + "Material: " + (articulo.getMaterial() != null ? articulo.getMaterial().getNombre() : "N/A") + "\n"
+                + "Origen: " + articulo.getOrigen() + "\n";
+        alerta.setContentText(info);
+        alerta.showAndWait();
+    }
+
+    private void editarArticulo(Articulo articulo) { System.out.println("Editar: " + articulo.getNombre()); }
+
+    private void eliminarArticulo(Articulo articulo) {
+        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION, "¿Seguro que desea eliminar " + articulo.getNombre() + "?", ButtonType.OK, ButtonType.CANCEL);
+        alerta.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try { apiService.eliminarArticuloDeBaseDeDatos(articulo.getId()); cargarTabla(); } catch (Exception e) { e.printStackTrace(); }
+            }
+        });
+    }
+
+    private void cargarTabla() {
+        List<Articulo> listaBackend = apiService.obtenerTodos();
+        if (listaBackend != null && !listaBackend.isEmpty()) {
+            tablaArticulos.setItems(FXCollections.observableArrayList(listaBackend));
+            lblTotalArticulos.setText("Total en catálogo: " + listaBackend.size() + " artículos");
+        } else {
+            tablaArticulos.getItems().clear();
+            lblTotalArticulos.setText("Total en catálogo: 0 artículos");
+        }
+    }
+
+    @FXML public void buscarArticulos(ActionEvent event) { System.out.println("Filtrando..."); }
+    @FXML public void limpiarFiltros(ActionEvent event) { txtBuscar.clear(); cmbCategoria.setValue(null); cmbMaterial.setValue(null); cmbOrigen.setValue(null); cargarTabla(); }
 }

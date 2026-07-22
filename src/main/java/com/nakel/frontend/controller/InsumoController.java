@@ -216,14 +216,36 @@ public class InsumoController {
         String tipoMedicion = insumo.getCategoria() != null ? insumo.getCategoria().getTipoMedicion() : "";
 
         String info = "Categoría: " + nombreCategoria + "\n"
-                + "Costo Total: $" + insumo.getCostoTotal() + "\n\n";
+                + "Costo Total: $" + insumo.getCostoTotal() + "\n";
+
+        // 🔥 Si es SUPERFICIE, sumamos el Material en el bloque general de arriba
+        if ("SUPERFICIE".equals(tipoMedicion)) {
+            String nombreMaterial = insumo.getMaterial() != null ? insumo.getMaterial().getNombre() : "Sin asignar";
+            info += "Material: " + nombreMaterial + "\n";
+        }
+
+        info += "\n"; // Espaciado limpio para los bloques de stock
 
         if ("SUPERFICIE".equals(tipoMedicion)) {
+            // 📏 Lógica para Telas, Cueros, etc.
             info += "Dimensiones Originales: " + insumo.getAnchoLoteCm() + "x" + insumo.getLargoLoteCm() + " cm\n";
-            info += "Área Actual Disponible: " + insumo.getAreaActualCm2() + " cm²\n";
+
+            // 🧮 Calculamos el área original en vivo
+            int areaOriginal = 0;
+            if (insumo.getAnchoLoteCm() != null && insumo.getLargoLoteCm() != null) {
+                areaOriginal = insumo.getAnchoLoteCm() * insumo.getLargoLoteCm();
+            }
+            info += "Área Original Total: " + areaOriginal + " cm²\n";
+            info += "Área Actual Disponible: " + (insumo.getAreaActualCm2() != null ? insumo.getAreaActualCm2() : 0) + " cm²\n";
+
         } else if ("UNIDAD".equals(tipoMedicion)) {
+            // 📦 Lógica para Cierres, Hebillas, Avíos
             info += "Cantidad Original (Lote): " + insumo.getCantidadLote() + " unidades\n";
             info += "Stock Actual: " + insumo.getCantidadActual() + " unidades\n";
+
+        } else if ("SERVICIO".equals(tipoMedicion) || "TIEMPO".equals(tipoMedicion)) {
+            // ⏳ Lógica por si tocan el botón "Ver" en la mano de obra
+            info += "Costo por Hora de Confección: $" + insumo.getCostoTotal() + "\n";
         }
 
         alerta.setContentText(info);

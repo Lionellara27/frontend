@@ -15,20 +15,32 @@ import java.math.BigDecimal;
 
 public class NuevoProveedorController {
 
-    @FXML private Label lblTitulo; // Acordate de agregarle el fx:id="lblTitulo" a este Label en tu FXML
+    @FXML private Label lblTitulo;
     @FXML private TextField txtEmpresa;
     @FXML private TextField txtContacto;
     @FXML private ComboBox<String> cmbRubro;
     @FXML private TextField txtTelefono;
     @FXML private TextField txtEmail;
 
+    // 🔥 NUEVO CAMPO DE SALDO
+    @FXML private TextField txtSaldo;
+
     private final ProveedorApiService apiService = new ProveedorApiService();
     private Proveedor proveedorAEditar = null;
 
     @FXML
     public void initialize() {
-        // Recuperamos tus rubros originales que estaban geniales
-        cmbRubro.getItems().addAll("Cueros y Telas", "Herrajes", "Hilos y Cierres", "Maquinaria", "Varios");
+        // 🔥 Rubros ajustados a la realidad de su negocio
+        cmbRubro.getItems().addAll(
+                "Cueros y Telas",
+                "Herrajes y Avíos",
+                "Hilos y Cierres",
+                "Insumos Marroquinería",
+                "Productos Terminados (Mates, Billeteras)",
+                "Packaging y Cajas",
+                "Maquinaria y Taller",
+                "Varios"
+        );
     }
 
     public void cargarDatosParaEditar(Proveedor proveedor) {
@@ -43,6 +55,19 @@ public class NuevoProveedorController {
         this.cmbRubro.setValue(proveedor.getRubro());
         this.txtTelefono.setText(proveedor.getTelefono());
         this.txtEmail.setText(proveedor.getEmail());
+
+        // 🕵️‍♂️ MICRÓFONO PARA CAZAR EL BUG DE LOS 100000
+        System.out.println("========== DEBUG EDITAR PROVEEDOR ==========");
+        System.out.println("Proveedor seleccionado: " + proveedor.getRazonSocial());
+        System.out.println("Saldo que trae el objeto: " + proveedor.getSaldo());
+        System.out.println("============================================");
+
+        // 🔥 Solución al problema visual (El texto gris)
+        if (proveedor.getSaldo() != null) {
+            this.txtSaldo.setText(proveedor.getSaldo().toString());
+        } else {
+            this.txtSaldo.clear(); // ✨ Esto deja el campo vacío y muestra el promptText gris
+        }
     }
 
     @FXML
@@ -57,9 +82,20 @@ public class NuevoProveedorController {
         String rubro = cmbRubro.getValue() != null ? cmbRubro.getValue() : "";
         String telefono = txtTelefono.getText().trim();
         String email = txtEmail.getText().trim();
-
         String cuit = "";
+
+        // 🔥 LÓGICA DEL SALDO
         BigDecimal saldo = BigDecimal.ZERO;
+        if (txtSaldo.getText() != null && !txtSaldo.getText().trim().isEmpty()) {
+            try {
+                // Reemplazamos coma por punto por si la clienta tipea "1500,50"
+                String saldoLimpiado = txtSaldo.getText().trim().replace(",", ".");
+                saldo = new BigDecimal(saldoLimpiado);
+            } catch (NumberFormatException e) {
+                mostrarAlerta("Error de formato", "El saldo debe ser un número válido (Ej: 1500.00 o -500).", Alert.AlertType.WARNING);
+                return;
+            }
+        }
 
         try {
             if (proveedorAEditar == null) {

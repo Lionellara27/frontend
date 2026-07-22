@@ -32,4 +32,19 @@ public class DetalleCalculadora {
     }
 
     public double getSubtotal() { return subtotal; }
+
+    // 1. Necesario para obtener el objeto Insumo y poder descontar stock
+    public Insumo getInsumo() {
+        return insumo;
+    }
+
+    // 2. Necesario para saber CUÁNTO descontar del stock
+    public double getCantidadUsada() {
+        // Si es superficie, devolvemos el total de cm2
+        if (anchoUsado != null && largoUsado != null) {
+            return (double) anchoUsado * largoUsado;
+        }
+        // Si no, devolvemos la cantidad/horas
+        return cantidadUsada;
+    }
 }

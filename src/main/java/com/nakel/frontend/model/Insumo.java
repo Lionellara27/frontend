@@ -7,6 +7,7 @@ public class Insumo {
     private String nombre;
 
     private Categoria categoria;
+    private Material material;
     private BigDecimal costoTotal;
 
     // ==========================================
@@ -56,6 +57,9 @@ public class Insumo {
 
     public Integer getAreaActualCm2() { return areaActualCm2; }
     public void setAreaActualCm2(Integer areaActualCm2) { this.areaActualCm2 = areaActualCm2; }
+
+    public Material getMaterial() { return material; }
+    public void setMaterial(Material material) { this.material = material; }
 
     // ==========================================
     // 🔥 MOTORES DE CÁLCULO (Usan el LOTE comprado)

@@ -36,7 +36,7 @@ public class ProveedorApiService {
     }
 
     // =============== 2. GUARDAR PROVEEDORES (POST BLINDADO) ===============
-    public void guardarProveedoresEnBaseDeDatos(String razonSocial, String nombreContacto, String rubro, String cuit, String telefono, String email, BigDecimal saldoPendiente) throws Exception {
+    public void guardarProveedoresEnBaseDeDatos(String razonSocial, String nombreContacto, String rubro, String cuit, String telefono, String email, BigDecimal saldo) throws Exception {
 
         Map<String, Object> datosProveedor = new HashMap<>();
         datosProveedor.put("razonSocial", razonSocial);
@@ -45,7 +45,7 @@ public class ProveedorApiService {
         datosProveedor.put("cuit", cuit);
         datosProveedor.put("telefono", telefono);
         datosProveedor.put("email", email);
-        datosProveedor.put("saldoPendiente", saldoPendiente);
+        datosProveedor.put("saldo", saldo);
 
         String jsonMandar = gson.toJson(datosProveedor);
 
@@ -65,7 +65,7 @@ public class ProveedorApiService {
     }
 
     // =============== 3. ACTUALIZAR PROVEEDORES (PUT) ===============
-    public void actualizarProveedoresEnBaseDeDatos(Long id, String razonSocial, String nombreContacto, String rubro, String cuit, String telefono, String email, BigDecimal saldoPendiente) throws Exception {
+    public void actualizarProveedoresEnBaseDeDatos(Long id, String razonSocial, String nombreContacto, String rubro, String cuit, String telefono, String email, BigDecimal saldo) throws Exception {
 
         Map<String, Object> datosProveedor = new HashMap<>();
         datosProveedor.put("id", id);
@@ -75,7 +75,7 @@ public class ProveedorApiService {
         datosProveedor.put("cuit", cuit);
         datosProveedor.put("telefono", telefono);
         datosProveedor.put("email", email);
-        datosProveedor.put("saldoPendiente", saldoPendiente);
+        datosProveedor.put("saldo", saldo);
 
         String jsonMandar = gson.toJson(datosProveedor);
 

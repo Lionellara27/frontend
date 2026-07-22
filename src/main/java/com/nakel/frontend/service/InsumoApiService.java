@@ -65,8 +65,12 @@ public class InsumoApiService {
     // =============== 3. GUARDAR INSUMO (POST BLINDADO) ===============
     public void guardarInsumoEnBaseDeDatos(Insumo insumo) throws Exception {
 
-        // Gson convierte automáticamente el objeto Insumo a JSON (ignorando los campos nulos)
+        // Gson convierte automáticamente el objeto Insumo a JSON
         String jsonMandar = gson.toJson(insumo);
+
+        // 🔥 MICRÓFONO ACTIVADO: Vemos qué sale del Frontend
+        System.out.println("========== GUARDAR INSUMO (FRONTEND) ==========");
+        System.out.println("JSON ENVIADO: " + jsonMandar);
 
         HttpRequest peticion = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL))
@@ -75,6 +79,11 @@ public class InsumoApiService {
                 .build();
 
         HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+        // 🔥 MICRÓFONO ACTIVADO: Vemos qué devuelve el Backend
+        System.out.println("STATUS: " + respuesta.statusCode());
+        System.out.println("BODY DEVUELTO: " + respuesta.body());
+        System.out.println("===============================================");
 
         if (respuesta.statusCode() == 400) {
             throw new RuntimeException(respuesta.body());

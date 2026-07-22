@@ -18,6 +18,9 @@
                         <HBox spacing="10.0">
                             <children>
                                 <TextField fx:id="txtNuevaCategoria" promptText="Nueva categoría..." HBox.hgrow="ALWAYS" />
+
+                                <TextField fx:id="txtNuevoPrefijo" promptText="Prefijo (Ej: 1111)" prefWidth="120.0" />
+
                                 <Button mnemonicParsing="false" onAction="#agregarCategoria" text="➕" />
                                 <Button mnemonicParsing="false" onAction="#eliminarCategoria" styleClass="btn-eliminar" text="🗑️" textFill="WHITE" />
                             </children>

@@ -11,15 +11,14 @@ public class Proveedor {
     private String cuit;
     private String telefono;
     private String email;
-    private BigDecimal saldoPendiente;
 
-    // Constructores
+    // 🔥 SOLO QUEDA ESTE
+    private BigDecimal saldo;
+
+    // Constructor
     public Proveedor() {
-        this.saldoPendiente = BigDecimal.ZERO;
+        this.saldo = BigDecimal.ZERO;
     }
-
-    // Getters y Setters (Podés generarlos con IntelliJ apretando Alt + Insert,
-    // o usar @Data de Lombok si lo tenés configurado en el front)
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -42,6 +41,6 @@ public class Proveedor {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public BigDecimal getSaldoPendiente() { return saldoPendiente; }
-    public void setSaldoPendiente(BigDecimal saldoPendiente) { this.saldoPendiente = saldoPendiente; }
+    public BigDecimal getSaldo() { return saldo; }
+    public void setSaldo(BigDecimal saldo) { this.saldo = saldo; }
 }

@@ -2,17 +2,18 @@ package com.nakel.frontend.model;
 
 public class Articulo {
 
-    private Long id; // Fundamental para poder Editar o Eliminar después
+    private Long id;
     private String codigo;
     private String nombre;
     private Double precio;
-    private Integer stockActual; // Agregado para el catálogo
-    private Double alicuotaIva;  // Agregado
-    private String origen;       // Agregado para filtrar (Reventa/Propia)
-    //para hacer calculos
+    private Integer stockActual;
+    private Double alicuotaIva;
+    private String origen;
+
+    // Para hacer calculos
     private transient Integer cantidad = 1;
 
-    // Clases anidadas para recibir los objetos del JSON
+    // 🔥 Ahora usa las clases independientes que creaste (Categoria.java y Material.java)
     private Categoria categoria;
     private Material material;
 
@@ -26,6 +27,7 @@ public class Articulo {
     public Integer getStockActual() { return stockActual; }
     public Double getAlicuotaIva() { return alicuotaIva; }
     public String getOrigen() { return origen; }
+
     public Categoria getCategoria() { return categoria; }
     public Material getMaterial() { return material; }
 
@@ -37,34 +39,13 @@ public class Articulo {
     public void setStockActual(Integer stockActual) { this.stockActual = stockActual; }
     public void setAlicuotaIva(Double alicuotaIva) { this.alicuotaIva = alicuotaIva; }
     public void setOrigen(String origen) { this.origen = origen; }
+
     public void setCategoria(Categoria categoria) { this.categoria = categoria; }
     public void setMaterial(Material material) { this.material = material; }
 
     // --- GETTERS Y SETTERS PARA LA CANTIDAD Y HACER CALCULOS ---
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
-    // =========================================================
-    // SUB-CLASES para mapear los objetos que vienen del Backend
-    // =========================================================
 
-    public static class Categoria {
-        private Long id;
-        private String nombre; // Asumo que en tu back se llama "nombre"
-
-        public Categoria() {}
-        public Long getId() { return id; }
-        public String getNombre() { return nombre; }
-        // Este toString es clave para que el ComboBox de JavaFX muestre el texto lindo
-        @Override public String toString() { return nombre; }
-    }
-
-    public static class Material {
-        private Long id;
-        private String nombre; // Asumo que en tu back se llama "nombre"
-
-        public Material() {}
-        public Long getId() { return id; }
-        public String getNombre() { return nombre; }
-        @Override public String toString() { return nombre; }
-    }
+    // 🗑️ ¡ACÁ ESTABAN LAS CLASES ANIDADAS QUE BORRAMOS!
 }

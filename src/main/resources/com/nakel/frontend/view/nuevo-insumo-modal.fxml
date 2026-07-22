@@ -15,10 +15,8 @@
         <Insets top="20" right="25" bottom="20" left="25"/>
     </padding>
 
-    <!-- TÍTULO -->
     <Label text="➕ Alta de Nuevo Insumo" styleClass="titulo-modulo"/>
 
-    <!-- FORMULARIO -->
     <GridPane vgap="15" hgap="10">
 
         <Label text="Categoría:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
@@ -27,31 +25,36 @@
             <Button text="+" onAction="#abrirModalNuevaCategoria" styleClass="btn-primario" prefWidth="40"/>
         </HBox>
 
-        <Label text="Descripción:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <TextField fx:id="txtDescripcion" promptText="Ej: Cuero Negro, Cierre YKK..."
-                   GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" styleClass="text-field"/>
+        <Label fx:id="lblMaterial" text="Material:" GridPane.rowIndex="1" GridPane.columnIndex="0" visible="false" managed="false"/>
+        <HBox fx:id="boxMaterial" spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="1" visible="false" managed="false">
+            <ComboBox fx:id="cmbMaterial" promptText="Seleccionar material..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="text-field"/>
+            <Button text="+" onAction="#abrirModalNuevoMaterial" styleClass="btn-primario" prefWidth="40"/>
+        </HBox>
 
-        <Label fx:id="lblMedidas" text="Medidas Totales (cm):" GridPane.rowIndex="2" GridPane.columnIndex="0" visible="false" managed="false"/>
-        <HBox fx:id="boxMedidas" spacing="10" GridPane.rowIndex="2" GridPane.columnIndex="1" visible="false" managed="false">
+        <Label text="Descripción:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtDescripcion" promptText="Ej: Cuero Negro, Cierre YKK..."
+                   GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" styleClass="text-field"/>
+
+        <Label fx:id="lblMedidas" text="Medidas Totales (cm):" GridPane.rowIndex="3" GridPane.columnIndex="0" visible="false" managed="false"/>
+        <HBox fx:id="boxMedidas" spacing="10" GridPane.rowIndex="3" GridPane.columnIndex="1" visible="false" managed="false">
             <TextField fx:id="txtAnchoPlancha" promptText="Ancho" prefWidth="80" styleClass="text-field"/>
             <Label text="x" style="-fx-alignment: center; -fx-padding: 5 0 0 0;"/>
             <TextField fx:id="txtLargoPlancha" promptText="Largo" prefWidth="80" styleClass="text-field"/>
         </HBox>
 
-        <Label fx:id="lblCantidad" text="Cantidad de unidades:" GridPane.rowIndex="3" GridPane.columnIndex="0" visible="false" managed="false"/>
-        <TextField fx:id="txtCantidad" promptText="Ej: 100" GridPane.rowIndex="3" GridPane.columnIndex="1" visible="false" managed="false" styleClass="text-field"/>
+        <Label fx:id="lblCantidad" text="Cantidad de unidades:" GridPane.rowIndex="4" GridPane.columnIndex="0" visible="false" managed="false"/>
+        <TextField fx:id="txtCantidad" promptText="Ej: 100" GridPane.rowIndex="4" GridPane.columnIndex="1" visible="false" managed="false" styleClass="text-field"/>
 
-        <Label text="Unidad de Medida:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <Label text="Unidad de Medida:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
         <ComboBox fx:id="cmbUnidad" promptText="Seleccionar..."
-                  GridPane.rowIndex="4" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
+                  GridPane.rowIndex="5" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
 
-        <Label text="Costo Total ($):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <Label text="Costo Total ($):" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
         <TextField fx:id="txtCosto" promptText="Ej: 15000"
-                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="text-field"/>
+                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="text-field"/>
 
     </GridPane>
 
-    <!-- BOTONES -->
     <HBox spacing="15" alignment="CENTER_RIGHT">
         <Button text="Cancelar" styleClass="btn-secundario" onAction="#cerrarModal"/>
         <Button text="💾 Guardar Insumo" styleClass="btn-primario" onAction="#guardarInsumo"/>

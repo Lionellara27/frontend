@@ -3,30 +3,32 @@ package com.nakel.frontend.model;
 public class Categoria {
     private Long id;
     private String nombre;
+    private String tipoMedicion; // Para la Calculadora (Insumos)
+    private String prefijoSku;   // NUEVO: Para el Catálogo (Artículos)
 
-    // 🔥 El campo clave que le avisa al formulario cómo comportarse
-    private String tipoMedicion;
-
-    // Constructor vacío (Siempre útil para que Gson arme los objetos desde el JSON)
     public Categoria() {}
 
-    // Constructor completo (Para cargar los datos de la base de datos)
-    public Categoria(Long id, String nombre, String tipoMedicion) {
+    public Categoria(Long id, String nombre, String tipoMedicion, String prefijoSku) {
         this.id = id;
         this.nombre = nombre;
         this.tipoMedicion = tipoMedicion;
+        this.prefijoSku = prefijoSku;
     }
 
     // --- GETTERS ---
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public String getTipoMedicion() { return tipoMedicion; }
+    public String getPrefijoSku() { return prefijoSku; }
 
     // --- SETTERS ---
     public void setId(Long id) { this.id = id; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     public void setTipoMedicion(String tipoMedicion) { this.tipoMedicion = tipoMedicion; }
+    public void setPrefijoSku(String prefijoSku) { this.prefijoSku = prefijoSku; }
 
     @Override
     public String toString() { return nombre; }
+
+
 }

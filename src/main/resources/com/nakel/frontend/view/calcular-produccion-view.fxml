@@ -52,7 +52,16 @@
     </TableView>
 
     <HBox alignment="CENTER_LEFT">
-        <Button text="🗑 Quitar Seleccionado" onAction="#eliminarFila" style="-fx-background-color: #ffebee; -fx-text-fill: #c62828; -fx-cursor: hand;"/>
+        <Button text="🗑 Quitar Seleccionado" onAction="#eliminarFila"/>
+    </HBox>
+
+    <HBox spacing="15" alignment="CENTER_LEFT">
+        <Label text="Nombre del Producto:"/>
+        <TextField fx:id="txtNombreProducto" promptText="Ej: Mochila Matera Negra"/>
+    </HBox>
+
+    <HBox alignment="CENTER_RIGHT">
+        <Button text="💾 Guardar Producto" onAction="#guardarPresupuesto"/>
     </HBox>
 
     <HBox alignment="CENTER_RIGHT" spacing="25" style="-fx-padding: 15; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;">

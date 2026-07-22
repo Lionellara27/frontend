@@ -38,8 +38,8 @@
             <TableColumn fx:id="colCodigo" text="Cód. SKU" prefWidth="120"/>
             <TableColumn fx:id="colNombre" text="Descripción" prefWidth="250"/>
             <TableColumn fx:id="colCategoria" text="Categoría" prefWidth="120"/>
-            <TableColumn text="Material" prefWidth="120"/>
-            <TableColumn text="Origen" prefWidth="120"/>
+            <TableColumn fx:id="colMaterial" text="Material" prefWidth="120"/>
+            <TableColumn fx:id="colOrigen" text="Origen" prefWidth="120"/>
             <TableColumn fx:id="colStock" text="Stock" prefWidth="70"/>
             <TableColumn fx:id="colPrecio" text="Precio Venta" prefWidth="100"/>
 
