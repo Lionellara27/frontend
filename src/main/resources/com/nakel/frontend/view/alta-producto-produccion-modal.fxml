@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="10" prefWidth="400" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nakel.frontend.controller.AltaProductoProduccionController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Finalizar Creación de Producto" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+    <Label text="Nombre del Producto:"/>
+    <TextField fx:id="txtNombre" disable="true"/>
+
+    <Label text="Categoría (Familia):"/>
+    <ComboBox fx:id="cmbCategoria" promptText="Seleccione categoría..." prefWidth="400"/>
+
+    <Label text="Código SKU Sugerido:"/>
+    <TextField fx:id="txtCodigoSKU" promptText="Ej: 11110004"/>
+
+    <Label text="Material Destacado:"/>
+    <TextField fx:id="txtMaterialDestacado" disable="true"/>
+
+    <Label text="Origen:"/>
+    <TextField fx:id="txtOrigen" disable="true"/>
+
+    <HBox spacing="10">
+        <VBox HBox.hgrow="ALWAYS">
+            <Label text="Costo Total:"/>
+            <TextField fx:id="txtCosto" disable="true"/>
+        </VBox>
+        <VBox HBox.hgrow="ALWAYS">
+            <Label text="Precio de Venta:"/>
+            <TextField fx:id="txtPrecio" disable="true"/>
+        </VBox>
+    </HBox>
+
+    <Label text="Cantidad a Fabricar (Stock Inicial):"/>
+    <TextField fx:id="txtStock" text="1"/>
+
+    <HBox spacing="10" alignment="CENTER_RIGHT" style="-fx-padding: 10 0 0 0;">
+        <Button text="Cancelar" onAction="#cerrarModal"/>
+        <Button text="Confirmar" onAction="#confirmarGuardado" style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold;"/>
+    </HBox>
+</VBox>

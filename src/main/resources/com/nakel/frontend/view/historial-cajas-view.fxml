@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox spacing="15.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.nakel.frontend.controller.HistorialCajasController">
+    <padding>
+        <Insets bottom="20" left="20" right="20" top="20" />
+    </padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="15">
+        <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📦 Historial de Cajas Diarias" />
+        <Pane HBox.hgrow="ALWAYS" />
+        <Button onAction="#cargarHistorial" style="-fx-background-color: #3498db; -fx-text-fill: white;" text="🔄 Actualizar" />
+    </HBox>
+
+    <TableView fx:id="tablaCajas" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colId" prefWidth="50.0" text="ID" />
+            <TableColumn fx:id="colEstado" prefWidth="90.0" text="Estado" />
+            <TableColumn fx:id="colApertura" prefWidth="140.0" text="Apertura" />
+            <TableColumn fx:id="colCierre" prefWidth="140.0" text="Cierre" />
+            <TableColumn fx:id="colSaldoInicial" prefWidth="90.0" text="Inicial" />
+            <TableColumn fx:id="colEfectivo" prefWidth="90.0" text="Efectivo" />
+            <TableColumn fx:id="colMercadoPago" prefWidth="100.0" text="MercadoPago" />
+            <TableColumn fx:id="colTransferencia" prefWidth="100.0" text="Transferencia" />
+            <TableColumn fx:id="colTotalVentas" prefWidth="100.0" text="Total Ventas" />
+            <TableColumn fx:id="colSaldoFinal" prefWidth="100.0" text="Saldo Final" />
+            <TableColumn fx:id="colCantVentas" prefWidth="70.0" text="Ventas" />
+        </columns>
+    </TableView>
+</VBox>

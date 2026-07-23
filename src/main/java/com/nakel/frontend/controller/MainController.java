@@ -1,19 +1,27 @@
 package com.nakel.frontend.controller;
 
 import com.nakel.frontend.service.ClienteApiService;
+import com.nakel.frontend.service.CajaApiService; // 🔥 IMPORTANTE
 import com.nakel.frontend.util.Icono;
-import com.nakel.frontend.util.Navegador; // ¡Importamos tu Router!
+import com.nakel.frontend.util.Navegador;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+
+import java.util.Optional;
 
 public class MainController {
-    // 1. ENLAZAMOS LOS BOTONES Y EL PANEL DEL FXML
-    // ==========================================================
+
     @FXML private StackPane areaContenido;
 
     @FXML private Button btnMostrador;
@@ -28,19 +36,23 @@ public class MainController {
     @FXML private Button btnCerrarCaja;
     @FXML private Button btnConfiguracion;
 
+    // 🔥 INSTANCIAMOS EL SERVICIO DE LA CAJA
+    private final CajaApiService cajaApiService = new CajaApiService();
+
     @FXML
     public void initialize() {
-        ClienteApiService api = new ClienteApiService();
-        //api.probarConexion();
-
-        // 1. Le entregamos el panel central al Router para que tome el control
+        // 1. Le entregamos el panel central al Router
         Navegador.setPanelCentral(this.areaContenido);
 
         // 2. Mostramos el mensaje inicial
         mostrarBienvenida();
 
-        // ¡INYECTAMOS LOS VECTORES DORADOS A CADA BOTÓN!
-        //ufamos un if noNull pro si alguna vez se borra un boton para que nada explote
+        // 🔥 3. MAGIA: ABRIR CAJA AUTOMÁTICAMENTE
+        // Le pegamos al backend apenas entra. Si no había caja abierta hoy, el backend la crea en este exacto momento.
+        System.out.println("Comprobando estado de la caja diaria...");
+        cajaApiService.obtenerCajaActual();
+
+        // 4. Inyectamos los iconos
         if (btnMostrador != null) btnMostrador.setGraphic(Icono.MOSTRADOR.construir("#333333"));
         if (btnCatalogo != null) btnCatalogo.setGraphic(Icono.CATALOGO.construir());
         if (btnClientes != null) btnClientes.setGraphic(Icono.CLIENTES.construir());
@@ -58,56 +70,55 @@ public class MainController {
     // NAVEGACIÓN LIMPIA (Usando el Router)
     // ==========================================================
 
+    @FXML public void mostrarPuntoDeVenta(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/venta-view.fxml"); }
+    @FXML public void mostrarClientes(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/cliente-view.fxml"); }
+    @FXML public void mostrarInsumos(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/insumo-view.fxml"); }
+    @FXML public void mostrarCalculadora(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/calcular-produccion-view.fxml"); }
+    @FXML public void mostrarProveedores(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/proveedor-view.fxml"); }
+    @FXML public void mostrarHistorialVentas(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/historial-ventas-view.fxml"); }
+    @FXML public void mostrarCatalogo(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/articulo-view.fxml"); }
+    @FXML public void mostrarConfiguracion(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/configuracion.fxml"); }
+    @FXML public void mostrarEstadisticas(ActionEvent event) { Navegador.cargarVista("/com/nakel/frontend/view/estadisticas.fxml"); }
+    @FXML public void mostrarHistorialCajas(ActionEvent event) {Navegador.cargarVista("/com/nakel/frontend/view/historial-cajas-view.fxml");}
+    // ==========================================================
+    // 🔥 LÓGICA PARA CERRAR LA CAJA Y VOLVER AL LOGIN
+    // ==========================================================
     @FXML
-    public void mostrarPuntoDeVenta(ActionEvent event) {
-        Navegador.cargarVista("/com/nakel/frontend/view/venta-view.fxml");
-    }
+    public void cerrarCaja(ActionEvent event) {
+        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacion.setTitle("Cierre de Caja");
+        confirmacion.setHeaderText("¿Estás seguro de que querés Cerrar la Caja?");
+        confirmacion.setContentText("Esto finalizará el turno y te devolverá a la pantalla de inicio de sesión.");
 
-    @FXML
-    public void mostrarClientes(ActionEvent event) {
-        Navegador.cargarVista("/com/nakel/frontend/view/cliente-view.fxml");
-    }
+        Optional<ButtonType> resultado = confirmacion.showAndWait();
+        if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
 
-    @FXML
-    public void mostrarInsumos(ActionEvent event) {
-        Navegador.cargarVista("/com/nakel/frontend/view/insumo-view.fxml");
-    }
+            boolean exito = cajaApiService.cerrarCaja();
 
-    @FXML
-    public void mostrarCalculadora(ActionEvent event) {
-        Navegador.cargarVista("/com/nakel/frontend/view/calcular-produccion-view.fxml");
-    }
+            if (exito) {
+                try {
+                    FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/nakel/frontend/view/login.fxml"));
+                    Scene scene = new Scene(fxmlLoader.load());
 
-    @FXML
-    public void mostrarProveedores(ActionEvent event) {
-        Navegador.cargarVista("/com/nakel/frontend/view/proveedor-view.fxml");
-    }
+                    java.net.URL cssUrl = getClass().getResource("/css/nakel.css");
+                    if (cssUrl != null) scene.getStylesheets().add(cssUrl.toExternalForm());
 
-    @FXML
-    public void mostrarHistorialVentas(ActionEvent event) {
-        Navegador.cargarVista("/com/nakel/frontend/view/historial-ventas-view.fxml");
-    }
+                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                    stage.setScene(scene);
+                    stage.setTitle("Nakel Software - Iniciar Sesión");
+                    stage.centerOnScreen();
 
-    @FXML
-    public void mostrarCatalogo(ActionEvent event) {
-        System.out.println("Abriendo Catálogo de Artículos...");
-        Navegador.cargarVista("/com/nakel/frontend/view/articulo-view.fxml");
-    }
-
-    @FXML
-    public void mostrarConfiguracion(ActionEvent event) {
-        System.out.println("Abriendo Configuración...");
-        Navegador.cargarVista("/com/nakel/frontend/view/configuracion.fxml");
-    }
-
-    @FXML
-    public void mostrarEstadisticas(ActionEvent event) {
-        System.out.println("Abriendo Dashboard de Estadísticas...");
-        Navegador.cargarVista("/com/nakel/frontend/view/estadisticas.fxml");
+                } catch (Exception e) {
+                    mostrarAlertaError("Error de Sistema", "No se pudo cargar la pantalla de Login: " + e.getMessage());
+                }
+            } else {
+                mostrarAlertaError("Error al Cerrar", "No se pudo cerrar la caja. Verifique la conexión o si ya estaba cerrada.");
+            }
+        }
     }
 
     // ==========================================================
-    // MENSAJE DE INICIO (Por defecto)
+    // UTILIDADES
     // ==========================================================
     private void mostrarBienvenida() {
         VBox bienvenida = new VBox(15);
@@ -125,5 +136,12 @@ public class MainController {
             areaContenido.getChildren().clear();
             areaContenido.getChildren().add(bienvenida);
         }
+    }
+
+    private void mostrarAlertaError(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.ERROR, mensaje);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.showAndWait();
     }
 }

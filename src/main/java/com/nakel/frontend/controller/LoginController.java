@@ -1,5 +1,6 @@
 package com.nakel.frontend.controller;
 
+import com.nakel.frontend.service.UsuarioApiService;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -18,30 +19,31 @@ public class LoginController {
     @FXML
     private PasswordField txtPassword;
 
+    // 🔥 Instanciamos el servicio de conexión
+    private final UsuarioApiService usuarioApiService = new UsuarioApiService();
+
     @FXML
     public void onIngresarClick() {
 
-        String usuario = txtUsuario.getText();
-        String password = txtPassword.getText();
+        String usuario = txtUsuario.getText().trim();
+        String password = txtPassword.getText().trim();
 
-        if (usuario.equals("admin") && password.equals("1234")) {
+        // 🛑 Validación rápida de campos vacíos
+        if (usuario.isEmpty() || password.isEmpty()) {
+            mostrarAlerta("Error de Acceso", "Por favor, complete ambos campos.");
+            return;
+        }
 
+        // 🔥 ACÁ SUCEDE LA MAGIA: Le preguntamos a la base de datos a través de la API
+        boolean loginExitoso = usuarioApiService.login(usuario, password);
+
+        if (loginExitoso) {
             try {
-
                 // Cargar pantalla principal
-                FXMLLoader fxmlLoader = new FXMLLoader(
-                        getClass().getResource(
-                                "/com/nakel/frontend/view/main-layout.fxml"
-                        )
-                );
+                FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/nakel/frontend/view/main-layout.fxml"));
+                Scene scene = new Scene(fxmlLoader.load(), 1224, 768);
 
-                Scene scene = new Scene(
-                        fxmlLoader.load(),
-                        1224,
-                        768
-                );
-
-                // Cargar CSS global (¡Con la ruta corta y correcta!)
+                // Cargar CSS global
                 java.net.URL cssUrl = getClass().getResource("/css/nakel.css");
                 if (cssUrl != null) {
                     scene.getStylesheets().add(cssUrl.toExternalForm());
@@ -50,9 +52,7 @@ public class LoginController {
                 }
 
                 // Obtener ventana actual
-                Stage stage = (Stage) txtUsuario
-                        .getScene()
-                        .getWindow();
+                Stage stage = (Stage) txtUsuario.getScene().getWindow();
 
                 // Configurar ventana
                 stage.setScene(scene);
@@ -61,23 +61,21 @@ public class LoginController {
                 stage.centerOnScreen();
 
             } catch (IOException e) {
-
-                Alert alerta = new Alert(Alert.AlertType.ERROR);
-                alerta.setTitle("Error");
-                alerta.setHeaderText("No se pudo abrir la pantalla principal");
-                alerta.setContentText(e.getMessage());
-                alerta.showAndWait();
-
+                mostrarAlerta("Error", "No se pudo abrir la pantalla principal: " + e.getMessage());
                 e.printStackTrace();
             }
 
         } else {
-
-            Alert alerta = new Alert(Alert.AlertType.ERROR);
-            alerta.setTitle("Error de Acceso");
-            alerta.setHeaderText(null);
-            alerta.setContentText("Usuario o contraseña incorrectos.");
-            alerta.showAndWait();
+            mostrarAlerta("Error de Acceso", "Usuario o contraseña incorrectos.");
         }
+    }
+
+    // Método auxiliar para no repetir tanto código de alertas
+    private void mostrarAlerta(String titulo, String mensaje) {
+        Alert alerta = new Alert(Alert.AlertType.ERROR);
+        alerta.setTitle(titulo);
+        alerta.setHeaderText(null);
+        alerta.setContentText(mensaje);
+        alerta.showAndWait();
     }
 }

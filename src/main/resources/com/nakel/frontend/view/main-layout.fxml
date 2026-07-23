@@ -115,7 +115,8 @@
             <Button fx:id="btnHistorialCajas"
                     text="Historial de Cajas"
                     maxWidth="999"
-                    styleClass="menu-button"/>
+                    styleClass="menu-button"
+                    onAction="#mostrarHistorialCajas"/>
 
             <!-- HERRAMIENTAS -->
 
@@ -172,7 +173,8 @@
             <Button fx:id="btnCerrarCaja"
                     text="Cerrar Caja"
                     maxWidth="999"
-                    styleClass="danger-button"/>
+                    styleClass="danger-button"
+                    onAction="#cerrarCaja"/>
 
         </VBox>
 
