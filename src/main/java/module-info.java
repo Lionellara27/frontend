@@ -16,4 +16,6 @@ module com.nakel.frontend {
     exports com.nakel.frontend;
     exports com.nakel.frontend.controller;
     exports com.nakel.frontend.model;
+    exports com.nakel.frontend.util;
+    opens com.nakel.frontend.util to com.google.gson, javafx.base;
 }

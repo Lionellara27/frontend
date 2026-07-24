@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox prefWidth="500.0" prefHeight="650.0" spacing="10.0" style="-fx-background-color: #f9f9f9; -fx-padding: 20;"
+      xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.nakel.frontend.controller.ModalDetalleCajaController">
+
+    <Label fx:id="lblTitulo" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📋 Detalle de Caja" />
+
+    <GridPane hgap="10" vgap="5">
+        <Label text="Fecha Apertura:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+        <Label fx:id="lblFechaApertura" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+        <Label text="Fecha Cierre:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+        <Label fx:id="lblFechaCierre" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+        <Label text="Estado:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+        <Label fx:id="lblEstado" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+        <Label text="Total Ventas:" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+        <Label fx:id="lblTotalVentas" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+        <Label text="Egresos:" GridPane.columnIndex="0" GridPane.rowIndex="4" style="-fx-font-weight: bold;"/>
+        <Label fx:id="lblEgresos" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+
+        <Label text="Saldo Final:" GridPane.columnIndex="0" GridPane.rowIndex="5" style="-fx-font-weight: bold;"/>
+        <Label fx:id="lblSaldoFinal" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+    </GridPane>
+
+    <Label style="-fx-font-weight: bold; -fx-padding: 10 0 0 0;" text="Movimientos del Día:" />
+
+    <TableView fx:id="tablaMovimientos" VBox.vgrow="ALWAYS">
+        <columns>
+            <TableColumn fx:id="colHora" prefWidth="80.0" text="Hora" />
+            <TableColumn fx:id="colTipo" prefWidth="100.0" text="Tipo" />
+            <TableColumn fx:id="colConcepto" prefWidth="150.0" text="Concepto" />
+            <TableColumn fx:id="colMonto" prefWidth="120.0" text="Monto" />
+        </columns>
+    </TableView>
+
+    <HBox alignment="CENTER_RIGHT" spacing="10">
+        <Button onAction="#cerrarModal" style="-fx-background-color: #7f8c8d; -fx-text-fill: white; -fx-cursor: hand;" text="Cerrar" />
+    </HBox>
+</VBox>

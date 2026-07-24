@@ -14,22 +14,20 @@
     <HBox alignment="CENTER_LEFT" spacing="15">
         <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="📦 Historial de Cajas Diarias" />
         <Pane HBox.hgrow="ALWAYS" />
-        <Button onAction="#cargarHistorial" style="-fx-background-color: #3498db; -fx-text-fill: white;" text="🔄 Actualizar" />
+        <Button onAction="#cargarHistorial" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🔄 Actualizar" />
     </HBox>
 
-    <TableView fx:id="tablaCajas" VBox.vgrow="ALWAYS">
+    <TableView fx:id="tablaCajas" VBox.vgrow="ALWAYS" style="-fx-font-size: 14px;">
         <columns>
-            <TableColumn fx:id="colId" prefWidth="50.0" text="ID" />
-            <TableColumn fx:id="colEstado" prefWidth="90.0" text="Estado" />
-            <TableColumn fx:id="colApertura" prefWidth="140.0" text="Apertura" />
-            <TableColumn fx:id="colCierre" prefWidth="140.0" text="Cierre" />
-            <TableColumn fx:id="colSaldoInicial" prefWidth="90.0" text="Inicial" />
-            <TableColumn fx:id="colEfectivo" prefWidth="90.0" text="Efectivo" />
-            <TableColumn fx:id="colMercadoPago" prefWidth="100.0" text="MercadoPago" />
-            <TableColumn fx:id="colTransferencia" prefWidth="100.0" text="Transferencia" />
-            <TableColumn fx:id="colTotalVentas" prefWidth="100.0" text="Total Ventas" />
-            <TableColumn fx:id="colSaldoFinal" prefWidth="100.0" text="Saldo Final" />
-            <TableColumn fx:id="colCantVentas" prefWidth="70.0" text="Ventas" />
+            <TableColumn fx:id="colId" prefWidth="60.0" text="ID" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="colFecha" prefWidth="150.0" text="Fecha Apertura" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="colVentas" prefWidth="90.0" text="Ventas" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="colTotal" prefWidth="140.0" text="Ingresos Totales" style="-fx-alignment: CENTER-RIGHT;"/>
+            <TableColumn fx:id="colEstado" prefWidth="120.0" text="Estado" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="colAcciones" prefWidth="90.0" text="Acciones" style="-fx-alignment: CENTER;"/>
         </columns>
+        <columnResizePolicy>
+            <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+        </columnResizePolicy>
     </TableView>
 </VBox>

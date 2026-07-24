@@ -4,16 +4,14 @@ import com.nakel.frontend.service.ClienteApiService;
 import com.nakel.frontend.service.CajaApiService; // 🔥 IMPORTANTE
 import com.nakel.frontend.util.Icono;
 import com.nakel.frontend.util.Navegador;
+import com.nakel.frontend.util.SesionActual;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -50,7 +48,7 @@ public class MainController {
         // 🔥 3. MAGIA: ABRIR CAJA AUTOMÁTICAMENTE
         // Le pegamos al backend apenas entra. Si no había caja abierta hoy, el backend la crea en este exacto momento.
         System.out.println("Comprobando estado de la caja diaria...");
-        cajaApiService.obtenerCajaActual();
+        cajaApiService.obtenerCajaActual(SesionActual.getUsuarioLogueado());
 
         // 4. Inyectamos los iconos
         if (btnMostrador != null) btnMostrador.setGraphic(Icono.MOSTRADOR.construir("#333333"));
@@ -86,34 +84,49 @@ public class MainController {
     @FXML
     public void cerrarCaja(ActionEvent event) {
         Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmacion.setTitle("Cierre de Caja");
-        confirmacion.setHeaderText("¿Estás seguro de que querés Cerrar la Caja?");
-        confirmacion.setContentText("Esto finalizará el turno y te devolverá a la pantalla de inicio de sesión.");
+        confirmacion.setTitle("Cerrar Caja y Sesión");
+        confirmacion.setHeaderText(null);
+        confirmacion.setContentText("¿Estás seguro que querés CERRAR LA CAJA de hoy y volver al inicio de sesión?");
 
         Optional<ButtonType> resultado = confirmacion.showAndWait();
+
         if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
 
-            boolean exito = cajaApiService.cerrarCaja();
+            // 1. Le avisamos al backend que cierre la caja (si puede)
+            boolean exito = cajaApiService.cerrarCaja(SesionActual.getUsuarioLogueado());
 
-            if (exito) {
-                try {
-                    FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/nakel/frontend/view/login.fxml"));
-                    Scene scene = new Scene(fxmlLoader.load());
-
-                    java.net.URL cssUrl = getClass().getResource("/css/nakel.css");
-                    if (cssUrl != null) scene.getStylesheets().add(cssUrl.toExternalForm());
-
-                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                    stage.setScene(scene);
-                    stage.setTitle("Nakel Software - Iniciar Sesión");
-                    stage.centerOnScreen();
-
-                } catch (Exception e) {
-                    mostrarAlertaError("Error de Sistema", "No se pudo cargar la pantalla de Login: " + e.getMessage());
-                }
-            } else {
-                mostrarAlertaError("Error al Cerrar", "No se pudo cerrar la caja. Verifique la conexión o si ya estaba cerrada.");
+            // 2. Si el backend nos dice "Ya estaba cerrada" (Status 400), le damos un aviso chiquito
+            if (!exito) {
+                Alert info = new Alert(Alert.AlertType.INFORMATION);
+                info.setTitle("Aviso");
+                info.setHeaderText(null);
+                info.setContentText("Aviso: La caja ya se encontraba cerrada, pero cerraremos la sesión de todas formas.");
+                info.showAndWait();
             }
+
+            // 3. SÍ O SÍ, PASE LO QUE PASE, TE EXPULSAMOS AL LOGIN
+            irAlLogin(event);
+        }
+    }
+
+    // 🔥 Este método maneja el salto de pantalla sin errores
+    private void irAlLogin(ActionEvent event) {
+        try {
+            // ⚠️ REVISÁ QUE ESTE NOMBRE SEA EXACTAMENTE EL DE TU ARCHIVO FXML DE LOGIN
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/nakel/frontend/view/login-view.fxml"));
+            Scene scene = new Scene(fxmlLoader.load());
+
+            java.net.URL cssUrl = getClass().getResource("/css/nakel.css");
+            if (cssUrl != null) scene.getStylesheets().add(cssUrl.toExternalForm());
+
+            Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
+            stage.setScene(scene);
+            stage.setTitle("Nakel Software - Iniciar Sesión");
+            stage.centerOnScreen();
+
+        } catch (Exception e) {
+            mostrarAlertaError("Error de Pantalla", "No se encontró el archivo de Login. Revisá el nombre del archivo.");
+            e.printStackTrace();
         }
     }
 
