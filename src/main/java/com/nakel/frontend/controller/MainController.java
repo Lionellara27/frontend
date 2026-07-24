@@ -83,29 +83,43 @@ public class MainController {
     // ==========================================================
     @FXML
     public void cerrarCaja(ActionEvent event) {
-        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmacion.setTitle("Cerrar Caja y Sesión");
-        confirmacion.setHeaderText(null);
-        confirmacion.setContentText("¿Estás seguro que querés CERRAR LA CAJA de hoy y volver al inicio de sesión?");
+        Alert opciones = new Alert(Alert.AlertType.CONFIRMATION);
+        opciones.setTitle("Cerrar Caja");
+        opciones.setHeaderText("¿Qué desea hacer?");
+        opciones.setContentText("Seleccione cómo desea salir del sistema:");
 
-        Optional<ButtonType> resultado = confirmacion.showAndWait();
+        // 1. Creamos los 3 botones exactos que pediste
+        ButtonType btnVolverLogin = new ButtonType("Volver al Login");
+        ButtonType btnCerrarSalir = new ButtonType("Cerrar y Salir");
+        ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
 
-        if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
+        opciones.getButtonTypes().setAll(btnVolverLogin, btnCerrarSalir, btnCancelar);
 
-            // 1. Le avisamos al backend que cierre la caja (si puede)
-            boolean exito = cajaApiService.cerrarCaja(SesionActual.getUsuarioLogueado());
+        Optional<ButtonType> resultado = opciones.showAndWait();
 
-            // 2. Si el backend nos dice "Ya estaba cerrada" (Status 400), le damos un aviso chiquito
-            if (!exito) {
-                Alert info = new Alert(Alert.AlertType.INFORMATION);
-                info.setTitle("Aviso");
-                info.setHeaderText(null);
-                info.setContentText("Aviso: La caja ya se encontraba cerrada, pero cerraremos la sesión de todas formas.");
-                info.showAndWait();
-            }
+        // 2. Si eligió "Cancelar" o cerró la ventanita de la X, cortamos acá nomás
+        if (!resultado.isPresent() || resultado.get() == btnCancelar) {
+            return;
+        }
 
-            // 3. SÍ O SÍ, PASE LO QUE PASE, TE EXPULSAMOS AL LOGIN
-            irAlLogin(event);
+        // 3. Si eligió alguna de las otras dos opciones, SÍ O SÍ CERRAMOS LA CAJA PRIMERO
+        boolean exito = cajaApiService.cerrarCaja(SesionActual.getUsuarioLogueado());
+
+        // Si ya estaba cerrada (Status 400), avisamos pero dejamos que salga igual
+        if (!exito) {
+            Alert info = new Alert(Alert.AlertType.INFORMATION);
+            info.setTitle("Aviso");
+            info.setHeaderText(null);
+            info.setContentText("Aviso: La caja ya se encontraba cerrada.");
+            info.showAndWait();
+        }
+
+        // 4. Ahora sí, lo mandamos a donde pidió
+        if (resultado.get() == btnVolverLogin) {
+            irAlLogin(event); // Cierra sesión y va a la pantalla principal
+        } else if (resultado.get() == btnCerrarSalir) {
+            javafx.application.Platform.exit(); // Apaga todo el programa
+            System.exit(0);
         }
     }
 
