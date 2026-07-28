@@ -2,6 +2,7 @@ package com.nakel.frontend.service;
 
 import com.google.gson.Gson;
 import com.nakel.frontend.model.Venta;
+import com.nakel.frontend.util.SesionActual; // 🔥 IMPORTANTE: Traemos la sesión
 
 import java.net.URI;
 import java.net.http.*;
@@ -14,8 +15,13 @@ public class VentaApiService {
     public boolean registrarVenta(Venta venta) {
         try {
             String jsonVenta = gson.toJson(venta);
+
+            // 🔥 1. Agarramos al cajero que está logueado en este momento
+            String username = SesionActual.getUsuarioLogueado();
+
+            // 🔥 2. Se lo pegamos al final de la URL para que el Backend sepa de quién es la caja
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL))
+                    .uri(URI.create(API_URL + "?username=" + username))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonVenta))
                     .build();
@@ -23,12 +29,15 @@ public class VentaApiService {
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
             System.out.println("CÓDIGO DE RESPUESTA: " + respuesta.statusCode());
             System.out.println("MENSAJE DEL BACKEND: " + respuesta.body());
-            return respuesta.statusCode() == 201; // 201 Created
+
+            // 🔥 3. Aceptamos 200 (OK) o 201 (Created) para que no tire error falso
+            return respuesta.statusCode() == 200 || respuesta.statusCode() == 201;
+
         } catch (Exception e) {
+            System.out.println("❌ Error de red al registrar la venta: " + e.getMessage());
             return false;
         }
     }
-    // Importa esto arriba si no lo tenés: import java.net.http.HttpRequest; import java.net.http.HttpResponse;
 
     public String obtenerHistorialVentas() {
         try {

@@ -276,7 +276,7 @@ public class VentaController {
         cmbTipoFactura.getItems().addAll("Factura C", "Remito", "Presupuesto");
         cmbTipoFactura.setValue("Factura C");
 
-        cmbMedioPago.getItems().addAll("Efectivo", "Transferencia", "MercadoPago", "Tarjeta de Crédito", "Pago Mixto");
+        cmbMedioPago.getItems().addAll("Efectivo", "Transferencia", "MercadoPago", "Tarjeta de Crédito", "Tarjeta de Débito", "Pago Mixto");
         cmbMedioPago.setValue("Efectivo");
     }
 

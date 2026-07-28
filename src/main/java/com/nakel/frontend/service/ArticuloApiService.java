@@ -1,7 +1,7 @@
 package com.nakel.frontend.service;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken; // Importante para las listas
+import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Articulo;
 
 import java.lang.reflect.Type;
@@ -48,14 +48,13 @@ public class ArticuloApiService {
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
             if (respuesta.statusCode() == 200) {
-                // Truco de GSON para leer una lista completa (Array JSON a List Java)
                 Type listType = new TypeToken<ArrayList<Articulo>>(){}.getType();
                 return gson.fromJson(respuesta.body(), listType);
             }
         } catch (Exception e) {
             System.out.println("Error al obtener el catálogo: " + e.getMessage());
         }
-        return new ArrayList<>(); // Devuelve lista vacía si hay error para que no explote la tabla
+        return new ArrayList<>();
     }
 
     // 💾 NUEVO: Para el botón "➕ Nuevo Artículo"
@@ -65,13 +64,12 @@ public class ArticuloApiService {
 
             HttpRequest peticion = HttpRequest.newBuilder()
                     .uri(URI.create(API_URL))
-                    .header("Content-Type", "application/json") // Fundamental
+                    .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonArticulo))
                     .build();
 
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-            // Aceptamos 200 OK o 201 Created como éxito
             return respuesta.statusCode() == 200 || respuesta.statusCode() == 201;
 
         } catch (Exception e) {
@@ -79,24 +77,52 @@ public class ArticuloApiService {
             return false;
         }
     }
-    // 🗑️ NUEVO: Eliminar artículo de la base de datos
-    public void eliminarArticuloDeBaseDeDatos(Long id) throws Exception {
-        HttpRequest peticion = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL + "/" + id))
-                .DELETE()
-                .build();
 
-        HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+    // 🔄 NUEVO: Actualizar artículo (Para el botón Editar ✏️)
+    public boolean actualizarArticulo(Articulo articulo) {
+        try {
+            String jsonArticulo = gson.toJson(articulo);
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/" + articulo.getId())) // Usa el ID para actualizar
+                    .header("Content-Type", "application/json")
+                    .PUT(HttpRequest.BodyPublishers.ofString(jsonArticulo)) // Usamos PUT para modificar
+                    .build();
 
-        if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
-            throw new Exception("Error " + respuesta.statusCode() + " del servidor al eliminar el artículo.");
+            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            return respuesta.statusCode() == 200 || respuesta.statusCode() == 201;
+        } catch (Exception e) {
+            System.out.println("Error al actualizar el artículo: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 🔥 ELIMINAR TOTALMENTE BLINDADO (Sin throws Exception, atrapa los errores)
+    public boolean eliminarArticuloDeBaseDeDatos(Long id) {
+        try {
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/" + id))
+                    .DELETE()
+                    .build();
+
+            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            // 200 OK o 204 No Content significan que lo borró con éxito
+            if (respuesta.statusCode() == 200 || respuesta.statusCode() == 204) {
+                return true;
+            } else {
+                // Si devuelve cualquier otro código (ej: 500 por clave foránea, o 404 si no existe)
+                System.out.println("⚠️ El servidor rechazó el borrado. Código: " + respuesta.statusCode());
+                return false;
+            }
+        } catch (Exception e) {
+            System.out.println("Error interno al intentar eliminar: " + e.getMessage());
+            return false;
         }
     }
 
     // 🔍 NUEVO: Buscar producto para la pantalla de Cambios (por código)
     public String buscarProducto(String busqueda) throws Exception {
-        // Nota: Si en tu backend (Spring Boot) tenés una ruta específica para buscar
-        // por nombre, podés cambiar esta URL. Por ahora, usamos la de código que ya tenés:
         HttpRequest peticion = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL + "/codigo/" + busqueda))
                 .GET()
@@ -105,9 +131,9 @@ public class ArticuloApiService {
         HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
         if (respuesta.statusCode() == 200) {
-            return respuesta.body(); // Devuelve el JSON exitosamente
+            return respuesta.body();
         } else if (respuesta.statusCode() == 404) {
-            return null; // No lo encontró, le avisamos al controlador para que tire cartel rojo
+            return null;
         } else {
             throw new Exception("Error del servidor: " + respuesta.statusCode());
         }
