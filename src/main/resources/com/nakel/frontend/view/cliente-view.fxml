@@ -29,13 +29,19 @@
     </HBox>
 
     <!-- TABLA DE CLIENTES -->
+    <!-- TABLA DE CLIENTES -->
     <TableView fx:id="tablaClientes" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
         <columns>
             <TableColumn fx:id="colCod" text="Cód." prefWidth="50"/>
-            <TableColumn fx:id="colNombre" text="Nombre / Razón Social" prefWidth="250"/>
+            <TableColumn fx:id="colNombre" text="Nombre / Razón Social" prefWidth="200"/>
             <TableColumn fx:id="colDni" text="DNI / CUIT" prefWidth="120"/>
-            <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="150"/>
+            <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="120"/>
             <TableColumn fx:id="colEmail" text="Email" prefWidth="150"/>
+
+            <!-- 🔥 NUEVAS COLUMNAS PARA VER LA PLATA -->
+            <TableColumn fx:id="colSaldoAFavor" text="A Favor ($)" prefWidth="100"/>
+            <TableColumn fx:id="colSaldoPendiente" text="Deuda ($)" prefWidth="100"/>
+
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
         </columns>
     </TableView>

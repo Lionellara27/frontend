@@ -109,29 +109,42 @@ public class HistorialVentasController {
                         @Override
                         public void updateItem(Void item, boolean empty) {
                             super.updateItem(item, empty);
-                            // Verificamos que la fila no esté vacía ni sea nula
+
                             if (empty || getTableView().getItems().get(getIndex()) == null) {
                                 setGraphic(null);
                             } else {
-                                // Agarramos la venta de esta fila específica
                                 Venta ventaFila = getTableView().getItems().get(getIndex());
 
-                                try {
-                                    // 🔥 ACÁ OCURRE LA MAGIA DEL CÁLCULO
-                                    java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(ventaFila.getFechaHora());
-                                    java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30); // Le sumamos 30 días a la fecha original
+                                // 1. RESETEO VITAL: Como JavaFX recicla celdas al scrollear,
+                                // siempre arrancamos asumiendo que el botón está habilitado
+                                btnCambio.setDisable(false);
 
-                                    // Comparamos la fecha límite con el instante exacto de AHORA
-                                    if (java.time.LocalDateTime.now().isAfter(fechaLimite)) {
-                                        // 🛑 Pasaron los 30 días -> Pintamos el botón de GRIS
-                                        btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #9E9E9E; -fx-font-size: 14px;");
-                                    } else {
-                                        // ✅ Está dentro del plazo -> Pintamos el botón de VERDE
-                                        btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #4CAF50; -fx-font-size: 14px;");
+                                // 2. VERIFICACIÓN DE CAMBIO: ¿Esta venta ya fue cambiada antes?
+                                // (Usamos Boolean.TRUE.equals para evitar NullPointerExceptions si el campo viene nulo)
+                                boolean yaFueCambiado = Boolean.TRUE.equals(ventaFila.getEsTicketCambio());
+
+                                if (yaFueCambiado) {
+                                    // 🛑 YA TIENE UN CAMBIO: Botón gris, pero HABILITADO para pedir contraseña
+                                    btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #9e9e9e; -fx-font-size: 14px;");
+                                    btnCambio.setDisable(false); // <-- FUNDAMENTAL: Lo habilitamos
+
+                                } else {
+                                    // ✅ NO FUE CAMBIADA: Evaluamos el tema de los 30 días
+                                    try {
+                                        java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(ventaFila.getFechaHora());
+                                        java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30);
+
+                                        if (java.time.LocalDateTime.now().isAfter(fechaLimite)) {
+                                            // Vencido -> Naranja (Se puede clickear pero pedirá clave de Admin)
+                                            btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #FF9800; -fx-font-size: 14px;");
+                                        } else {
+                                            // En regla -> Verde
+                                            btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #4CAF50; -fx-font-size: 14px;");
+                                        }
+                                    } catch (Exception e) {
+                                        // Si la fecha falla por algo, lo dejamos naranja por precaución
+                                        btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #FF9800; -fx-font-size: 14px;");
                                     }
-                                } catch (Exception e) {
-                                    // Si por algún motivo la fecha viene mal o vacía, lo dejamos naranja por defecto
-                                    btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #FF9800; -fx-font-size: 14px;");
                                 }
 
                                 // Finalmente, metemos la caja con los 3 botones en la celda
@@ -214,14 +227,23 @@ public class HistorialVentasController {
 
     private void iniciarProcesoCambio(Venta venta) {
         try {
+            boolean yaFueCambiado = Boolean.TRUE.equals(venta.getEsTicketCambio());
+
             java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(venta.getFechaHora());
             java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30);
+            boolean estaVencido = java.time.LocalDateTime.now().isAfter(fechaLimite);
 
-            if (java.time.LocalDateTime.now().isAfter(fechaLimite)) {
-                // 🛑 ESTÁ VENCIDO: Invocamos el Pop-up de Administrador
+            // 🛑 Evaluamos si necesita clave por CUALQUIERA de los dos motivos
+            if (yaFueCambiado || estaVencido) {
+
+                // Determinamos qué mensaje mostrar en el pop-up
+                String mensajeAlerta = yaFueCambiado
+                        ? "Esta venta ya tuvo cambios previos.\nIngrese contraseña de Administrador para forzar un nuevo cambio:"
+                        : "El plazo de 30 días ha vencido.\nIngrese contraseña de Administrador para forzar el cambio:";
+
                 Dialog<String> dialog = new Dialog<>();
                 dialog.setTitle("Autorización Requerida");
-                dialog.setHeaderText("El plazo de 30 días ha vencido.\nIngrese contraseña de Administrador para forzar el cambio:");
+                dialog.setHeaderText(mensajeAlerta);
 
                 // Botones del pop-up
                 ButtonType btnAutorizar = new ButtonType("Autorizar", ButtonBar.ButtonData.OK_DONE);
@@ -240,7 +262,7 @@ public class HistorialVentasController {
 
                 // Mostramos y evaluamos
                 dialog.showAndWait().ifPresent(clave -> {
-                    // TODO: A futuro validar esto contra el backend o una variable encriptada
+                    // TODO: A futuro validar esto contra tu BD
                     if ("admin123".equals(clave)) {
                         System.out.println("✅ Autorizado por la dueña.");
                         abrirPantallaCambio(venta); // Avanza
@@ -251,7 +273,7 @@ public class HistorialVentasController {
                 });
 
             } else {
-                // ✅ ESTÁ DENTRO DE LOS 30 DÍAS: Pasa directo
+                // ✅ ESTÁ DENTRO DE LOS 30 DÍAS Y NO TIENE CAMBIOS: Pasa directo
                 System.out.println("En regla. Abriendo módulo de cambio...");
                 abrirPantallaCambio(venta);
             }

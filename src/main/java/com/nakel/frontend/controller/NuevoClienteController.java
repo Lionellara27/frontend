@@ -18,75 +18,103 @@ public class NuevoClienteController {
     @FXML private TextField txtDni;
     @FXML private TextField txtEmail;
 
-    //nuevo
+    // 🔥 NUEVOS CAMPOS DE SALDOS (Asegurate de ponerles el mismo fx:id en el FXML)
+    @FXML private TextField txtSaldoAFavor;
+    @FXML private TextField txtSaldoPendiente;
+
     @FXML private TextField txtCuit;
     @FXML private ComboBox<String> cmbIva;
     @FXML private Button btnGuardar;
 
     private Long idClienteEditando = null;
 
-    // 🔌 1. Instanciamos nuestro servicio de conexión
     private final ClienteApiService apiService = new ClienteApiService();
 
     @FXML
     public void initialize() {
-        // Llenamos los tipos de cliente clásicos
         cmbTipoCliente.getItems().addAll("Consumidor Final", "Mayorista / Revendedor", "Empresa");
-
-        // Dejamos uno seleccionado por defecto para agilizarle el trabajo
         cmbTipoCliente.setValue("Consumidor Final");
     }
 
-    //
     public void cargarDatosParaEditar(com.nakel.frontend.model.Cliente cliente) {
-        // 1. Guardamos el ID para saber que estamos actualizando
         this.idClienteEditando = cliente.getId();
 
-        // 2. Llenamos los campos
         txtNombre.setText(cliente.getNombre());
         txtTelefono.setText(cliente.getTelefono());
         txtEmail.setText(cliente.getEmail());
 
-        // 3. Manejo seguro del ComboBox
         if (cliente.getCondicionIva() != null) {
             cmbTipoCliente.setValue(cliente.getCondicionIva());
         }
 
-        // 4. 🔥 BLINDAJE: El DNI/CUIT no se toca en modo edición
         txtDni.setText(cliente.getCuit());
         txtDni.setDisable(true);
-        txtDni.setStyle("-fx-opacity: 0.7; -fx-background-color: #f0f0f0;"); // Lo ponemos gris claro para que se note
+        txtDni.setStyle("-fx-opacity: 0.7; -fx-background-color: #f0f0f0;");
+
+        // 🔥 CARGAMOS LOS SALDOS AL ABRIR EL LAPICITO
+        // Convertimos el double a texto para que entre en el TextField
+        if (txtSaldoAFavor != null) {
+            txtSaldoAFavor.setText(String.valueOf(cliente.getSaldoAFavor()));
+        }
+        if (txtSaldoPendiente != null) {
+            txtSaldoPendiente.setText(String.valueOf(cliente.getSaldoPendiente()));
+        }
     }
 
     @FXML
     public void guardarCliente(ActionEvent event) {
-        // 🛡️ 2. Validación temprana: evitamos mandar basura al Backend
         if (txtNombre.getText().isBlank() || txtDni.getText().isBlank()) {
             mostrarAlerta(Alert.AlertType.WARNING, "Datos incompletos", "El Nombre y el DNI/CUIT son obligatorios.");
-            return; // Cortamos la ejecución acá
+            return;
         }
 
         try {
             System.out.println("Enviando datos al servidor...");
 
-            // 🚀 3. Disparamos los datos reales a la base de datos a través de la API
-            apiService.guardarClienteEnBaseDeDatos(
-                    this.idClienteEditando, // 🔥 ¡AHORA SÍ MANDAMOS EL ID! (Puede ser null o el número)
-                    txtNombre.getText(),
-                    txtDni.getText(),
-                    cmbTipoCliente.getValue(),
-                    txtTelefono.getText() != null ? txtTelefono.getText() : "",
-                    txtEmail.getText() != null ? txtEmail.getText() : ""
-            );
+            // 🔥 Atrapamos los saldos de forma segura (si hay texto en blanco, ponemos 0.0)
+            double saldoAFavor = 0.0;
+            double saldoPendiente = 0.0;
 
-            // ✅ 4. Si la línea anterior no tiró error, festejamos
+            // Reemplazamos coma por punto por si el usuario escribe "10,50" en vez de "10.50"
+            if (txtSaldoAFavor != null && !txtSaldoAFavor.getText().isBlank()) {
+                saldoAFavor = Double.parseDouble(txtSaldoAFavor.getText().replace(",", "."));
+            }
+            if (txtSaldoPendiente != null && !txtSaldoPendiente.getText().isBlank()) {
+                saldoPendiente = Double.parseDouble(txtSaldoPendiente.getText().replace(",", "."));
+            }
+
+            // 🔀 SEPARAMOS LOS CAMINOS: ¿Es Nuevo o es Edición?
+            if (this.idClienteEditando == null) {
+                // ES UN CLIENTE NUEVO (Los saldos arrancan en 0 en la base de datos automáticamente)
+                apiService.guardarClienteEnBaseDeDatos(
+                        null,
+                        txtNombre.getText(),
+                        txtDni.getText(),
+                        cmbTipoCliente.getValue(),
+                        txtTelefono.getText() != null ? txtTelefono.getText() : "",
+                        txtEmail.getText() != null ? txtEmail.getText() : ""
+                );
+            } else {
+                // ES UNA EDICIÓN (LAPICITO) - Usamos el método que creamos con los saldos
+                apiService.actualizarClienteEnBaseDeDatos(
+                        this.idClienteEditando,
+                        txtNombre.getText(),
+                        txtDni.getText(),
+                        cmbTipoCliente.getValue(),
+                        txtTelefono.getText() != null ? txtTelefono.getText() : "",
+                        txtEmail.getText() != null ? txtEmail.getText() : "",
+                        saldoAFavor, // Mandamos la plata a favor
+                        saldoPendiente // Mandamos la deuda
+                );
+            }
+
             mostrarAlerta(Alert.AlertType.INFORMATION, "¡Éxito!", "Cliente guardado correctamente en la base de datos.");
-
-            // Una vez guardado, cerramos la ventanita
             cerrarModal(event);
 
+        } catch (NumberFormatException e) {
+            // Si el usuario escribe "Hola" en el campo de saldo, atajamos la explosión
+            mostrarAlerta(Alert.AlertType.WARNING, "Formato incorrecto", "Los saldos deben ser números válidos (Ej: 1500.50).");
         } catch (Exception e) {
-            // 🛑 5. Atajamos el error (Ej: DNI duplicado) que nos manda el Backend
             mostrarAlerta(Alert.AlertType.ERROR, "No se pudo guardar", e.getMessage());
         }
     }
@@ -98,7 +126,6 @@ public class NuevoClienteController {
         stage.close();
     }
 
-    // 🛠️ 6. Herramienta para crear cartelitos fáciles sin repetir código
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {
         Alert alerta = new Alert(tipo);
         alerta.setTitle(titulo);

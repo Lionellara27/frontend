@@ -12,20 +12,17 @@ import java.util.UUID;
 
 public class CambioVentaController {
 
-    // 🗃️ Listas para manejar el catálogo completo filtrable
     private javafx.collections.ObservableList<DetalleVenta> masterInventario = javafx.collections.FXCollections.observableArrayList();
     private javafx.collections.transformation.FilteredList<DetalleVenta> filteredInventario;
 
     @FXML private Label lblTituloVenta;
     @FXML private Label lblCliente;
 
-    // 🔥 Tablas y Columnas (Izquierda: Devuelve)
     @FXML private TableView<DetalleVenta> tablaDevolucion;
     @FXML private TableColumn<DetalleVenta, String> colDevCant;
     @FXML private TableColumn<DetalleVenta, String> colDevDesc;
     @FXML private TableColumn<DetalleVenta, String> colDevPrecio;
 
-    // 🔥 Tablas y Columnas (Derecha: Lleva)
     @FXML private TableView<DetalleVenta> tablaNuevos;
     @FXML private TableColumn<DetalleVenta, String> colNueCant;
     @FXML private TableColumn<DetalleVenta, String> colNueDesc;
@@ -36,15 +33,14 @@ public class CambioVentaController {
     @FXML private Label lblDiferenciaTexto;
     @FXML private Label lblDiferenciaMonto;
     @FXML private Label lblMensajeVoucher;
-
-    // 🔍 Barra de búsqueda y Servicios
     @FXML private TextField txtBuscarNuevo;
+
     private final com.nakel.frontend.service.ArticuloApiService articuloApi = new com.nakel.frontend.service.ArticuloApiService();
+    private final com.nakel.frontend.service.ValeApiService valeApi = new com.nakel.frontend.service.ValeApiService();
+    private final com.nakel.frontend.service.CambioApiService cambioApi = new com.nakel.frontend.service.CambioApiService();
     private final com.google.gson.Gson gson = new com.google.gson.Gson();
 
     private Venta ventaOriginal;
-
-    // Variables para guardar la matemática pura
     private double saldoAFavorCliente = 0.0;
     private double costoNuevosProductos = 0.0;
 
@@ -52,64 +48,158 @@ public class CambioVentaController {
     public void initialize() {
         tablaDevolucion.setPlaceholder(new Label("No hay artículos para devolver."));
         tablaNuevos.setPlaceholder(new Label("Cargando inventario..."));
-        // 1. Configuramos la Tabla Izquierda (Lo que devuelve)
         configurarColumnaCantidadDevolucion();
         colDevDesc.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
         colDevPrecio.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty("$ " + cell.getValue().getPrecioUnitario()));
 
-        // 2. Configuramos la Tabla Derecha (🔥 AHORA CON BOTONES Y CATÁLOGO REAL)
-        configurarColumnaCantidadNuevos(); // Tu nuevo método privado
+        configurarColumnaCantidadNuevos();
         colNueDesc.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
         colNuePrecio.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty("$ " + cell.getValue().getPrecioUnitario()));
 
-        // 🔥 Cargamos la góndola entera de entrada
         cargarCatalogoCompleto();
     }
 
     public void cargarVentaOriginal(Venta venta) {
         this.ventaOriginal = venta;
-
         lblTituloVenta.setText("Gestión de Cambio - Venta #" + String.format("%08d", venta.getId()));
         lblCliente.setText("Cliente: " + (venta.getCliente() != null ? venta.getCliente().getNombre() : "Consumidor Final"));
 
-        // 🔥 MAGIA APLICADA: Llenamos la tabla izquierda con los productos reales
-        // Guardamos la cantidad original vendida para limitar la devolución
-        if (venta.getDetalles() != null) {
-            for (DetalleVenta det : venta.getDetalles()) {
-                det.setCantidadOriginal(det.getCantidad());
+        // 🔥 OBTENEMOS EL "TICKET VIVO" DESDE EL BACKEND (Restando lo devuelto y sumando lo nuevo histórico)
+        try {
+            java.util.List<com.nakel.frontend.model.ArticuloInfoDTO> stockReal = cambioApi.obtenerArticulosActuales(venta.getId());
+
+            if (stockReal != null && !stockReal.isEmpty()) {
+                java.util.List<DetalleVenta> itemsParaDevolver = new java.util.ArrayList<>();
+
+                for (com.nakel.frontend.model.ArticuloInfoDTO info : stockReal) {
+                    // Transformamos el DTO del ticket vivo en un DetalleVenta para que la tabla lo dibuje
+                    DetalleVenta det = new DetalleVenta();
+                    det.setArticulo(info.getArticulo());
+                    det.setCantidad(info.getCantidad());
+                    det.setCantidadOriginal(info.getCantidad()); // Límite máximo que puede devolver ahora
+                    det.setPrecioUnitario(info.getPrecioUnitario());
+                    det.setSubtotal(info.getCantidad() * info.getPrecioUnitario());
+
+                    itemsParaDevolver.add(det);
+                }
+
+                tablaDevolucion.setItems(javafx.collections.FXCollections.observableArrayList(itemsParaDevolver));
+            } else {
+                tablaDevolucion.setItems(javafx.collections.FXCollections.observableArrayList());
             }
 
-            tablaDevolucion.setItems(javafx.collections.FXCollections.observableArrayList(venta.getDetalles()));
+        } catch (Exception e) {
+            System.err.println("❌ Error al cargar stock real del cliente: " + e.getMessage());
+            // Fallback por seguridad a los detalles originales si falla la red
+            if (venta.getDetalles() != null) {
+                for (DetalleVenta det : venta.getDetalles()) {
+                    det.setCantidadOriginal(det.getCantidad());
+                }
+                tablaDevolucion.setItems(javafx.collections.FXCollections.observableArrayList(venta.getDetalles()));
+            }
         }
 
-        saldoAFavorCliente = venta.getTotal();
-        lblSaldoFavor.setText(String.format("$ %.2f", saldoAFavorCliente));
-
-        calcularDiferencias();
+        // Calculamos el saldo a favor inicial basado en lo que realmente tiene en la mano
+        recalcularSaldoFavor();
     }
 
-    // 🔥 EL NÚCLEO MATEMÁTICO DEL VOUCHER
-    private void calcularDiferencias() {
-        // Diferencia = Lo que se lleva (costo) - Lo que devuelve (favor)
+    @FXML
+    public void buscarYAgregarNuevoProducto(ActionEvent event) {
+        String busqueda = txtBuscarNuevo.getText();
+        if (busqueda == null || busqueda.isBlank()) return;
+
+        try {
+            String jsonRespuesta = articuloApi.buscarProducto(busqueda.trim());
+            if (jsonRespuesta != null && !jsonRespuesta.isBlank()) {
+                com.nakel.frontend.model.Articulo articuloEncontrado = gson.fromJson(jsonRespuesta, com.nakel.frontend.model.Articulo.class);
+                DetalleVenta nuevoItem = new DetalleVenta();
+                nuevoItem.setArticulo(articuloEncontrado);
+                nuevoItem.setCantidad(1);
+                nuevoItem.setPrecioUnitario(articuloEncontrado.getPrecio());
+                nuevoItem.setSubtotal(articuloEncontrado.getPrecio() * 1);
+
+                tablaNuevos.getItems().add(nuevoItem);
+                costoNuevosProductos += nuevoItem.getSubtotal();
+                lblCostoNuevos.setText(String.format("$ %.2f", costoNuevosProductos));
+                calcularDiferencias();
+                txtBuscarNuevo.clear();
+            } else {
+                mostrarError("Producto no encontrado", "No se encontró ningún artículo: " + busqueda);
+                txtBuscarNuevo.selectAll();
+            }
+        } catch (Exception e) {
+            mostrarError("Error de Conexión", "Problema al buscar producto: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void confirmarCambio(ActionEvent event) {
+        // Validación: No podés confirmar un cambio vacío
+        if (costoNuevosProductos == 0 && saldoAFavorCliente == ventaOriginal.getTotal()) {
+            mostrarError("Cambio Inválido", "Debe seleccionar al menos un artículo para cambiar o devolver.");
+            return;
+        }
+
         double diferencia = costoNuevosProductos - saldoAFavorCliente;
+        String resumen = generarResumenArticulos();
+        Long idCliente = (ventaOriginal.getCliente() != null) ? ventaOriginal.getCliente().getId() : null;
 
         if (diferencia > 0) {
-            // El cliente eligió cosas más caras. Debe pagar la diferencia.
-            lblDiferenciaTexto.setText("EL CLIENTE DEBE ABONAR:");
-            lblDiferenciaTexto.setStyle("-fx-text-fill: #d32f2f;"); // Rojo
-            lblDiferenciaMonto.setText(String.format("$ %.2f", diferencia));
-            lblMensajeVoucher.setVisible(false);
+            // 🔥 AHORA ESPERAMOS A QUE EL MODAL NOS DIGA SI PAGÓ O NO
+            boolean pagoExitoso = abrirModalDePago(diferencia, ventaOriginal);
+
+            if (pagoExitoso) {
+                actualizarStockEnBaseDeDatos();
+                registrarCambioEnBackend(resumen, diferencia, null); // 📝 Guardamos el rastro histórico
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION, "¡Cambio registrado y diferencia cobrada con éxito!");
+                alert.showAndWait();
+                cerrarModal(event);
+            } else {
+                System.out.println("El usuario canceló el pago. No se guardan los cambios.");
+            }
 
         } else if (diferencia < 0) {
-            // El cliente eligió cosas más baratas. Le sobra plata (Saldo a favor / Voucher)
-            lblDiferenciaTexto.setText("SALDO A FAVOR DEL CLIENTE:");
-            lblDiferenciaTexto.setStyle("-fx-text-fill: #388e3c;"); // Verde
-            lblDiferenciaMonto.setText(String.format("$ %.2f", Math.abs(diferencia)));
+            double montoVoucher = Math.abs(diferencia);
+            com.nakel.frontend.model.Vale nuevoVale = valeApi.generarVale(montoVoucher, idCliente);
 
-            lblMensajeVoucher.setVisible(true); // Prendemos el aviso naranja del voucher
+            if (nuevoVale != null) {
+                actualizarStockEnBaseDeDatos();
+                registrarCambioEnBackend(resumen, diferencia, nuevoVale.getCodigo()); // 📝 Guardamos el rastro histórico
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Cambio Procesado");
+                alert.setContentText("Stock actualizado.\n\nSe ha generado el VALE DE CAMBIO:\nCÓDIGO: " + nuevoVale.getCodigo() + "\nMONTO A FAVOR: $" + nuevoVale.getMonto());
+                alert.showAndWait();
+                cerrarModal(event);
+            } else {
+                mostrarError("Error de Conexión", "No se pudo generar el vale en el servidor.");
+            }
 
         } else {
             // Cambio mano a mano
+            actualizarStockEnBaseDeDatos();
+            registrarCambioEnBackend(resumen, 0.0, null); // 📝 Guardamos el rastro histórico
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "¡Cambio Directo Exitoso! Stock actualizado.");
+            alert.showAndWait();
+            cerrarModal(event);
+        }
+    }
+
+    private void calcularDiferencias() {
+        double diferencia = costoNuevosProductos - saldoAFavorCliente;
+        if (diferencia > 0) {
+            lblDiferenciaTexto.setText("EL CLIENTE DEBE ABONAR:");
+            lblDiferenciaTexto.setStyle("-fx-text-fill: #d32f2f;");
+            lblDiferenciaMonto.setText(String.format("$ %.2f", diferencia));
+            lblMensajeVoucher.setVisible(false);
+        } else if (diferencia < 0) {
+            lblDiferenciaTexto.setText("SALDO A FAVOR DEL CLIENTE:");
+            lblDiferenciaTexto.setStyle("-fx-text-fill: #388e3c;");
+            lblDiferenciaMonto.setText(String.format("$ %.2f", Math.abs(diferencia)));
+            lblMensajeVoucher.setVisible(true);
+        } else {
             lblDiferenciaTexto.setText("CAMBIO DIRECTO (Sin costo):");
             lblDiferenciaTexto.setStyle("-fx-text-fill: #333333;");
             lblDiferenciaMonto.setText("$ 0.00");
@@ -117,55 +207,6 @@ public class CambioVentaController {
         }
     }
 
-    @FXML
-    public void buscarYAgregarNuevoProducto(ActionEvent event) {
-        String busqueda = txtBuscarNuevo.getText();
-
-        if (busqueda == null || busqueda.isBlank()) {
-            return;
-        }
-
-        try {
-            // 1. Buscamos el artículo en el backend usando tu API
-            // (Ajustá "buscarProducto" al nombre exacto que tengas en ArticuloApiService)
-            String jsonRespuesta = articuloApi.buscarProducto(busqueda.trim());
-
-            if (jsonRespuesta != null && !jsonRespuesta.isBlank()) {
-                // 2. Convertimos el JSON al objeto Articulo
-                com.nakel.frontend.model.Articulo articuloEncontrado = gson.fromJson(jsonRespuesta, com.nakel.frontend.model.Articulo.class);
-
-                // 3. Armamos el nuevo renglón para la tabla (DetalleVenta)
-                DetalleVenta nuevoItem = new DetalleVenta();
-                nuevoItem.setArticulo(articuloEncontrado);
-                nuevoItem.setCantidad(1); // Por defecto agregamos 1 unidad
-                // (Ajustá getPrecio() al nombre real de tu getter en Articulo)
-                nuevoItem.setPrecioUnitario(articuloEncontrado.getPrecio());
-                nuevoItem.setSubtotal(articuloEncontrado.getPrecio() * 1);
-
-                // 4. Lo metemos en la tabla de Nuevos Artículos
-                tablaNuevos.getItems().add(nuevoItem);
-
-                // 5. Actualizamos los totales
-                costoNuevosProductos += nuevoItem.getSubtotal();
-                lblCostoNuevos.setText(String.format("$ %.2f", costoNuevosProductos));
-
-                // 6. Recalculamos la matemática del voucher al instante
-                calcularDiferencias();
-
-                // 7. Limpiamos el campito para que la dueña pueda escanear otro
-                txtBuscarNuevo.clear();
-
-            } else {
-                mostrarError("Producto no encontrado", "No se encontró ningún artículo con el código o nombre: " + busqueda);
-                txtBuscarNuevo.selectAll();
-            }
-
-        } catch (Exception e) {
-            mostrarError("Error de Conexión", "Hubo un problema al buscar el producto en el servidor: " + e.getMessage());
-        }
-    }
-
-    // Método de ayuda para mostrar los carteles rojos de error rápido
     private void mostrarError(String titulo, String mensaje) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(titulo);
@@ -174,42 +215,101 @@ public class CambioVentaController {
         alert.showAndWait();
     }
 
-    @FXML
-    public void confirmarCambio(ActionEvent event) {
-        double diferencia = costoNuevosProductos - saldoAFavorCliente;
-
-        // 🛡️ PREPARACIÓN FISCAL (ARCA/AFIP)
-        boolean requiereNotaCredito = (ventaOriginal.getEsFiscal() != null && ventaOriginal.getEsFiscal());
-
-        if (requiereNotaCredito) {
-            System.out.println("⚠️ ALERTA FISCAL: Ticket original con CAE. Preparando conexión con ARCA para emitir NOTA DE CRÉDITO.");
-            // TODO: Etapa 4 - Llamar al Web Service de ARCA acá antes de seguir
-        } else {
-            System.out.println("✅ Movimiento de inventario interno. No requiere aviso a ARCA.");
+    private String generarResumenArticulos() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Devuelve: ");
+        for (DetalleVenta dev : tablaDevolucion.getItems()) {
+            if (dev.getCantidad() > 0) {
+                sb.append(dev.getArticulo().getNombre()).append(" (x").append(dev.getCantidad()).append("), ");
+            }
         }
-
-        // 💰 LÓGICA DE SALDOS
-        if (diferencia < 0) {
-            String codigoVoucher = "VOU-" + java.util.UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-            double montoVoucher = Math.abs(diferencia);
-
-            String msjFiscal = requiereNotaCredito ? "\n(Se emitirá Nota de Crédito en ARCA)" : "";
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Cambio Procesado");
-            alert.setHeaderText("¡Cambio Exitoso!");
-            alert.setContentText("Stock actualizado." + msjFiscal + "\n\nSe ha generado el comprobante:\nCÓDIGO: " + codigoVoucher + "\nMONTO A FAVOR: $" + montoVoucher);
-            alert.showAndWait();
-
-        } else {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Cambio Procesado");
-            alert.setHeaderText("¡Cambio Exitoso!");
-            alert.setContentText("Stock actualizado correctamente.\nSe debe cobrar al cliente: $" + diferencia);
-            alert.showAndWait();
+        sb.append(" | Se lleva: ");
+        for (DetalleVenta nuev : masterInventario) {
+            if (nuev.getCantidad() > 0) {
+                sb.append(nuev.getArticulo().getNombre()).append(" (x").append(nuev.getCantidad()).append("), ");
+            }
         }
+        return sb.toString();
+    }
 
-        cerrarModal(event);
+    // 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
+    // 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
+    private boolean abrirModalDePago(double montoAcobrar, Venta venta) {
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/pago-mixto-modal.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            Long idCliente = (venta.getCliente() != null) ? venta.getCliente().getId() : null;
+
+            PagoMixtoController controller = loader.getController();
+            controller.inicializarValores(montoAcobrar, null, idCliente);
+
+            Stage stage = new Stage();
+            stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            stage.setTitle("Cobrar Diferencia de Cambio");
+            stage.setScene(new javafx.scene.Scene(root));
+
+            // 🛑 ACÁ SE CONGELA HASTA QUE EL MODAL SE CIERRE
+            stage.showAndWait();
+
+            // Retorna TRUE si pagó todo, FALSE si cerró de la X
+            return controller.isPagoCompleto();
+
+        } catch (Exception e) {
+            System.err.println("Error al abrir el modal de pagos: " + e.getMessage());
+            mostrarError("Error visual", "No se pudo abrir la ventana de pagos.");
+            return false;
+        }
+    }
+
+    // 📝 MAGIA HISTÓRICA: Le avisamos a la BD que esto pasó
+// 📝 MAGIA HISTÓRICA: Empaquetamos y avisamos a la BD
+    // 📝 MAGIA HISTÓRICA: Empaquetamos y avisamos a la BD
+    private void registrarCambioEnBackend(String resumen, double diferencia, String codigoVale) {
+        try {
+            // 1. Creamos el objeto Cambio usando los SETTERS EXACTOS de tu clase
+            com.nakel.frontend.model.Cambio nuevoCambio = new com.nakel.frontend.model.Cambio();
+
+            nuevoCambio.setResumenArticulos(resumen);
+            nuevoCambio.setDiferenciaCobrada(diferencia);
+            nuevoCambio.setCodigoValeGenerado(codigoVale);
+
+            // 🔥 2. ARMAMOS LA LISTA DE ÍTEMS PARA EL BACKEND
+            java.util.List<com.nakel.frontend.model.ItemCambio> itemsDelCambio = new java.util.ArrayList<>();
+
+            // A) Agarramos lo que el cliente DEVUELVE
+            for (com.nakel.frontend.model.DetalleVenta dev : tablaDevolucion.getItems()) {
+                if (dev.getCantidad() > 0) {
+                    com.nakel.frontend.model.ItemCambio itemDevuelto = new com.nakel.frontend.model.ItemCambio();
+                    itemDevuelto.setArticulo(dev.getArticulo());
+                    itemDevuelto.setCantidad(dev.getCantidad());
+                    itemDevuelto.setPrecioUnitario(dev.getPrecioUnitario());
+                    itemDevuelto.setTipo("DEVUELTO"); // <-- Clave para restar en el backend
+                    itemsDelCambio.add(itemDevuelto);
+                }
+            }
+
+            // B) Agarramos lo que se lleva NUEVO
+            for (com.nakel.frontend.model.DetalleVenta nuev : masterInventario) {
+                if (nuev.getCantidad() > 0) {
+                    com.nakel.frontend.model.ItemCambio itemNuevo = new com.nakel.frontend.model.ItemCambio();
+                    itemNuevo.setArticulo(nuev.getArticulo());
+                    itemNuevo.setCantidad(nuev.getCantidad());
+                    itemNuevo.setPrecioUnitario(nuev.getPrecioUnitario());
+                    itemNuevo.setTipo("NUEVO"); // <-- Clave para sumar en el backend
+                    itemsDelCambio.add(itemNuevo);
+                }
+            }
+
+            // 3. Le atamos la lista de artículos al cambio
+            nuevoCambio.setItems(itemsDelCambio);
+
+            // 4. Mandamos el paquete completo al servicio
+            cambioApi.registrarCambio(ventaOriginal.getId(), nuevoCambio);
+
+        } catch (Exception e) {
+            System.out.println("No se pudo registrar la trazabilidad: " + e.getMessage());
+        }
     }
 
     @FXML
@@ -219,119 +319,106 @@ public class CambioVentaController {
         stage.close();
     }
 
+    private void actualizarStockEnBaseDeDatos() {
+        for (DetalleVenta devuelto : tablaDevolucion.getItems()) {
+            if (devuelto.getCantidad() > 0) {
+                articuloApi.restaurarStock(devuelto.getArticulo().getId(), devuelto.getCantidad());
+            }
+        }
+        for (DetalleVenta nuevo : masterInventario) {
+            if (nuevo.getCantidad() > 0) {
+                articuloApi.descontarStock(nuevo.getArticulo().getId(), nuevo.getCantidad());
+            }
+        }
+    }
 
-    // Método privado para mantener limpio el código
     private void configurarColumnaCantidadDevolucion() {
         colDevCant.setCellFactory(col -> new TableCell<DetalleVenta, String>() {
             private final Button btnMenos = new Button("-");
             private final Label lblCant = new Label();
             private final Button btnMas = new Button("+");
             private final javafx.scene.layout.HBox panel = new javafx.scene.layout.HBox(5, btnMenos, lblCant, btnMas);
-
             {
                 panel.setAlignment(javafx.geometry.Pos.CENTER);
                 btnMenos.setStyle("-fx-background-color: #ffcdd2; -fx-cursor: hand;");
                 btnMas.setStyle("-fx-background-color: #c8e6c9; -fx-cursor: hand;");
 
-                // Restar cantidad a devolver
                 btnMenos.setOnAction(e -> {
                     DetalleVenta item = getTableView().getItems().get(getIndex());
                     if (item.getCantidad() > 1) {
                         item.setCantidad(item.getCantidad() - 1);
                         item.setSubtotal(item.getCantidad() * item.getPrecioUnitario());
                     } else {
-                        // Si llega a 0, lo sacamos de la tabla porque significa que NO lo devuelve
                         getTableView().getItems().remove(item);
                     }
                     getTableView().refresh();
-                    recalcularSaldoFavor(); // Actualizamos los números
+                    recalcularSaldoFavor();
                 });
 
-                // Sumar cantidad (Opcional, por si restó de más sin querer)
-                // Sumar cantidad (sin superar la cantidad vendida originalmente)
                 btnMas.setOnAction(e -> {
                     DetalleVenta item = getTableView().getItems().get(getIndex());
-
                     if (item.getCantidad() < item.getCantidadOriginal()) {
                         item.setCantidad(item.getCantidad() + 1);
                         item.setSubtotal(item.getCantidad() * item.getPrecioUnitario());
-
                         getTableView().refresh();
                         recalcularSaldoFavor();
                     } else {
-                        mostrarError(
-                                "Cantidad máxima alcanzada",
-                                "No se pueden devolver más unidades de las que fueron vendidas."
-                        );
+                        mostrarError("Límite", "No puede devolver más de lo que compró.");
                     }
                 });
             }
-
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || getTableView().getItems().get(getIndex()) == null) {
                     setGraphic(null);
                 } else {
-                    DetalleVenta detalle = getTableView().getItems().get(getIndex());
-                    lblCant.setText(String.valueOf(detalle.getCantidad()));
+                    lblCant.setText(String.valueOf(getTableView().getItems().get(getIndex()).getCantidad()));
                     setGraphic(panel);
                 }
             }
         });
     }
 
-    // El método que actualiza la plata cuando tocás los botones
     private void recalcularSaldoFavor() {
         saldoAFavorCliente = 0.0;
         for (DetalleVenta det : tablaDevolucion.getItems()) {
             saldoAFavorCliente += det.getSubtotal();
         }
         lblSaldoFavor.setText(String.format("$ %.2f", saldoAFavorCliente));
-        calcularDiferencias(); // Recalcula también la diferencia general
+        calcularDiferencias();
     }
-    //--------------------------------
-    // 🔥 Carga todo el inventario de tu local con cantidad inicial 0
+
     private void cargarCatalogoCompleto() {
         try {
-            // Le pegamos a tu ApiService (obtenerTodos) igual que en el mostrador
             java.util.List<com.nakel.frontend.model.Articulo> articulosBBDD = articuloApi.obtenerTodos();
-
             if (articulosBBDD != null) {
                 masterInventario.clear();
                 for (com.nakel.frontend.model.Articulo art : articulosBBDD) {
-                    // Creamos renglones en 0 pesos y 0 unidades usando tu constructor
-                    DetalleVenta renglonCatalogo = new DetalleVenta(0, art.getPrecio(), 0.0, art);
-                    masterInventario.add(renglonCatalogo);
+                    if (art.getStockActual() > 0) {
+                        masterInventario.add(new DetalleVenta(0, art.getPrecio(), 0.0, art));
+                    }
                 }
-
-                // Enchufamos la lista al filtro de JavaFX
                 filteredInventario = new javafx.collections.transformation.FilteredList<>(masterInventario, p -> true);
                 tablaNuevos.setItems(filteredInventario);
-                System.out.println("✅ Catálogo de cambios inicializado con " + articulosBBDD.size() + " productos.");
             }
-        } catch (Exception e) {
-            System.err.println("Error al precargar el inventario en cambios: " + e.getMessage());
-        }
+        } catch (Exception e) {}
     }
 
-    // 🔥 Botones de más y menos para la Góndola de la derecha
     private void configurarColumnaCantidadNuevos() {
         colNueCant.setCellFactory(col -> new TableCell<DetalleVenta, String>() {
             private final Button btnMenos = new Button("-");
             private final Label lblCant = new Label();
             private final Button btnMas = new Button("+");
             private final javafx.scene.layout.HBox panel = new javafx.scene.layout.HBox(5, btnMenos, lblCant, btnMas);
-
             {
                 panel.setAlignment(javafx.geometry.Pos.CENTER);
                 btnMenos.setStyle("-fx-background-color: #ffcdd2; -fx-cursor: hand;");
                 btnMas.setStyle("-fx-background-color: #c8e6c9; -fx-cursor: hand;");
 
-                // Restar unidades que se lleva
                 btnMenos.setOnAction(e -> {
                     DetalleVenta item = getTableView().getItems().get(getIndex());
-                    if (item.getCantidad() > 0) { // No permitimos menos de 0
+                    if (item.getCantidad() > 0) {
                         item.setCantidad(item.getCantidad() - 1);
                         item.setSubtotal(item.getCantidad() * item.getPrecioUnitario());
                         getTableView().refresh();
@@ -339,51 +426,37 @@ public class CambioVentaController {
                     }
                 });
 
-                // Sumar unidades que se lleva
-                // Sumar unidades que se lleva
                 btnMas.setOnAction(e -> {
                     DetalleVenta item = getTableView().getItems().get(getIndex());
-
-                    int stockDisponible = item.getArticulo().getStockActual();
-
-                    if (item.getCantidad() < stockDisponible) {
-
+                    if (item.getCantidad() < item.getArticulo().getStockActual()) {
                         item.setCantidad(item.getCantidad() + 1);
                         item.setSubtotal(item.getCantidad() * item.getPrecioUnitario());
-
                         getTableView().refresh();
                         recalcularCostoNuevos();
-
                     } else {
-                        mostrarError(
-                                "Stock insuficiente",
-                                "Solo hay " + stockDisponible + " unidades disponibles."
-                        );
+                        mostrarError("Sin stock", "No hay más unidades.");
                     }
                 });
             }
-
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || getTableView().getItems().get(getIndex()) == null) {
                     setGraphic(null);
                 } else {
-                    DetalleVenta detalle = getTableView().getItems().get(getIndex());
-                    lblCant.setText(String.valueOf(detalle.getCantidad()));
+                    lblCant.setText(String.valueOf(getTableView().getItems().get(getIndex()).getCantidad()));
                     setGraphic(panel);
                 }
             }
         });
     }
 
-    // Recorre toda la lista maestra sumando solo lo que tenga cantidad > 0
     private void recalcularCostoNuevos() {
         costoNuevosProductos = 0.0;
         for (DetalleVenta det : masterInventario) {
             costoNuevosProductos += det.getSubtotal();
         }
         lblCostoNuevos.setText(String.format("$ %.2f", costoNuevosProductos));
-        calcularDiferencias(); // Actualiza el vuelto/deuda al instante
+        calcularDiferencias();
     }
 }

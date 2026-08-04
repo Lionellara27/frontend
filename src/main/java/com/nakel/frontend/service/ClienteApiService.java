@@ -88,9 +88,11 @@ public class ClienteApiService {
     }
 
     // =============== 3.5. ACTUALIZAR CLIENTE (PUT) ===============
-    public void actualizarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
+    // =============== 3.5. ACTUALIZAR CLIENTE (PUT) ===============
+    // 🔥 Le sumamos los dos saldos a los parámetros
+    public void actualizarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email, double saldoAFavor, double saldoPendiente) throws Exception {
 
-        Map<String, Object> datosCliente = new HashMap<>(); // Usamos Object por si el ID es numérico
+        Map<String, Object> datosCliente = new HashMap<>();
         datosCliente.put("id", id);
         datosCliente.put("nombre", nombre);
         datosCliente.put("cuit", cuit);
@@ -98,12 +100,16 @@ public class ClienteApiService {
         datosCliente.put("telefono", telefono);
         datosCliente.put("email", email);
 
+        // 🔥 Metemos los saldos en el JSON para que el backend no los sobreescriba con null
+        datosCliente.put("saldoAFavor", saldoAFavor);
+        datosCliente.put("saldoPendiente", saldoPendiente);
+
         String jsonMandar = gson.toJson(datosCliente);
 
         HttpRequest peticion = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL + "/" + id)) // ¡Ojo a la URL! Le pasamos el ID
+                .uri(URI.create(API_URL + "/" + id))
                 .header("Content-Type", "application/json")
-                .PUT(HttpRequest.BodyPublishers.ofString(jsonMandar)) // Usamos PUT para modificar
+                .PUT(HttpRequest.BodyPublishers.ofString(jsonMandar))
                 .build();
 
         HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());

@@ -9,6 +9,10 @@ public class Cliente {
     private String telefono;
     private String email;
 
+
+    private double saldoAFavor;
+    private double saldoPendiente;
+
     // Constructores vacíos para que Gson pueda trabajar tranquilo
     public Cliente() {
     }
@@ -62,4 +66,11 @@ public class Cliente {
     public void setEmail(String email) {
         this.email = email;
     }
+
+    // Getters y Setters
+    public double getSaldoAFavor() { return saldoAFavor; }
+    public void setSaldoAFavor(double saldoAFavor) { this.saldoAFavor = saldoAFavor; }
+
+    public double getSaldoPendiente() { return saldoPendiente; }
+    public void setSaldoPendiente(double saldoPendiente) { this.saldoPendiente = saldoPendiente; }
 }

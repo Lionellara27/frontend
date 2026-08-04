@@ -166,13 +166,33 @@ public class ClienteController {
         alerta.setTitle("Detalle del Cliente");
         alerta.setHeaderText(cliente.getNombre() + " (DNI/CUIT: " + cliente.getCuit() + ")");
 
-        String info = "Teléfono: " + (cliente.getTelefono().isEmpty() ? "N/A" : cliente.getTelefono()) + "\n"
-                + "Email: " + (cliente.getEmail().isEmpty() ? "N/A" : cliente.getEmail()) + "\n"
-                + "Condición IVA: " + cliente.getCondicionIva() + "\n\n"
-                + "--- ESTADÍSTICAS ---\n"
-                + "Compras: Próximamente...\n";
+        // Usamos StringBuilder que es más prolijo para armar textos largos
+        StringBuilder info = new StringBuilder();
+        info.append("Teléfono: ").append(cliente.getTelefono().isEmpty() ? "N/A" : cliente.getTelefono()).append("\n");
+        info.append("Email: ").append(cliente.getEmail().isEmpty() ? "N/A" : cliente.getEmail()).append("\n");
+        info.append("Condición IVA: ").append(cliente.getCondicionIva()).append("\n\n");
 
-        alerta.setContentText(info);
+        // --- ACÁ AGREGAMOS LA BILLETERA / CUENTA CORRIENTE ---
+        info.append("--- ESTADO DE CUENTA ---\n");
+
+        // 1. Evaluamos si tiene plata a favor
+        if (cliente.getSaldoAFavor() > 0) {
+            info.append("✅ SALDO A FAVOR: $").append(String.format("%.2f", cliente.getSaldoAFavor())).append("\n");
+        } else {
+            info.append("SALDO A FAVOR: $0.00\n");
+        }
+
+        // 2. Evaluamos si debe plata
+        if (cliente.getSaldoPendiente() > 0) {
+            info.append("❌ SALDO PENDIENTE: $").append(String.format("%.2f", cliente.getSaldoPendiente())).append("\n");
+        } else {
+            info.append("SALDO PENDIENTE: $0.00\n");
+        }
+
+        info.append("\n--- ESTADÍSTICAS ---\n");
+        info.append("Compras: Próximamente...\n");
+
+        alerta.setContentText(info.toString());
         alerta.showAndWait();
     }
 

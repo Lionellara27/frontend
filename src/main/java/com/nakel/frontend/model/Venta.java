@@ -13,6 +13,9 @@ public class Venta {
     private List<Pago> pagos;
     private String fechaHora;
 
+    // 🔥 ESTO ES LO NUEVO QUE AGREGAMOS
+    private String tipoComprobante;
+
 
     // 🔥 CONSTRUCTOR VACÍO (Obligatorio para que Gson pueda leer el Historial)
     public Venta() {
@@ -48,7 +51,6 @@ public class Venta {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
-    // Agregá esto al final con los demás getters
     public String getFechaHora() {
         return fechaHora;
     }
@@ -57,8 +59,26 @@ public class Venta {
         this.fechaHora = fechaHora;
     }
 
-    // 🔥 AGREGAR ESTO EN Venta.java para que Gson pueda setearlo desde el JSON
     public void setEsTicketCambio(Boolean esTicketCambio) {
         this.esTicketCambio = esTicketCambio;
     }
+
+    // 🔥 ESTOS SON LOS GETTERS Y SETTERS NUEVOS PARA EL TIPO DE COMPROBANTE
+    public String getTipoComprobante() {
+        return tipoComprobante;
+    }
+
+    public void setTipoComprobante(String tipoComprobante) {
+        this.tipoComprobante = tipoComprobante;
+    }
+
+    private java.util.List<Cambio> historialCambios;
+
+    public java.util.List<Cambio> getHistorialCambios() {
+        return historialCambios;
+    }
+    public void setHistorialCambios(java.util.List<Cambio> historialCambios) {
+        this.historialCambios = historialCambios;
+    }
+
 }

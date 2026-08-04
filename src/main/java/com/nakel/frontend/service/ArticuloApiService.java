@@ -138,4 +138,38 @@ public class ArticuloApiService {
             throw new Exception("Error del servidor: " + respuesta.statusCode());
         }
     }
+
+    // 🔥 Suma stock (cuando el cliente devuelve algo)
+    public boolean restaurarStock(Long idArticulo, int cantidad) {
+        try {
+            String url = API_URL + "/" + idArticulo + "/restaurar-stock?cantidad=" + cantidad;
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .PUT(HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+            return respuesta.statusCode() == 200;
+        } catch (Exception e) {
+            System.out.println("❌ Error al restaurar stock: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 🔥 Resta stock (cuando el cliente se lleva algo nuevo por el cambio)
+    public boolean descontarStock(Long idArticulo, int cantidad) {
+        try {
+            String url = API_URL + "/" + idArticulo + "/descontar-stock?cantidad=" + cantidad;
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .PUT(HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+            return respuesta.statusCode() == 200;
+        } catch (Exception e) {
+            System.out.println("❌ Error al descontar stock: " + e.getMessage());
+            return false;
+        }
+    }
 }

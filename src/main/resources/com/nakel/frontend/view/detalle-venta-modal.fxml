@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="500.0" prefWidth="550.0" style="-fx-background-color: #F8F9FA; -fx-border-color: #CCCCCC; -fx-border-width: 1;" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nakel.frontend.controller.DetalleVentaController">
+<AnchorPane prefHeight="600.0" prefWidth="550.0" style="-fx-background-color: #F8F9FA; -fx-border-color: #CCCCCC; -fx-border-width: 1;" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nakel.frontend.controller.DetalleVentaController">
     <children>
         <VBox spacing="15.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
             <children>
@@ -35,7 +35,8 @@
                     </children>
                 </HBox>
 
-                <TableView fx:id="tablaDetalles" prefHeight="250.0" prefWidth="510.0" VBox.vgrow="ALWAYS">
+                <!-- TABLA ORIGINAL DE LA VENTA -->
+                <TableView fx:id="tablaDetalles" prefHeight="200.0" prefWidth="510.0" VBox.vgrow="ALWAYS">
                     <columns>
                         <TableColumn fx:id="colCantidad" prefWidth="70.0" text="Cant." />
                         <TableColumn fx:id="colDescripcion" prefWidth="240.0" text="Descripción" />
@@ -44,11 +45,29 @@
                     </columns>
                 </TableView>
 
+                <!-- 🔥 NUEVA SECCIÓN: HISTORIAL DE CAMBIOS (Oculta por defecto) -->
+                <VBox spacing="5.0">
+                    <children>
+                        <Label fx:id="lblAvisoCambios" managed="false" text="⚠️ Esta venta tiene X cambio(s) registrado(s)" textFill="#d32f2f" visible="false">
+                            <font>
+                                <Font name="System Bold" size="14.0" />
+                            </font>
+                        </Label>
+                        <TableView fx:id="tablaCambios" managed="false" prefHeight="130.0" prefWidth="510.0" visible="false">
+                            <columns>
+                                <TableColumn fx:id="colFechaCambio" prefWidth="120.0" text="Fecha" />
+                                <TableColumn fx:id="colResumenCambio" prefWidth="280.0" text="Resumen de Artículos" />
+                                <TableColumn fx:id="colDiferenciaCambio" prefWidth="100.0" text="Diferencia" />
+                            </columns>
+                        </TableView>
+                    </children>
+                </VBox>
+
                 <HBox alignment="CENTER_RIGHT" spacing="20.0">
                     <children>
-                        <Label text="TOTAL:" textFill="#333333">
+                        <Label text="TOTAL ORIGINAL:" textFill="#333333">
                             <font>
-                                <Font name="System Bold" size="18.0" />
+                                <Font name="System Bold" size="16.0" />
                             </font>
                         </Label>
                         <Label fx:id="lblTotal" text="\$ 0.00" textFill="#2e7d32">
@@ -58,9 +77,10 @@
                         </Label>
                     </children>
                 </HBox>
+
                 <HBox alignment="CENTER_RIGHT">
                     <children>
-                        <Button mnemonicParsing="false" onAction="#cerrarModal" prefHeight="35.0" prefWidth="120.0" style="-fx-background-color: #E0E0E0; -fx-font-weight: bold;" text="Cerrar" />
+                        <Button mnemonicParsing="false" onAction="#cerrarModal" prefHeight="35.0" prefWidth="120.0" style="-fx-background-color: #E0E0E0; -fx-font-weight: bold; -fx-cursor: hand;" text="Cerrar" />
                     </children>
                 </HBox>
             </children>

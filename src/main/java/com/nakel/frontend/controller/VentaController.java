@@ -65,6 +65,9 @@ public class VentaController {
     // 🔥 NUEVO: Lista para el buscador de clientes
     private ObservableList<String> clientesMaster = FXCollections.observableArrayList();
 
+    // 🔥 NUEVO: Guardamos los objetos originales para sacarles el ID cuando hagamos el Vale
+    private List<com.nakel.frontend.model.Cliente> listaClientesReales = new ArrayList<>();
+
     @FXML
     public void initialize() {
         configurarEventos();
@@ -78,76 +81,114 @@ public class VentaController {
     }
 
     private void configurarEventos() {
-        // Buscar por código o nombre cuando presionan Enter en la pistola láser
-        txtCodigoBarras.setOnAction(event -> procesarBusqueda(txtCodigoBarras.getText()));
+        // 🔍 1. FILTRADO EN TIEMPO REAL A MEDIDA QUE ESCRIBE (Nombre, Código, Categoría, Material)
+        txtCodigoBarras.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (filteredInventario != null) {
+                filteredInventario.setPredicate(art -> {
+                    if (newVal == null || newVal.isBlank()) return true;
 
-        // DOBLE CLICK en inventario
-        tablaInventario.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2) {
-                Articulo seleccionado = tablaInventario.getSelectionModel().getSelectedItem();
-                if (seleccionado != null) agregarAlTicket(seleccionado);
-            }
-        });
+                    String busqueda = newVal.toLowerCase().trim();
 
-        // ENTER en inventario
-        tablaInventario.setOnKeyPressed(event -> {
-            if (event.getCode() == KeyCode.ENTER) {
-                Articulo seleccionado = tablaInventario.getSelectionModel().getSelectedItem();
-                if (seleccionado != null) agregarAlTicket(seleccionado);
-                event.consume();
-            }
-        });
+                    // Coincidencia por Código / SKU
+                    boolean coincideCodigo = art.getCodigo() != null && art.getCodigo().toLowerCase().contains(busqueda);
+                    // Coincidencia por Nombre
+                    boolean coincideNombre = art.getNombre() != null && art.getNombre().toLowerCase().contains(busqueda);
+                    // Coincidencia por Categoría
+                    boolean coincideCat = art.getCategoria() != null && art.getCategoria().getNombre().toLowerCase().contains(busqueda);
+                    // Coincidencia por Material
+                    boolean coincideMat = art.getMaterial() != null && art.getMaterial().getNombre().toLowerCase().contains(busqueda);
 
-        // 🔥 NUEVO: Atajo F3 para ir directo a la Lupita del Inventario
-        Platform.runLater(() -> {
-            if (txtCodigoBarras.getScene() != null) {
-                txtCodigoBarras.getScene().setOnKeyPressed(event -> {
-                    if (event.getCode() == KeyCode.F3 && txtBuscarInventario != null) {
-                        txtBuscarInventario.requestFocus();
-                    }
+                    return coincideCodigo || coincideNombre || coincideCat || coincideMat;
                 });
             }
         });
 
-        // 🔥 NUEVO: Lógica de filtrado en tiempo real para la Lupita
-        if (txtBuscarInventario != null) {
-            txtBuscarInventario.textProperty().addListener((obs, oldVal, newVal) -> {
-                if (filteredInventario != null) {
-                    filteredInventario.setPredicate(art -> {
-                        if (newVal == null || newVal.isBlank()) return true;
-                        String busqueda = newVal.toLowerCase();
-                        return art.getNombre().toLowerCase().contains(busqueda) ||
-                                art.getCodigo().toLowerCase().contains(busqueda);
-                    });
+        // 🔫 2. AL PRESIONAR ENTER (Pistola láser o tipeo manual)
+        txtCodigoBarras.setOnAction(event -> procesarBusquedaInventario());
+
+        // 🖱️ 3. DOBLE CLICK en la tabla de inventario filtrada
+        tablaInventario.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Articulo seleccionado = tablaInventario.getSelectionModel().getSelectedItem();
+                if (seleccionado != null) {
+                    agregarAlTicket(seleccionado);
                 }
-            });
-        }
+            }
+        });
+
+        // ⌨️ 4. ENTER estando parado en la tabla de inventario
+        tablaInventario.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.ENTER) {
+                Articulo seleccionado = tablaInventario.getSelectionModel().getSelectedItem();
+                if (seleccionado != null) {
+                    agregarAlTicket(seleccionado);
+                }
+                event.consume();
+            }
+        });
+
+        // ⌨️ 5. ESCAPAR (ESC) limpia el buscador al instante
+        Platform.runLater(() -> {
+            if (txtCodigoBarras.getScene() != null) {
+                txtCodigoBarras.getScene().setOnKeyPressed(event -> {
+                    if (event.getCode() == KeyCode.ESCAPE) {
+                        limpiarBusquedaInventario(null);
+                    }
+                });
+            }
+        });
     }
 
-    private void procesarBusqueda(String texto) {
+    // ⚡ LÓGICA DE BÚSQUEDA AL DAR ENTER
+    private void procesarBusquedaInventario() {
+        String texto = txtCodigoBarras.getText();
         if (texto == null || texto.isBlank()) return;
 
-        String json = articuloApi.buscarArticuloPorCodigo(texto);
+        String busquedaLimpia = texto.trim();
 
-        if (json == null || json.isBlank() || json.equals("null")) {
-            System.out.println("❌ Producto no encontrado en el Backend");
+        // A) ¿Es un CÓDIGO DE BARRAS / SKU EXACTO? (Ej: disparó con la pistola láser)
+        Articulo codigoExacto = masterInventario.stream()
+                .filter(a -> a.getCodigo() != null && a.getCodigo().equalsIgnoreCase(busquedaLimpia))
+                .findFirst()
+                .orElse(null);
+
+        if (codigoExacto != null) {
+            // ¡PUM! Directo al ticket y limpiamos la barra para la próxima
+            agregarAlTicket(codigoExacto);
+            txtCodigoBarras.clear();
             return;
         }
 
-        try {
-            Articulo item = gson.fromJson(json, Articulo.class);
-            if (item.getNombre() != null) {
-                agregarAlTicket(item);
-                txtCodigoBarras.clear();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+        // B) Si NO es un código exacto, pero la tabla filtrada tiene EXACTAMENTE 1 solo resultado
+        if (filteredInventario != null && filteredInventario.size() == 1) {
+            agregarAlTicket(filteredInventario.get(0));
+            txtCodigoBarras.clear();
+            return;
+        }
+
+        // C) Si hay varios resultados (ej: buscó "mate" y hay 3 mates), la tabla de la izquierda ya se los muestra.
+        // Se puede hacer foco en la tabla para que la cajera elija con las flechas o haga doble clic.
+        if (filteredInventario != null && !filteredInventario.isEmpty()) {
+            tablaInventario.requestFocus();
+            tablaInventario.getSelectionModel().selectFirst();
+        } else {
+            mostrarAlerta(Alert.AlertType.WARNING, "Sin Coincidencias", "No se encontró ningún producto que coincida con: " + texto);
         }
     }
 
     @FXML
     public void buscarProducto(ActionEvent event) {
-        procesarBusqueda(txtCodigoBarras.getText());
+        procesarBusquedaInventario();
+    }
+
+    // 🧹 Botón para limpiar la búsqueda del inventario
+    @FXML
+    public void limpiarBusquedaInventario(ActionEvent event) {
+        txtCodigoBarras.clear();
+        if (filteredInventario != null) {
+            filteredInventario.setPredicate(art -> true); // Muestra todo de nuevo
+        }
+        txtCodigoBarras.requestFocus(); // Devuelve el foco a la barra para seguir escaneando
     }
 
     private void configurarTabla() {
@@ -228,18 +269,54 @@ public class VentaController {
     }
 
     private void cargarDatosIniciales() {
-        // 🔥 1. SOLUCIÓN COMPROBANTES: Textos claros para la cajera
+        // 🔥 1. SOLUCIÓN COMPROBANTES Y MEDIOS DE PAGO
         cmbTipoFactura.getItems().addAll("Ticket de Venta", "Factura A (Con IVA)", "Presupuesto");
         cmbTipoFactura.setValue("Ticket de Venta");
 
         cmbMedioPago.getItems().addAll("Efectivo", "Transferencia", "MercadoPago", "Tarjeta de Crédito", "Tarjeta de Débito", "Pago Mixto");
         cmbMedioPago.setValue("Efectivo");
 
-        // 🔥 2. SOLUCIÓN BUSCADOR DE CLIENTES (Autocompletado inteligente)
-        cmbCliente.setEditable(true); // Permite escribir adentro del ComboBox
+        // 🔥 2. CLIENTES DE VERDAD (Con parche para Paginación de Spring Boot)
+        cmbCliente.setEditable(true);
+        clientesMaster.clear();
 
-        // Simulación de carga (Nota: acá a futuro podés llamar a tu ClienteApiService)
-        clientesMaster.addAll("Consumidor Final", "Marta - 44233111", "Roberto - 11222333", "Pepe - 22333444");
+        // Siempre dejamos a Consumidor Final como primera opción
+        clientesMaster.add("Consumidor Final");
+
+        try {
+            com.nakel.frontend.service.ClienteApiService clienteApi = new com.nakel.frontend.service.ClienteApiService();
+            String jsonClientes = clienteApi.obtenerClientes();
+
+            if (jsonClientes != null && !jsonClientes.equals("[]")) {
+
+                // 1. Leemos el texto de Spring Boot
+                com.google.gson.JsonElement elemento = com.google.gson.JsonParser.parseString(jsonClientes);
+                com.google.gson.JsonArray arrayClientes;
+
+                // 2. ¿Viene adentro de un "Page" (paginado) o viene la lista suelta?
+                if (elemento.isJsonObject() && elemento.getAsJsonObject().has("content")) {
+                    arrayClientes = elemento.getAsJsonObject().getAsJsonArray("content"); // Sacamos la lista del cajón "content"
+                } else if (elemento.isJsonArray()) {
+                    arrayClientes = elemento.getAsJsonArray(); // Es una lista directa
+                } else {
+                    arrayClientes = new com.google.gson.JsonArray();
+                }
+
+                // 3. Ahora sí, convertimos el array puro a nuestra lista de Java
+                java.lang.reflect.Type listType = new com.google.gson.reflect.TypeToken<ArrayList<com.nakel.frontend.model.Cliente>>(){}.getType();
+                List<com.nakel.frontend.model.Cliente> clientesReales = gson.fromJson(arrayClientes, listType);
+
+                this.listaClientesReales = clientesReales;
+
+                // 4. Llenamos el ComboBox
+                for (com.nakel.frontend.model.Cliente c : clientesReales) {
+                    clientesMaster.add(c.getNombre() + " - " + c.getCuit());
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("⚠️ Advertencia: No se pudieron cargar los clientes del servidor: " + e.getMessage());
+        }
+
         FilteredList<String> clientesFiltrados = new FilteredList<>(clientesMaster, p -> true);
         cmbCliente.setItems(clientesFiltrados);
         cmbCliente.setValue("Consumidor Final");
@@ -262,11 +339,19 @@ public class VentaController {
         List<Articulo> inventario = apiService.obtenerTodos();
 
         if (inventario != null && !inventario.isEmpty()) {
-            // 🔥 3. SOLUCIÓN LUPITA: Usamos FilteredList en vez del observable pelado
-            masterInventario.setAll(inventario);
+
+            // 🔥 LA MAGIA: Filtramos la lista para que al Mostrador
+            // SOLO lleguen los artículos que tienen 1 o más de stock.
+            List<Articulo> soloConStock = inventario.stream()
+                    .filter(art -> art.getStockActual() > 0)
+                    .toList();
+
+            // Usamos la lista limpia para llenar la tabla
+            masterInventario.setAll(soloConStock);
             filteredInventario = new FilteredList<>(masterInventario, p -> true);
             tablaInventario.setItems(filteredInventario);
-            System.out.println("✅ Inventario cargado y filtrable: " + inventario.size() + " productos.");
+
+            System.out.println("✅ Mostrador listo: " + soloConStock.size() + " productos disponibles para vender.");
         } else {
             System.out.println("⚠️ El inventario está vacío.");
         }
@@ -278,7 +363,8 @@ public class VentaController {
                 .sum();
     }
 
-    private void ejecutarProcesoDeCierreDeVenta(List<Pago> listaPagos) {
+    // 🔥 1. Agregamos el Vale como segundo parámetro
+    private void ejecutarProcesoDeCierreDeVenta(List<Pago> listaPagos, com.nakel.frontend.model.Vale valeUsado) {
         if (tablaTicket.getItems().isEmpty()) {
             mostrarAlerta(Alert.AlertType.WARNING, "Ticket vacío", "No hay productos en el mostrador para cobrar.");
             return;
@@ -297,7 +383,6 @@ public class VentaController {
         String clienteSeleccionado = cmbCliente.getValue();
         com.nakel.frontend.model.Cliente clienteParaBackend = new com.nakel.frontend.model.Cliente();
 
-        // 🔥 Blindaje por si eligen Consumidor Final
         if (clienteSeleccionado != null && clienteSeleccionado.contains(" - ")) {
             String[] partes = clienteSeleccionado.split(" - ");
             clienteParaBackend.setCuit(partes[1].trim());
@@ -309,21 +394,36 @@ public class VentaController {
                 clienteParaBackend,
                 obtenerTotalNumerico(),
                 true,
-                chkRegalo.isSelected(),
+                false, // 🔥 ACÁ PONÉ UN FALSE GIGANTE, NUNCA CHKREGALO
                 detalles,
                 listaPagos
         );
+
+// Y si querías guardar si era regalo o no para imprimir el papelito extra,
+// a lo sumo se lo metés al campo 'tipoComprobante' (que lo agregaste hoy).
+        if (chkRegalo.isSelected()) {
+            ventaFinal.setTipoComprobante("TICKET_REGALO");
+        } else {
+            ventaFinal.setTipoComprobante("TICKET_NORMAL");
+        }
 
         VentaApiService apiVentas = new VentaApiService();
         boolean exito = apiVentas.registrarVenta(ventaFinal);
 
         if (exito) {
+            // 🔥 ACÁ ESTÁ LA MAGIA: Si la venta se guardó y había un vale, lo quemamos
+            if (valeUsado != null) {
+                com.nakel.frontend.service.ValeApiService valeApi = new com.nakel.frontend.service.ValeApiService();
+                valeApi.consumirVale(valeUsado.getCodigo());
+                System.out.println("✅ Vale " + valeUsado.getCodigo() + " consumido con éxito.");
+            }
+
             mostrarAlerta(Alert.AlertType.INFORMATION, "¡Venta Exitosa!", "La transacción se registró correctamente.");
             tablaTicket.getItems().clear();
             actualizarTotal();
             chkRegalo.setSelected(false);
-            cmbCliente.setValue("Consumidor Final"); // Vuelve a cero
-            txtCodigoBarras.requestFocus(); // Foco automático para escanear de nuevo
+            cmbCliente.setValue("Consumidor Final");
+            txtCodigoBarras.requestFocus();
         } else {
             mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo guardar la venta en la Base de Datos.");
         }
@@ -346,7 +446,8 @@ public class VentaController {
         } else {
             List<Pago> pagos = new ArrayList<>();
             pagos.add(new Pago(medioPago, obtenerTotalNumerico()));
-            ejecutarProcesoDeCierreDeVenta(pagos);
+            // 🔥 Pasamos "null" porque en un pago simple no se usan vales
+            ejecutarProcesoDeCierreDeVenta(pagos, null);
         }
     }
 
@@ -401,14 +502,31 @@ public class VentaController {
             botonFacturarNode.setDisable(true);
 
             PagoMixtoController controladorModal = loader.getController();
-            controladorModal.inicializarValores(obtenerTotalNumerico(), (javafx.scene.control.Button) botonFacturarNode);
+
+            // 🔥 NUEVO: Rescatamos el ID del cliente seleccionado para el Vale
+            String clienteSeleccionado = cmbCliente.getValue();
+            Long idClienteParaVale = null;
+
+            if (clienteSeleccionado != null && clienteSeleccionado.contains(" - ")) {
+                String cuitBuscado = clienteSeleccionado.split(" - ")[1].trim();
+                for (com.nakel.frontend.model.Cliente c : listaClientesReales) {
+                    if (c.getCuit().equals(cuitBuscado)) {
+                        idClienteParaVale = c.getId(); // ¡Acá atrapamos el ID!
+                        break;
+                    }
+                }
+            }
+
+            // 🔥 NUEVO: Le pasamos el idClienteParaVale al controlador del modal
+            controladorModal.inicializarValores(obtenerTotalNumerico(), (javafx.scene.control.Button) botonFacturarNode, idClienteParaVale);
 
             dialog.getDialogPane().setContent(root);
 
             dialog.setResultConverter(btn -> {
                 if (btn == btnFacturar && controladorModal.isPagoCompleto()) {
                     List<Pago> pagos = controladorModal.getPagosRegistrados();
-                    ejecutarProcesoDeCierreDeVenta(pagos);
+                    com.nakel.frontend.model.Vale valeAplicado = controladorModal.getValeAplicado();
+                    ejecutarProcesoDeCierreDeVenta(pagos, valeAplicado);
                 }
                 return null;
             });

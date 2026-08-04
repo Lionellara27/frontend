@@ -15,7 +15,7 @@
         <Insets top="20" right="25" bottom="20" left="25"/>
     </padding>
 
-    <Label text="➕ Alta de Nuevo Cliente" styleClass="titulo-modulo"/>
+    <Label text="➕ Alta / Edición de Cliente" styleClass="titulo-modulo"/>
 
     <GridPane vgap="15" hgap="10">
 
@@ -38,6 +38,15 @@
         <Label text="Email (Opcional):" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
         <TextField fx:id="txtEmail" promptText="cliente@email.com"
                    GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="text-field"/>
+
+        <!-- 🔥 ACÁ ESTÁN LOS DOS CAMPOS NUEVOS PARA LOS SALDOS -->
+        <Label text="Saldo a Favor ($):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtSaldoAFavor" promptText="0.00"
+                   GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="text-field"/>
+
+        <Label text="Deuda Pendiente ($):" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtSaldoPendiente" promptText="0.00"
+                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="text-field"/>
 
     </GridPane>
 
