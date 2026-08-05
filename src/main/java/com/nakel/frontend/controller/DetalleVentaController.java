@@ -117,13 +117,23 @@ public class DetalleVentaController {
         }
 
         // 2. Lógica del Indicador Visual (El Regalo 🎁)
-        if (venta.getEsTicketCambio() != null && venta.getEsTicketCambio()) {
+        /*if (venta.getEsTicketCambio() != null && venta.getEsTicketCambio()) {
+            lblRegalo.setVisible(true);
+            lblRegalo.setManaged(true);
+        } else {
+            lblRegalo.setVisible(false);
+            lblRegalo.setManaged(false);
+        }*/
+
+        // 2. Lógica del Indicador Visual (El Regalo 🎁)
+        if (venta.getEsParaRegalo() != null && venta.getEsParaRegalo()) {
             lblRegalo.setVisible(true);
             lblRegalo.setManaged(true);
         } else {
             lblRegalo.setVisible(false);
             lblRegalo.setManaged(false);
         }
+
 
         // 3. Llenamos la tablita original
         if (venta.getDetalles() != null) {

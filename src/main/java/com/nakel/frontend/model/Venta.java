@@ -81,4 +81,16 @@ public class Venta {
         this.historialCambios = historialCambios;
     }
 
+
+    // Agregás la variable
+    private Boolean esParaRegalo;
+
+    // Y sus getters y setters
+    public Boolean getEsParaRegalo() {
+        return esParaRegalo;
+    }
+
+    public void setEsParaRegalo(Boolean esParaRegalo) {
+        this.esParaRegalo = esParaRegalo;
+    }
 }

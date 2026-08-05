@@ -399,6 +399,8 @@ public class VentaController {
                 listaPagos
         );
 
+        ventaFinal.setEsParaRegalo(chkRegalo.isSelected());
+
 // Y si querías guardar si era regalo o no para imprimir el papelito extra,
 // a lo sumo se lo metés al campo 'tipoComprobante' (que lo agregaste hoy).
         if (chkRegalo.isSelected()) {

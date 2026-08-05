@@ -121,28 +121,34 @@ public class HistorialVentasController {
 
                                 // 2. VERIFICACIÓN DE CAMBIO: ¿Esta venta ya fue cambiada antes?
                                 // (Usamos Boolean.TRUE.equals para evitar NullPointerExceptions si el campo viene nulo)
-                                boolean yaFueCambiado = Boolean.TRUE.equals(ventaFila.getEsTicketCambio());
+                                // 2. VERIFICACIÓN DE CAMBIOS Y LÍMITES
+                                int cantidadCambios = (ventaFila.getHistorialCambios() != null) ? ventaFila.getHistorialCambios().size() : 0;
 
-                                if (yaFueCambiado) {
-                                    // 🛑 YA TIENE UN CAMBIO: Botón gris, pero HABILITADO para pedir contraseña
+                                if (cantidadCambios >= 2) {
+                                    // 🛑 ESTADO 2: Bloqueo total (Llegó al límite máximo)
+                                    btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: default; -fx-text-fill: #E0E0E0; -fx-font-size: 14px;");
+                                    btnCambio.setDisable(true); // Bloqueado, no se puede hacer más nada
+
+                                } else if (cantidadCambios == 1) {
+                                    // ⚠️ ESTADO 1: Ya tiene un cambio. Se permite un segundo forzado (Botón gris pero HABILITADO)
                                     btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #9e9e9e; -fx-font-size: 14px;");
-                                    btnCambio.setDisable(false); // <-- FUNDAMENTAL: Lo habilitamos
+                                    btnCambio.setDisable(false);
 
                                 } else {
-                                    // ✅ NO FUE CAMBIADA: Evaluamos el tema de los 30 días
+                                    // ✅ ESTADO 0: Cero cambios. Evaluamos la regla de los 30 días
+                                    btnCambio.setDisable(false);
                                     try {
                                         java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(ventaFila.getFechaHora());
                                         java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30);
 
                                         if (java.time.LocalDateTime.now().isAfter(fechaLimite)) {
-                                            // Vencido -> Naranja (Se puede clickear pero pedirá clave de Admin)
+                                            // Vencido -> Naranja
                                             btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #FF9800; -fx-font-size: 14px;");
                                         } else {
                                             // En regla -> Verde
                                             btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #4CAF50; -fx-font-size: 14px;");
                                         }
                                     } catch (Exception e) {
-                                        // Si la fecha falla por algo, lo dejamos naranja por precaución
                                         btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #FF9800; -fx-font-size: 14px;");
                                     }
                                 }
@@ -227,59 +233,68 @@ public class HistorialVentasController {
 
     private void iniciarProcesoCambio(Venta venta) {
         try {
-            boolean yaFueCambiado = Boolean.TRUE.equals(venta.getEsTicketCambio());
+            int cantidadCambios = (venta.getHistorialCambios() != null) ? venta.getHistorialCambios().size() : 0;
 
+            // Medida de seguridad extra por si logran clickear el botón bloqueado
+            if (cantidadCambios >= 2) {
+                Alert error = new Alert(Alert.AlertType.ERROR, "Esta venta ya superó el límite máximo de cambios permitidos.");
+                error.showAndWait();
+                return;
+            }
+
+            // Validación de fechas
             java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(venta.getFechaHora());
             java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30);
             boolean estaVencido = java.time.LocalDateTime.now().isAfter(fechaLimite);
 
-            // 🛑 Evaluamos si necesita clave por CUALQUIERA de los dos motivos
-            if (yaFueCambiado || estaVencido) {
+            // 🛑 Si tiene 1 cambio previo O está vencido, pedimos clave
+            if (cantidadCambios == 1 || estaVencido) {
 
-                // Determinamos qué mensaje mostrar en el pop-up
-                String mensajeAlerta = yaFueCambiado
-                        ? "Esta venta ya tuvo cambios previos.\nIngrese contraseña de Administrador para forzar un nuevo cambio:"
+                String mensajeAlerta = (cantidadCambios == 1)
+                        ? "ATENCIÓN: Esta venta ya tiene un cambio previo.\nIngrese la contraseña:"
                         : "El plazo de 30 días ha vencido.\nIngrese contraseña de Administrador para forzar el cambio:";
 
                 Dialog<String> dialog = new Dialog<>();
                 dialog.setTitle("Autorización Requerida");
                 dialog.setHeaderText(mensajeAlerta);
 
-                // Botones del pop-up
                 ButtonType btnAutorizar = new ButtonType("Autorizar", ButtonBar.ButtonData.OK_DONE);
                 dialog.getDialogPane().getButtonTypes().addAll(btnAutorizar, ButtonType.CANCEL);
 
-                // Campo de contraseña oculta
                 PasswordField txtClave = new PasswordField();
                 txtClave.setPromptText("Contraseña...");
                 dialog.getDialogPane().setContent(txtClave);
 
-                // Capturamos el resultado
                 dialog.setResultConverter(dialogButton -> {
                     if (dialogButton == btnAutorizar) return txtClave.getText();
                     return null;
                 });
 
-                // Mostramos y evaluamos
                 dialog.showAndWait().ifPresent(clave -> {
-                    // TODO: A futuro validar esto contra tu BD
-                    if ("admin123".equals(clave)) {
-                        System.out.println("✅ Autorizado por la dueña.");
-                        abrirPantallaCambio(venta); // Avanza
+                    // 1. Agarramos el usuario que está usando el sistema ahora mismo (ej: "ad")
+                    String usuarioActual = com.nakel.frontend.util.SesionActual.getUsuarioLogueado();
+
+                    // 2. Le preguntamos a tu API si esa clave es correcta
+                    com.nakel.frontend.service.UsuarioApiService usuarioApi = new com.nakel.frontend.service.UsuarioApiService();
+                    boolean esClaveCorrecta = usuarioApi.login(usuarioActual, clave);
+
+                    if (esClaveCorrecta) {
+                        System.out.println("✅ Autorizado por el backend para el usuario: " + usuarioActual);
+                        abrirPantallaCambio(venta);
                     } else {
-                        Alert error = new Alert(Alert.AlertType.ERROR, "Contraseña incorrecta. Operación cancelada.");
+                        Alert error = new Alert(Alert.AlertType.ERROR, "Contraseña incorrecta para el usuario '" + usuarioActual + "'. Operación cancelada.");
                         error.showAndWait();
                     }
                 });
 
             } else {
-                // ✅ ESTÁ DENTRO DE LOS 30 DÍAS Y NO TIENE CAMBIOS: Pasa directo
+                // ✅ 0 CAMBIOS Y DENTRO DE LOS 30 DÍAS: Pasa directo
                 System.out.println("En regla. Abriendo módulo de cambio...");
                 abrirPantallaCambio(venta);
             }
 
         } catch (Exception e) {
-            System.err.println("Error al procesar la fecha de cambio: " + e.getMessage());
+            System.err.println("Error al procesar el cambio: " + e.getMessage());
         }
     }
 
