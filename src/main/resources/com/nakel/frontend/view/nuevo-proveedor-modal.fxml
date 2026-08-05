@@ -9,33 +9,49 @@
       xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.nakel.frontend.controller.NuevoProveedorController"
-      prefWidth="450">
+      prefWidth="480">
 
     <padding>
         <Insets top="20" right="25" bottom="20" left="25"/>
     </padding>
 
-    <Label text="➕ Alta de Nuevo Proveedor" styleClass="titulo-modulo"/>
+    <Label text="➕ Alta / Edición de Proveedor" styleClass="titulo-modulo"/>
 
     <GridPane vgap="15" hgap="10">
 
+        <columnConstraints>
+            <ColumnConstraints minWidth="135" hgrow="NEVER"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+        </columnConstraints>
+
         <Label text="Empresa / Marca:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="txtEmpresa" promptText="Ej: Curtiembre San José" GridPane.rowIndex="0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" styleClass="text-field"/>
+        <TextField fx:id="txtEmpresa" promptText="Ej: Curtiembre San José" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="text-field"/>
 
         <Label text="Nombre Contacto:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
         <TextField fx:id="txtContacto" promptText="Ej: Carlos (Vendedor)" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="text-field"/>
 
-        <Label text="Rubro:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="cmbRubro" promptText="Seleccionar..." GridPane.rowIndex="2" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
+        <!-- 🔥 ACÁ METEMOS EL CUIT EN LA FILA 2 -->
+        <Label text="CUIT:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtCuit" promptText="Ej: 30-12345678-9" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="text-field"/>
 
-        <Label text="Teléfono / WhatsApp:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
-        <TextField fx:id="txtTelefono" promptText="Ej: 2920-123456" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="text-field"/>
+        <!-- 👇 A partir de acá, todos bajaron un número (Rubro ahora es 3, Teléfono 4, etc.) -->
+        <Label text="Rubro:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cmbRubro" promptText="Seleccionar..." GridPane.rowIndex="3" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
 
-        <Label text="Email:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
-        <TextField fx:id="txtEmail" promptText="ventas@proveedor.com" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="text-field"/>
+        <Label text="Teléfono / WhatsApp:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtTelefono" promptText="Ej: 2920-123456" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="text-field"/>
 
-        <Label text="Saldo ($):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <TextField fx:id="txtSaldo" promptText="Ej: 0.00 o -5000" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="text-field"/>
+        <Label text="Email:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtEmail" promptText="ventas@proveedor.com" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="text-field"/>
+
+        <Label text="Saldo a Favor ($):" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtSaldoFavor" promptText="Ej: 0.00" GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="text-field"/>
+
+        <Label text="Saldo en Contra ($):" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtSaldoContra" promptText="Ej: 0.00" GridPane.rowIndex="7" GridPane.columnIndex="1" styleClass="text-field"/>
+
+        <Label text="Comentarios:" GridPane.rowIndex="8" GridPane.columnIndex="0" GridPane.valignment="TOP"/>
+        <TextArea fx:id="txtComentarios" promptText="Anotaciones, días de visita, etc..." GridPane.rowIndex="8" GridPane.columnIndex="1" prefRowCount="3" wrapText="true" styleClass="text-field"/>
 
     </GridPane>
 

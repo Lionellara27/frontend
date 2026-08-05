@@ -32,7 +32,9 @@ public class ProveedorController {
     @FXML private TableColumn<Proveedor, String> colNombreContacto;
     @FXML private TableColumn<Proveedor, String> colTelefono;
     @FXML private TableColumn<Proveedor, String> colRubro;
-    @FXML private TableColumn<Proveedor, BigDecimal> colSaldo;
+
+    // 🔥 CAMBIO 1: Chau Saldo, Hola Comentarios
+    @FXML private TableColumn<Proveedor, String> colComentarios;
 
     // 1. ACTIVAMOS LA COLUMNA DE ACCIONES
     @FXML private TableColumn<Proveedor, Void> colAcciones;
@@ -55,7 +57,9 @@ public class ProveedorController {
         colNombreContacto.setCellValueFactory(new PropertyValueFactory<>("nombreContacto"));
         colTelefono.setCellValueFactory(new PropertyValueFactory<>("telefono"));
         colRubro.setCellValueFactory(new PropertyValueFactory<>("rubro"));
-        colSaldo.setCellValueFactory(new PropertyValueFactory<>("saldo"));
+
+        // 🔥 CAMBIO 2: Enlazamos la columna con el campo "comentarios" del modelo
+        colComentarios.setCellValueFactory(new PropertyValueFactory<>("comentarios"));
 
         // 2. LA FÁBRICA DE BOTONES CON IKONLI
         javafx.util.Callback<TableColumn<Proveedor, Void>, javafx.scene.control.TableCell<Proveedor, Void>> cellFactory = new javafx.util.Callback<>() {
@@ -99,7 +103,6 @@ public class ProveedorController {
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
-                // A diferencia de Clientes, acá el Backend nos devuelve la lista directa
                 Type tipoLista = new TypeToken<List<Proveedor>>(){}.getType();
                 List<Proveedor> listaProveedores = gson.fromJson(json, tipoLista);
 
@@ -112,7 +115,6 @@ public class ProveedorController {
                 e.printStackTrace();
             }
         } else {
-            // Si está vacío, limpiamos la tabla para que no queden datos fantasma
             tablaProveedores.setItems(FXCollections.observableArrayList());
             System.out.println("⚠️ La base de datos está vacía o el JSON vino nulo.");
         }
@@ -122,7 +124,6 @@ public class ProveedorController {
     public void buscarProveedor(ActionEvent event) {
         String textoBusqueda = txtBuscarProveedor.getText();
         System.out.println("Buscando en la base de datos: " + textoBusqueda);
-        // Cuando activemos el endpoint del buscador en el backend, conectamos esto.
     }
 
     @FXML
@@ -157,14 +158,31 @@ public class ProveedorController {
         String telefono = (proveedor.getTelefono() != null && !proveedor.getTelefono().isEmpty()) ? proveedor.getTelefono() : "N/A";
         String contacto = (proveedor.getNombreContacto() != null && !proveedor.getNombreContacto().isEmpty()) ? proveedor.getNombreContacto() : "N/A";
 
+        // Protegemos el comentario por si viene vacío o nulo
+        String comentarios = (proveedor.getComentarios() != null && !proveedor.getComentarios().trim().isEmpty()) ? proveedor.getComentarios() : "Sin anotaciones.";
+
+        // Armamos la tarjeta completa para el Ojito
         String info = "🏢 Contacto: " + contacto + "\n"
                 + "📞 Teléfono: " + telefono + "\n"
                 + "📧 Email: " + email + "\n"
                 + "📄 CUIT: " + cuit + "\n\n"
                 + "--- ESTADO DE CUENTA ---\n"
-                + "💰 Saldo Cta. Cte.: $" + proveedor.getSaldo() + "\n";
+                + "🟢 Saldo a Favor: $" + proveedor.getSaldoFavor() + "\n"
+                + "🔴 Saldo en Contra: $" + proveedor.getSaldoContra() + "\n\n"
+                + "--- COMENTARIOS ---\n"
+                + comentarios;
 
-        alerta.setContentText(info);
+        // 🔥 ACÁ ESTÁ EL CAMBIO: En vez de un texto simple, creamos un TextArea
+        javafx.scene.control.TextArea areaTexto = new javafx.scene.control.TextArea(info);
+        areaTexto.setEditable(false);
+        areaTexto.setWrapText(true); // Esto hace que baje de renglón automáticamente
+        areaTexto.setMaxWidth(Double.MAX_VALUE);
+        areaTexto.setMaxHeight(Double.MAX_VALUE);
+        areaTexto.setPrefRowCount(10); // Le damos unos 10 renglones de alto para que se vea bien
+
+        // Le enchufamos el TextArea a la alerta
+        alerta.getDialogPane().setContent(areaTexto);
+
         alerta.showAndWait();
     }
 
@@ -178,7 +196,7 @@ public class ProveedorController {
         if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
             try {
                 apiService.eliminarProveedorDeBaseDeDatos(proveedor.getId());
-                cargarProveedoresEnTabla(); // Recargamos la tabla automáticamente
+                cargarProveedoresEnTabla();
             } catch (Exception e) {
                 Alert error = new Alert(Alert.AlertType.ERROR, "No se pudo eliminar: " + e.getMessage());
                 error.showAndWait();
@@ -191,7 +209,6 @@ public class ProveedorController {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/nuevo-proveedor-modal.fxml"));
             javafx.scene.Parent root = loader.load();
 
-            // Pasa los datos al controlador del modal antes de abrirlo
             NuevoProveedorController controller = loader.getController();
             controller.cargarDatosParaEditar(proveedor);
 
@@ -202,7 +219,7 @@ public class ProveedorController {
             modalStage.setResizable(false);
             modalStage.showAndWait();
 
-            cargarProveedoresEnTabla(); // Al cerrar, recarga la tabla
+            cargarProveedoresEnTabla();
         } catch (Exception e) {
             System.err.println("Error al abrir el editor de Proveedores.");
             e.printStackTrace();

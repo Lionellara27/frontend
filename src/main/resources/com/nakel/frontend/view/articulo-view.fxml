@@ -15,7 +15,7 @@
     </padding>
 
     <HBox alignment="CENTER_LEFT" spacing="20">
-        <Label text="📦 Catálogo de Artículos y Stock" styleClass="titulo-modulo"/>
+        <Label text="Catálogo de Artículos y Stock" styleClass="titulo-modulo"/>
         <Pane HBox.hgrow="ALWAYS" />
         <Button text="➕ NUEVO ARTÍCULO" styleClass="btn-primario" onAction="#abrirModalNuevoArticulo"/>
     </HBox>

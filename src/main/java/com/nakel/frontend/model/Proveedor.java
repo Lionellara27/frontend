@@ -12,12 +12,15 @@ public class Proveedor {
     private String telefono;
     private String email;
 
-    // 🔥 SOLO QUEDA ESTE
-    private BigDecimal saldo;
+    // 🔥 NUEVOS CAMPOS
+    private BigDecimal saldoFavor;
+    private BigDecimal saldoContra;
+    private String comentarios;
 
     // Constructor
     public Proveedor() {
-        this.saldo = BigDecimal.ZERO;
+        this.saldoFavor = BigDecimal.ZERO;
+        this.saldoContra = BigDecimal.ZERO;
     }
 
     public Long getId() { return id; }
@@ -41,6 +44,13 @@ public class Proveedor {
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
-    public BigDecimal getSaldo() { return saldo; }
-    public void setSaldo(BigDecimal saldo) { this.saldo = saldo; }
+    // 🔥 GETTERS Y SETTERS NUEVOS
+    public BigDecimal getSaldoFavor() { return saldoFavor; }
+    public void setSaldoFavor(BigDecimal saldoFavor) { this.saldoFavor = saldoFavor; }
+
+    public BigDecimal getSaldoContra() { return saldoContra; }
+    public void setSaldoContra(BigDecimal saldoContra) { this.saldoContra = saldoContra; }
+
+    public String getComentarios() { return comentarios; }
+    public void setComentarios(String comentarios) { this.comentarios = comentarios; }
 }

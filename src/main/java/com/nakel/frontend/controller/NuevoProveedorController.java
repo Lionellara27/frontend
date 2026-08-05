@@ -9,6 +9,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 
 import java.math.BigDecimal;
@@ -22,15 +23,19 @@ public class NuevoProveedorController {
     @FXML private TextField txtTelefono;
     @FXML private TextField txtEmail;
 
-    // 🔥 NUEVO CAMPO DE SALDO
-    @FXML private TextField txtSaldo;
+    // 🔥 CAMBIO 1: Declaramos la variable del CUIT que agregamos al FXML
+    @FXML private TextField txtCuit;
+
+    @FXML private TextField txtSaldoFavor;
+    @FXML private TextField txtSaldoContra;
+    @FXML private TextArea txtComentarios;
 
     private final ProveedorApiService apiService = new ProveedorApiService();
     private Proveedor proveedorAEditar = null;
 
     @FXML
     public void initialize() {
-        // 🔥 Rubros ajustados a la realidad de su negocio
+        // Rubros ajustados a la realidad de su negocio
         cmbRubro.getItems().addAll(
                 "Cueros y Telas",
                 "Herrajes y Avíos",
@@ -56,17 +61,36 @@ public class NuevoProveedorController {
         this.txtTelefono.setText(proveedor.getTelefono());
         this.txtEmail.setText(proveedor.getEmail());
 
-        // 🕵️‍♂️ MICRÓFONO PARA CAZAR EL BUG DE LOS 100000
+        // 🔥 CAMBIO 2: Si el proveedor ya tiene un CUIT guardado, lo mostramos
+        if (proveedor.getCuit() != null) {
+            this.txtCuit.setText(proveedor.getCuit());
+        } else {
+            this.txtCuit.clear();
+        }
+
         System.out.println("========== DEBUG EDITAR PROVEEDOR ==========");
         System.out.println("Proveedor seleccionado: " + proveedor.getRazonSocial());
-        System.out.println("Saldo que trae el objeto: " + proveedor.getSaldo());
+        System.out.println("Saldo a Favor: " + proveedor.getSaldoFavor());
+        System.out.println("Saldo en Contra: " + proveedor.getSaldoContra());
         System.out.println("============================================");
 
-        // 🔥 Solución al problema visual (El texto gris)
-        if (proveedor.getSaldo() != null) {
-            this.txtSaldo.setText(proveedor.getSaldo().toString());
+        // Llenamos los campos nuevos (si existen)
+        if (proveedor.getSaldoFavor() != null) {
+            this.txtSaldoFavor.setText(proveedor.getSaldoFavor().toString());
         } else {
-            this.txtSaldo.clear(); // ✨ Esto deja el campo vacío y muestra el promptText gris
+            this.txtSaldoFavor.clear();
+        }
+
+        if (proveedor.getSaldoContra() != null) {
+            this.txtSaldoContra.setText(proveedor.getSaldoContra().toString());
+        } else {
+            this.txtSaldoContra.clear();
+        }
+
+        if (proveedor.getComentarios() != null) {
+            this.txtComentarios.setText(proveedor.getComentarios());
+        } else {
+            this.txtComentarios.clear();
         }
     }
 
@@ -82,26 +106,42 @@ public class NuevoProveedorController {
         String rubro = cmbRubro.getValue() != null ? cmbRubro.getValue() : "";
         String telefono = txtTelefono.getText().trim();
         String email = txtEmail.getText().trim();
-        String cuit = "";
 
-        // 🔥 LÓGICA DEL SALDO
-        BigDecimal saldo = BigDecimal.ZERO;
-        if (txtSaldo.getText() != null && !txtSaldo.getText().trim().isEmpty()) {
+        // 🔥 CAMBIO 3: Ya no es un texto vacío, ahora lee lo que pusimos en el modal
+        String cuit = txtCuit.getText() != null ? txtCuit.getText().trim() : "";
+
+        String comentarios = txtComentarios.getText() != null ? txtComentarios.getText().trim() : "";
+
+        // LÓGICA PARA PARSEAR EL SALDO A FAVOR
+        BigDecimal saldoFavor = BigDecimal.ZERO;
+        if (txtSaldoFavor.getText() != null && !txtSaldoFavor.getText().trim().isEmpty()) {
             try {
-                // Reemplazamos coma por punto por si la clienta tipea "1500,50"
-                String saldoLimpiado = txtSaldo.getText().trim().replace(",", ".");
-                saldo = new BigDecimal(saldoLimpiado);
+                String saldoLimpiado = txtSaldoFavor.getText().trim().replace(",", ".");
+                saldoFavor = new BigDecimal(saldoLimpiado);
             } catch (NumberFormatException e) {
-                mostrarAlerta("Error de formato", "El saldo debe ser un número válido (Ej: 1500.00 o -500).", Alert.AlertType.WARNING);
+                mostrarAlerta("Error de formato", "El Saldo a Favor debe ser un número válido (Ej: 1500.00).", Alert.AlertType.WARNING);
+                return;
+            }
+        }
+
+        // LÓGICA PARA PARSEAR EL SALDO EN CONTRA
+        BigDecimal saldoContra = BigDecimal.ZERO;
+        if (txtSaldoContra.getText() != null && !txtSaldoContra.getText().trim().isEmpty()) {
+            try {
+                String saldoLimpiado = txtSaldoContra.getText().trim().replace(",", ".");
+                saldoContra = new BigDecimal(saldoLimpiado);
+            } catch (NumberFormatException e) {
+                mostrarAlerta("Error de formato", "El Saldo en Contra debe ser un número válido (Ej: 500.50).", Alert.AlertType.WARNING);
                 return;
             }
         }
 
         try {
+            // Mandamos los datos fresquitos a la API
             if (proveedorAEditar == null) {
-                apiService.guardarProveedoresEnBaseDeDatos(razonSocial, contacto, rubro, cuit, telefono, email, saldo);
+                apiService.guardarProveedoresEnBaseDeDatos(razonSocial, contacto, rubro, cuit, telefono, email, saldoFavor, saldoContra, comentarios);
             } else {
-                apiService.actualizarProveedoresEnBaseDeDatos(proveedorAEditar.getId(), razonSocial, contacto, rubro, cuit, telefono, email, saldo);
+                apiService.actualizarProveedoresEnBaseDeDatos(proveedorAEditar.getId(), razonSocial, contacto, rubro, cuit, telefono, email, saldoFavor, saldoContra, comentarios);
             }
             cerrarModal(event);
         } catch (Exception e) {

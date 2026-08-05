@@ -15,7 +15,7 @@
     </padding>
 
     <HBox alignment="CENTER_LEFT">
-        <Label text="🧵 Gestión de Insumos y Materia Prima" styleClass="titulo-modulo"/>
+        <Label text="Gestión de Insumos y Materia Prima" styleClass="titulo-modulo"/>
     </HBox>
 
     <HBox spacing="15" alignment="CENTER_LEFT">

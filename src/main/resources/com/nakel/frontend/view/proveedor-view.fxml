@@ -15,7 +15,7 @@
     </padding>
 
     <HBox alignment="CENTER_LEFT">
-        <Label text="🏭 Directorio de Proveedores" styleClass="titulo-modulo"/>
+        <Label text="Directorio de Proveedores" styleClass="titulo-modulo"/>
     </HBox>
 
     <HBox spacing="15" alignment="CENTER_LEFT">
@@ -31,7 +31,10 @@
             <TableColumn fx:id="colNombreContacto" text="Nombre Contacto" prefWidth="150"/>
             <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="120"/>
             <TableColumn fx:id="colRubro" text="Rubro (Ej: Cueros)" prefWidth="120"/>
-            <TableColumn fx:id="colSaldo" text="Saldo Cta. Cte." prefWidth="120"/>
+
+            <!-- 🔥 ACÁ ESTÁ EL CAMBIO: Reemplazamos Saldo por Comentarios -->
+            <TableColumn fx:id="colComentarios" text="Comentarios" prefWidth="200"/>
+
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
         </columns>
     </TableView>

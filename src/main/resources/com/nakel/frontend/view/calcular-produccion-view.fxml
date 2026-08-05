@@ -15,7 +15,7 @@
     </padding>
 
     <HBox alignment="CENTER_LEFT">
-        <Label text="🧮 Calculadora de Producción (BOM)" styleClass="titulo-modulo"/>
+        <Label text="Calculadora de Producción (BOM)" styleClass="titulo-modulo"/>
     </HBox>
 
     <VBox spacing="15" style="-fx-background-color: #f8f9fa; -fx-padding: 15; -fx-background-radius: 8; -fx-border-color: #e0e0e0; -fx-border-radius: 8;">

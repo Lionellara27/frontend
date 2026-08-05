@@ -16,7 +16,7 @@
 
     <!-- ENCABEZADO -->
     <HBox alignment="CENTER_LEFT">
-        <Label text="👥 Agenda de Clientes" styleClass="titulo-modulo"/>
+        <Label text="Agenda de Clientes" styleClass="titulo-modulo"/>
     </HBox>
 
     <!-- BARRA DE BÚSQUEDA Y FILTROS -->

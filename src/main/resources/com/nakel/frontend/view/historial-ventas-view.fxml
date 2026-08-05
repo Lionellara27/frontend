@@ -15,7 +15,7 @@
     </padding>
 
     <HBox alignment="CENTER_LEFT" spacing="20">
-        <Label text="🧾 Historial de Comprobantes y Ventas" styleClass="titulo-modulo"/>
+        <Label text="Historial de Comprobantes y Ventas" styleClass="titulo-modulo"/>
         <Pane HBox.hgrow="ALWAYS" />
         <Button text="🛒 NUEVA VENTA (POS)" styleClass="btn-primario" onAction="#abrirPuntoDeVenta"/>
     </HBox>

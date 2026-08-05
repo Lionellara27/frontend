@@ -14,11 +14,11 @@ module com.nakel.frontend {
 
     // 🔥 LA LÍNEA MÁGICA QUE FALTABA:
     // Le da permiso a GSON para armar los JSON y a JavaFX para leer los datos de la tabla
-    opens com.nakel.frontend.model to com.google.gson, javafx.base;
 
     exports com.nakel.frontend;
     exports com.nakel.frontend.controller;
     exports com.nakel.frontend.model;
     exports com.nakel.frontend.util;
     opens com.nakel.frontend.util to com.google.gson, javafx.base;
+    opens com.nakel.frontend.model to com.google.gson, javafx.base, javafx.fxml;
 }
