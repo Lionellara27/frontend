@@ -174,22 +174,151 @@ public class ArticuloApiService {
     }
 
     // 📋 NUEVO: Para el paginador del catálogo (Devuelve el JSON completo con páginas)
-    public String obtenerArticulosPaginados(int pagina, int cantidadPorPagina) {
+    // 📋 Catálogo paginado + filtros
+    // 📋 CATÁLOGO PAGINADO + FILTROS
+    public String obtenerArticulosPaginados(
+            int pagina,
+            int cantidadPorPagina,
+            String buscar,
+            Long categoriaId,
+            Long materialId,
+            String origen) {
+
         try {
-            String url = API_URL + "?page=" + pagina + "&size=" + cantidadPorPagina;
+            StringBuilder url = new StringBuilder(API_URL);
+            url.append("?page=").append(pagina);
+            url.append("&size=").append(cantidadPorPagina);
+
+            // 🔍 Buscar por nombre o código
+            if (buscar != null && !buscar.isBlank()) {
+                url.append("&buscar=")
+                        .append(java.net.URLEncoder.encode(
+                                buscar.trim(),
+                                java.nio.charset.StandardCharsets.UTF_8
+                        ));
+            }
+
+            // 🏷️ Filtrar por categoría
+            if (categoriaId != null) {
+                url.append("&categoriaId=").append(categoriaId);
+            }
+
+            // 🧵 Filtrar por material
+            if (materialId != null) {
+                url.append("&materialId=").append(materialId);
+            }
+
+            // 🔥 Filtrar por origen
+            if (origen != null && !origen.isBlank()) {
+                url.append("&origen=")
+                        .append(java.net.URLEncoder.encode(
+                                origen.trim(),
+                                java.nio.charset.StandardCharsets.UTF_8
+                        ));
+            }
+
+            System.out.println("🌐 GET artículos: " + url);
+
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
+                    .uri(URI.create(url.toString()))
                     .GET()
                     .build();
 
-            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> respuesta = http.send(
+                    peticion,
+                    HttpResponse.BodyHandlers.ofString()
+            );
 
             if (respuesta.statusCode() == 200) {
                 return respuesta.body();
             }
+
+            System.out.println(
+                    "⚠️ Error al obtener catálogo. Código HTTP: "
+                            + respuesta.statusCode()
+            );
+
+            System.out.println("Respuesta: " + respuesta.body());
+
         } catch (Exception e) {
-            System.out.println("Error al obtener catálogo paginado: " + e.getMessage());
+            System.out.println(
+                    "❌ Error al obtener catálogo paginado: "
+                            + e.getMessage()
+            );
         }
+
+        return "[]";
+    }
+
+    // 🔍 BUSCAR Y FILTRAR ARTÍCULOS PAGINADOS
+    public String buscarArticulos(
+            String buscar,
+            Long categoriaId,
+            Long materialId,
+            String origen,
+            int pagina,
+            int cantidadPorPagina) {
+
+        try {
+            StringBuilder url = new StringBuilder(API_URL);
+            url.append("?page=").append(pagina);
+            url.append("&size=").append(cantidadPorPagina);
+
+            // 🔎 Texto: nombre o código
+            if (buscar != null && !buscar.isBlank()) {
+                url.append("&buscar=")
+                        .append(java.net.URLEncoder.encode(
+                                buscar.trim(),
+                                java.nio.charset.StandardCharsets.UTF_8
+                        ));
+            }
+
+            // 🏷️ Categoría
+            if (categoriaId != null) {
+                url.append("&categoriaId=").append(categoriaId);
+            }
+
+            // 🧵 Material
+            if (materialId != null) {
+                url.append("&materialId=").append(materialId);
+            }
+
+            // 🔥 Origen
+            if (origen != null && !origen.isBlank()) {
+                url.append("&origen=")
+                        .append(java.net.URLEncoder.encode(
+                                origen,
+                                java.nio.charset.StandardCharsets.UTF_8
+                        ));
+            }
+
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url.toString()))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta =
+                    http.send(
+                            peticion,
+                            HttpResponse.BodyHandlers.ofString()
+                    );
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
+
+            System.out.println(
+                    "⚠️ Error al buscar artículos. Código: "
+                            + respuesta.statusCode()
+            );
+
+        } catch (Exception e) {
+            System.out.println(
+                    "❌ Error al buscar artículos: "
+                            + e.getMessage()
+            );
+        }
+
         return "[]";
     }
 }

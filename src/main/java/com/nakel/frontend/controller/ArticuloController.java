@@ -1,9 +1,6 @@
 package com.nakel.frontend.controller;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Articulo;
 import com.nakel.frontend.model.Categoria;
@@ -53,6 +50,8 @@ public class ArticuloController {
     private final ArticuloApiService apiService = new ArticuloApiService();
     private final ParametrosApiService parametrosService = new ParametrosApiService();
 
+    private final Gson gson = new Gson();
+
     // 🔥 Agregamos listas observables para poder filtrar sin volver a consultar la API cada vez
     private ObservableList<Articulo> masterData = FXCollections.observableArrayList();
     private FilteredList<Articulo> filteredData;
@@ -60,90 +59,246 @@ public class ArticuloController {
     @FXML
     public void initialize() {
         System.out.println("Módulo de Catálogo Iniciado. Cargando Filtros reales...");
-        tablaArticulos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // 🔥 SOLUCIÓN DEFINITIVA A LOS "COSITOS GRISES"
+        tablaArticulos.setColumnResizePolicy(
+                TableView.CONSTRAINED_RESIZE_POLICY
+        );
+
+        // 🔥 Placeholder de los filtros
+        // Cuando no hay selección muestran:
+        // "Categoría..." | "Material..." | "Origen..."
         forzarTextoFantasma(cmbCategoria, "Categoría...");
         forzarTextoFantasma(cmbMaterial, "Material...");
         forzarTextoFantasma(cmbOrigen, "Origen...");
 
-        // 📋 CARGA DE COMBOS DE FILTROS DESDE SQLITE
-        cmbCategoria.getItems().addAll(parametrosService.obtenerCategorias());
-        cmbMaterial.getItems().addAll(parametrosService.obtenerMateriales());
-        cmbOrigen.getItems().addAll("PRODUCCION_PROPIA", "REVENTA");
+        // 📋 Cargar opciones de filtros
+        cmbCategoria.getItems().addAll(
+                parametrosService.obtenerCategorias()
+        );
 
+        cmbMaterial.getItems().addAll(
+                parametrosService.obtenerMateriales()
+        );
+
+        cmbOrigen.getItems().addAll(
+                "PRODUCCION_PROPIA",
+                "REVENTA"
+        );
+
+        // 📊 Configurar columnas de la tabla
         configurarColumnas();
 
+        // 📄 Configurar paginación
         if (paginadorArticulos != null) {
+
             paginadorArticulos.setPageFactory(paginaIndex -> {
+
+                // paginaIndex comienza en 0
+                // y se envía directamente al backend
                 cargarTabla(paginaIndex);
+
+                // La página de Pagination necesita devolver un Node.
+                // La tabla ya está fuera del Pagination, por eso
+                // devolvemos un contenedor vacío.
                 return new javafx.scene.layout.VBox();
             });
+
         } else {
+
+            // 🛟 Si por alguna razón no existe el Pagination,
+            // cargamos directamente la primera página.
             cargarTabla(0);
         }
     }
 
+    private static final int ARTICULOS_POR_PAGINA = 50;
+
     private void configurarColumnas() {
+
+        // 🔢 Número correlativo global según la página
+        // Página 1 → 1-50
+        // Página 2 → 51-100
+        // Página 3 → 101-150
         colNro.setCellFactory(col -> new TableCell<Articulo, String>() {
+
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty ? null : String.valueOf(getIndex() + 1));
+
+                if (empty) {
+                    setText(null);
+                    return;
+                }
+
+                int paginaActual = paginadorArticulos != null
+                        ? paginadorArticulos.getCurrentPageIndex()
+                        : 0;
+
+                int numeroGlobal =
+                        (paginaActual * ARTICULOS_POR_PAGINA)
+                                + getIndex()
+                                + 1;
+
+                setText(String.valueOf(numeroGlobal));
             }
         });
 
-        colCodigo.setCellValueFactory(new PropertyValueFactory<>("codigo"));
-        colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
-        colStock.setCellValueFactory(new PropertyValueFactory<>("stockActual"));
-        colPrecio.setCellValueFactory(new PropertyValueFactory<>("precio"));
+        // 🔹 Código
+        colCodigo.setCellValueFactory(
+                new PropertyValueFactory<>("codigo")
+        );
 
+        // 🔹 Nombre
+        colNombre.setCellValueFactory(
+                new PropertyValueFactory<>("nombre")
+        );
+
+        // 🔹 Stock
+        colStock.setCellValueFactory(
+                new PropertyValueFactory<>("stockActual")
+        );
+
+        // 🔹 Precio
+        colPrecio.setCellValueFactory(
+                new PropertyValueFactory<>("precio")
+        );
+
+        // 🔹 Categoría
         colCategoria.setCellValueFactory(cellData -> {
+
             Categoria cat = cellData.getValue().getCategoria();
-            return new SimpleStringProperty(cat != null ? cat.getNombre() : "Sin Categoría");
+
+            return new SimpleStringProperty(
+                    cat != null
+                            ? cat.getNombre()
+                            : "Sin Categoría"
+            );
         });
 
+        // 🔹 Material
         if (colMaterial != null) {
+
             colMaterial.setCellValueFactory(cellData -> {
+
                 Material mat = cellData.getValue().getMaterial();
-                return new SimpleStringProperty(mat != null ? mat.getNombre() : "Sin Material");
+
+                return new SimpleStringProperty(
+                        mat != null
+                                ? mat.getNombre()
+                                : "Sin Material"
+                );
             });
         }
 
+        // 🔹 Origen
         if (colOrigen != null) {
+
             colOrigen.setCellValueFactory(cellData -> {
+
                 String origen = cellData.getValue().getOrigen();
-                return new SimpleStringProperty(origen != null ? origen : "Sin Origen");
+
+                return new SimpleStringProperty(
+                        origen != null
+                                ? origen
+                                : "Sin Origen"
+                );
             });
         }
 
-        colAcciones.setCellValueFactory(param -> new javafx.beans.property.ReadOnlyObjectWrapper<>(param.getValue()));
+        // 🔹 Acciones
+        colAcciones.setCellValueFactory(
+                param -> new javafx.beans.property.ReadOnlyObjectWrapper<>(
+                        param.getValue()
+                )
+        );
+
         colAcciones.setPrefWidth(150);
-        colAcciones.setCellFactory(param -> new TableCell<Articulo, Articulo>() {
-            private final Button btnVer = new Button("", new FontIcon("fas-eye"));
-            private final Button btnEditar = new Button("", new FontIcon("fas-pen"));
-            private final FontIcon iconoTacho = new FontIcon("fas-trash-alt");
-            { iconoTacho.setIconColor(javafx.scene.paint.Color.web("#e74c3c")); }
-            private final Button btnEliminar = new Button("", iconoTacho);
-            private final HBox pane = new HBox(10, btnVer, btnEditar, btnEliminar);
 
-            {
-                pane.setAlignment(javafx.geometry.Pos.CENTER);
-                btnVer.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
-                btnEditar.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
-                btnEliminar.setStyle("-fx-cursor: hand; -fx-background-color: transparent;");
+        colAcciones.setCellFactory(
+                param -> new TableCell<Articulo, Articulo>() {
 
-                btnVer.setOnAction(e -> { Articulo art = getItem(); if (art != null) mostrarDetalle(art); });
-                btnEditar.setOnAction(e -> { Articulo art = getItem(); if (art != null) editarArticulo(art); });
-                btnEliminar.setOnAction(e -> { Articulo art = getItem(); if (art != null) eliminarArticulo(art); });
-            }
+                    private final Button btnVer =
+                            new Button("", new FontIcon("fas-eye"));
 
-            @Override
-            protected void updateItem(Articulo item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty || item == null ? null : pane);
-            }
-        });
+                    private final Button btnEditar =
+                            new Button("", new FontIcon("fas-pen"));
+
+                    private final FontIcon iconoTacho =
+                            new FontIcon("fas-trash-alt");
+
+                    {
+                        iconoTacho.setIconColor(
+                                javafx.scene.paint.Color.web("#e74c3c")
+                        );
+                    }
+
+                    private final Button btnEliminar =
+                            new Button("", iconoTacho);
+
+                    private final HBox pane =
+                            new HBox(10, btnVer, btnEditar, btnEliminar);
+
+                    {
+                        pane.setAlignment(javafx.geometry.Pos.CENTER);
+
+                        btnVer.setStyle(
+                                "-fx-cursor: hand; -fx-background-color: transparent;"
+                        );
+
+                        btnEditar.setStyle(
+                                "-fx-cursor: hand; -fx-background-color: transparent;"
+                        );
+
+                        btnEliminar.setStyle(
+                                "-fx-cursor: hand; -fx-background-color: transparent;"
+                        );
+
+                        // 👁️ Ver
+                        btnVer.setOnAction(e -> {
+
+                            Articulo art = getItem();
+
+                            if (art != null) {
+                                mostrarDetalle(art);
+                            }
+                        });
+
+                        // ✏️ Editar
+                        btnEditar.setOnAction(e -> {
+
+                            Articulo art = getItem();
+
+                            if (art != null) {
+                                editarArticulo(art);
+                            }
+                        });
+
+                        // 🗑️ Eliminar
+                        btnEliminar.setOnAction(e -> {
+
+                            Articulo art = getItem();
+
+                            if (art != null) {
+                                eliminarArticulo(art);
+                            }
+                        });
+                    }
+
+                    @Override
+                    protected void updateItem(
+                            Articulo item,
+                            boolean empty
+                    ) {
+                        super.updateItem(item, empty);
+
+                        setGraphic(
+                                empty || item == null
+                                        ? null
+                                        : pane
+                        );
+                    }
+                }
+        );
     }
 
     @FXML
@@ -347,105 +502,160 @@ public class ArticuloController {
     }
 
     private void cargarTabla(int numeroPagina) {
-        String json = apiService.obtenerArticulosPaginados(numeroPagina, 20);
 
-        if (json != null && !json.equals("[]") && !json.isEmpty()) {
+        String textoBuscado = txtBuscar.getText() != null
+                ? txtBuscar.getText().trim()
+                : "";
+
+        Categoria categoriaSeleccionada = cmbCategoria.getValue();
+        Material materialSeleccionado = cmbMaterial.getValue();
+        String origenSeleccionado = cmbOrigen.getValue();
+
+        Long categoriaId = categoriaSeleccionada != null
+                ? categoriaSeleccionada.getId()
+                : null;
+
+        Long materialId = materialSeleccionado != null
+                ? materialSeleccionado.getId()
+                : null;
+
+        String json = apiService.buscarArticulos(
+                textoBuscado,
+                categoriaId,
+                materialId,
+                origenSeleccionado,
+                numeroPagina,
+                50
+        );
+
+        if (json != null && !json.isEmpty()) {
+
             try {
-                com.google.gson.JsonElement elementoParseado = JsonParser.parseString(json);
-                JsonArray arregloArticulos;
-                int totalBD = 0;
 
-                // 🧠 MAGIA: Detectamos si el backend es nuevo (paginado) o viejo (lista cruda)
-                if (elementoParseado.isJsonObject()) {
-                    JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
-                    if (respuestaServidor.has("totalPages") && paginadorArticulos != null) {
-                        int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
-                        paginadorArticulos.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
-                    }
-                    arregloArticulos = respuestaServidor.getAsJsonArray("content");
-                    totalBD = respuestaServidor.has("totalElements") ? respuestaServidor.get("totalElements").getAsInt() : 0;
+                JsonElement elementoParseado = JsonParser.parseString(json);
 
-                } else if (elementoParseado.isJsonArray()) {
-                    // Si el backend mandó la lista cruda, la leemos directamente
-                    arregloArticulos = elementoParseado.getAsJsonArray();
-                    if (paginadorArticulos != null) {
-                        paginadorArticulos.setPageCount(1); // 1 sola página porque vino todo junto
-                    }
-                } else {
-                    throw new RuntimeException("Formato JSON no reconocido");
+                if (!elementoParseado.isJsonObject()) {
+                    throw new RuntimeException("El backend no devolvió una respuesta paginada válida.");
                 }
 
-                Type tipoLista = new TypeToken<List<Articulo>>(){}.getType();
-                List<Articulo> listaBackend = new Gson().fromJson(arregloArticulos, tipoLista);
+                JsonObject respuestaServidor =
+                        elementoParseado.getAsJsonObject();
 
+                // 📄 Cantidad de páginas después de aplicar TODOS los filtros
+                if (respuestaServidor.has("totalPages")
+                        && paginadorArticulos != null) {
+
+                    int totalPaginas =
+                            respuestaServidor.get("totalPages").getAsInt();
+
+                    paginadorArticulos.setPageCount(
+                            totalPaginas == 0 ? 1 : totalPaginas
+                    );
+                }
+
+                // 🔢 Cantidad TOTAL después de aplicar los filtros
+                int totalBD = respuestaServidor.has("totalElements")
+                        ? respuestaServidor.get("totalElements").getAsInt()
+                        : 0;
+
+                // 📦 Los artículos de ESTA página solamente
+                JsonArray arregloArticulos =
+                        respuestaServidor.getAsJsonArray("content");
+
+                Type tipoLista =
+                        new TypeToken<List<Articulo>>() {}.getType();
+
+                List<Articulo> listaBackend =
+                        gson.fromJson(arregloArticulos, tipoLista);
+
+                if (listaBackend == null) {
+                    listaBackend = List.of();
+                }
+
+                // 🧹 Reemplazamos solamente los 50 artículos de la página actual
                 masterData.setAll(listaBackend);
-                filteredData = new FilteredList<>(masterData, p -> true);
-                tablaArticulos.setItems(filteredData);
 
-                if (totalBD == 0) totalBD = listaBackend.size();
-                lblTotalArticulos.setText("Total en catálogo: " + totalBD + " artículos");
+                // 📋 La tabla muestra directamente la página recibida
+                tablaArticulos.setItems(masterData);
+
+                // 🔢 Contador global
+                lblTotalArticulos.setText(
+                        "Total en catálogo: " + totalBD + " artículos"
+                );
 
             } catch (Exception e) {
-                System.out.println("❌ Error: " + e.getMessage());
+
+                System.out.println(
+                        "❌ Error al cargar artículos: " + e.getMessage()
+                );
+
+                e.printStackTrace();
+
+                masterData.clear();
+
+                if (paginadorArticulos != null) {
+                    paginadorArticulos.setPageCount(1);
+                }
+
+                lblTotalArticulos.setText(
+                        "Total en catálogo: 0 artículos"
+                );
             }
+
         } else {
-            tablaArticulos.getItems().clear();
-            lblTotalArticulos.setText("Total en catálogo: 0 artículos");
+
+            masterData.clear();
+
+            if (paginadorArticulos != null) {
+                paginadorArticulos.setPageCount(1);
+            }
+
+            lblTotalArticulos.setText(
+                    "Total en catálogo: 0 artículos"
+            );
         }
     }
 
     // 🔥 SOLUCIÓN 1: La Magia de la Lupa (Buscador Multi-Filtro)
     @FXML
     public void buscarArticulos(ActionEvent event) {
-        if (filteredData == null) return; // Si la tabla está vacía, no hace nada
 
-        System.out.println("Buscando y aplicando filtros...");
+        System.out.println("🔍 Buscando artículos en el backend...");
 
-        // Obtenemos los valores de los controles
-        String textoBuscado = txtBuscar.getText() != null ? txtBuscar.getText().toLowerCase().trim() : "";
-        Categoria categoriaBuscada = cmbCategoria.getValue();
-        Material materialBuscado = cmbMaterial.getValue();
-        String origenBuscado = cmbOrigen.getValue();
+        // 🔄 Cada nueva búsqueda comienza desde la primera página
+        if (paginadorArticulos != null) {
+            paginadorArticulos.setCurrentPageIndex(0);
+        }
 
-        // Aplicamos el predicado (filtro) a la lista
-        filteredData.setPredicate(articulo -> {
-            // 1. Filtro por Texto (Código o Nombre)
-            boolean coincideTexto = textoBuscado.isEmpty()
-                    || (articulo.getNombre() != null && articulo.getNombre().toLowerCase().contains(textoBuscado))
-                    || (articulo.getCodigo() != null && articulo.getCodigo().toLowerCase().contains(textoBuscado));
-
-            // 2. Filtro por Categoría
-            boolean coincideCategoria = categoriaBuscada == null
-                    || (articulo.getCategoria() != null && articulo.getCategoria().getId().equals(categoriaBuscada.getId()));
-
-            // 3. Filtro por Material
-            boolean coincideMaterial = materialBuscado == null
-                    || (articulo.getMaterial() != null && articulo.getMaterial().getId().equals(materialBuscado.getId()));
-
-            // 4. Filtro por Origen
-            boolean coincideOrigen = origenBuscado == null
-                    || (articulo.getOrigen() != null && articulo.getOrigen().equalsIgnoreCase(origenBuscado));
-
-            // Para que un artículo se muestre, debe cumplir TODAS las condiciones establecidas
-            return coincideTexto && coincideCategoria && coincideMaterial && coincideOrigen;
-        });
-
-        // Actualizamos el contador visual según lo filtrado
-        lblTotalArticulos.setText("Resultados: " + filteredData.size() + " artículos");
+        // 🚀 cargarTabla() lee automáticamente:
+        // - texto
+        // - categoría
+        // - material
+        // - origen
+        //
+        // y se los manda al backend.
+        cargarTabla(0);
     }
 
     @FXML
     public void limpiarFiltros(ActionEvent event) {
+
+        // 🧹 Limpiamos el campo de búsqueda
         txtBuscar.clear();
+
+        // 🧹 Quitamos las selecciones de los ComboBox
+        // Vuelven a mostrar "Categoría...", "Material..." y "Origen..."
         cmbCategoria.setValue(null);
         cmbMaterial.setValue(null);
         cmbOrigen.setValue(null);
 
-        // Reseteamos el filtro para mostrar todos de nuevo
-        if (filteredData != null) {
-            filteredData.setPredicate(p -> true);
-            lblTotalArticulos.setText("Total en catálogo: " + masterData.size() + " artículos");
+        // 🔄 Volvemos a la primera página
+        if (paginadorArticulos != null) {
+            paginadorArticulos.setCurrentPageIndex(0);
         }
+
+        // 🔥 Volvemos a cargar el catálogo completo desde el backend
+        cargarTabla(0);
     }
 
     // 🪄 HERRAMIENTA MÁGICA: Obliga a JavaFX a mostrar el texto gris siempre que esté vacío
