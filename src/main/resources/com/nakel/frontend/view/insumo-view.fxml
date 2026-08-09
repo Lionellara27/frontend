@@ -18,10 +18,18 @@
         <Label text="Gestión de Insumos y Materia Prima" styleClass="titulo-modulo"/>
     </HBox>
 
+    <!-- 🔥 LA BOTONERA DE FILTROS CORREGIDA Y CON ESTILO CLÁSICO -->
     <HBox spacing="15" alignment="CENTER_LEFT">
-        <TextField fx:id="txtBuscarInsumo" promptText="Buscar cuero, herraje, etc..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
-        <Button text="🔍 Buscar" styleClass="btn-secundario" onAction="#buscarInsumo"/>
+        <TextField fx:id="txtBuscarInsumo" promptText="Buscar insumo..." prefWidth="220" styleClass="input-busqueda"/>
 
+        <!-- 1. Filtrar por Material (Acá volvió el look gris clásico) -->
+        <ComboBox fx:id="cmbFiltroMaterial" prefWidth="180" styleClass="text-field"/>
+
+        <!-- 2. Filtrar por Unidad (Acá volvió el look gris clásico) -->
+        <ComboBox fx:id="cmbFiltroUnidad" prefWidth="180" styleClass="text-field"/>
+
+        <Button text="Limpiar Filtros" styleClass="btn-secundario" onAction="#limpiarFiltros"/>
+        <Region HBox.hgrow="ALWAYS"/>
         <Button text="➕ Nuevo Insumo" styleClass="btn-primario" onAction="#abrirModalNuevoInsumo"/>
     </HBox>
 
@@ -35,5 +43,8 @@
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="100"/>
         </columns>
     </TableView>
+
+    <!-- 🔥 EL NUEVO PAGINADOR NATIVO DE JAVAFX -->
+    <Pagination fx:id="paginadorInsumos" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
 
 </VBox>

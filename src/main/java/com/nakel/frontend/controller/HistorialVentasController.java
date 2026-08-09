@@ -33,6 +33,8 @@ public class HistorialVentasController {
     @FXML private TableColumn<Venta, String> colEstado;
     @FXML private TableColumn<Venta, Void> colAcciones;
 
+    @FXML private Pagination paginadorHistorial;
+
     private final VentaApiService apiService = new VentaApiService();
     private final Gson gson = new Gson();
 
@@ -41,7 +43,15 @@ public class HistorialVentasController {
         System.out.println("Módulo de Historial de Ventas listo.");
         tablaVentas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarColumnas();
-        cargarVentas();
+
+        if (paginadorHistorial != null) {
+            paginadorHistorial.setPageFactory(paginaIndex -> {
+                cargarVentas(paginaIndex);
+                return new javafx.scene.layout.VBox();
+            });
+        } else {
+            cargarVentas(0);
+        }
     }
 
     private void configurarColumnas() {
@@ -165,31 +175,57 @@ public class HistorialVentasController {
         // 3. (A futuro) Acá podés meter tu CellFactory con FontAwesome para los botones de Imprimir/Ver
     }
 
-    private void cargarVentas() {
-        String json = apiService.obtenerHistorialVentas();
+    private void cargarVentas(int numeroPagina) {
+        // 🔥 1. Llamamos a tu nuevo método paginado
+        String json = apiService.obtenerHistorialVentasPaginado(numeroPagina, 20);
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
-                // Leemos el objeto paginado del backend
-                JsonObject respuestaServidor = JsonParser.parseString(json).getAsJsonObject();
-                JsonArray arregloVentas = respuestaServidor.getAsJsonArray("content");
+                com.google.gson.JsonElement elementoParseado = com.google.gson.JsonParser.parseString(json);
+                com.google.gson.JsonArray arregloVentas;
 
-                // Convertimos a Java
-                Type tipoLista = new TypeToken<List<Venta>>(){}.getType();
-                List<Venta> listaVentas = gson.fromJson(arregloVentas, tipoLista);
+                // 🔥 2. Detectamos si viene paginado (Objeto con "content") o lista directa (Array)
+                if (elementoParseado.isJsonObject()) {
+                    com.google.gson.JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
+                    if (respuestaServidor.has("totalPages") && paginadorHistorial != null) {
+                        int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
+                        paginadorHistorial.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+                    }
+                    arregloVentas = respuestaServidor.getAsJsonArray("content");
+                } else if (elementoParseado.isJsonArray()) {
+                    arregloVentas = elementoParseado.getAsJsonArray();
+                    if (paginadorHistorial != null) {
+                        paginadorHistorial.setPageCount(1);
+                    }
+                } else {
+                    throw new RuntimeException("Formato JSON no reconocido");
+                }
 
-                // Llenamos la tabla
-                ObservableList<Venta> datosObservable = FXCollections.observableArrayList(listaVentas);
+                // 🔥 3. Convertimos a Java y llenamos la tabla
+                java.lang.reflect.Type tipoLista = new com.google.gson.reflect.TypeToken<java.util.List<Venta>>(){}.getType();
+                java.util.List<Venta> listaVentas = gson.fromJson(arregloVentas, tipoLista);
+
+                javafx.collections.ObservableList<Venta> datosObservable = javafx.collections.FXCollections.observableArrayList(listaVentas);
                 tablaVentas.setItems(datosObservable);
 
-                // Actualizamos la etiqueta del total facturado
                 calcularTotalPantalla(listaVentas);
 
-                System.out.println("✅ Historial cargado con " + listaVentas.size() + " ventas.");
+                System.out.println("✅ Historial cargado con " + listaVentas.size() + " ventas (Página " + numeroPagina + ").");
             } catch (Exception e) {
-                System.out.println("❌ Error al cargar historial: " + e.getMessage());
+                System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
+            }
+        } else {
+            tablaVentas.getItems().clear();
+            if (lblTotalFacturado != null) {
+                lblTotalFacturado.setText("$ 0.00");
             }
         }
+    }
+
+    // 🔥 Sobrecarga para mantener retrocompatibilidad (por si algún botón hace un llamado sin parámetros)
+    @FXML
+    public void cargarVentas() {
+        cargarVentas(paginadorHistorial != null ? paginadorHistorial.getCurrentPageIndex() : 0);
     }
 
     private void calcularTotalPantalla(List<Venta> ventas) {

@@ -1,6 +1,9 @@
 package com.nakel.frontend.controller;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Proveedor;
 import com.nakel.frontend.service.ProveedorApiService;
@@ -9,12 +12,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -26,6 +24,7 @@ import java.util.Optional;
 public class ProveedorController {
 
     @FXML private TextField txtBuscarProveedor;
+    @FXML private ComboBox<String> cmbCampoBusqueda;
 
     @FXML private TableView<Proveedor> tablaProveedores;
     @FXML private TableColumn<Proveedor, String> colRazonSocial;
@@ -33,11 +32,15 @@ public class ProveedorController {
     @FXML private TableColumn<Proveedor, String> colTelefono;
     @FXML private TableColumn<Proveedor, String> colRubro;
 
+    @FXML private Pagination paginadorProveedores;
+
     // 🔥 CAMBIO 1: Chau Saldo, Hola Comentarios
     @FXML private TableColumn<Proveedor, String> colComentarios;
 
     // 1. ACTIVAMOS LA COLUMNA DE ACCIONES
     @FXML private TableColumn<Proveedor, Void> colAcciones;
+
+    private final ObservableList<Proveedor> masterData = FXCollections.observableArrayList();
 
     private final ProveedorApiService apiService = new ProveedorApiService();
     private final Gson gson = new Gson();
@@ -49,7 +52,44 @@ public class ProveedorController {
         tablaProveedores.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         configurarTabla();
-        cargarProveedoresEnTabla();
+
+        // 🔍 Opciones del buscador
+        cmbCampoBusqueda.getItems().addAll(
+                "Empresa",
+                "Contacto"
+        );
+        cmbCampoBusqueda.setValue("Empresa");
+
+        // 🔍 Cuando escribimos en el buscador
+        txtBuscarProveedor.textProperty().addListener((observable, valorViejo, valorNuevo) -> {
+            if (paginadorProveedores != null) {
+                paginadorProveedores.setCurrentPageIndex(0);
+            }
+
+            cargarProveedoresEnTabla(0);
+        });
+
+        // 🔍 Cuando cambiamos Empresa / Contacto
+        cmbCampoBusqueda.valueProperty().addListener((observable, valorViejo, valorNuevo) -> {
+            if (paginadorProveedores != null) {
+                paginadorProveedores.setCurrentPageIndex(0);
+            }
+
+            cargarProveedoresEnTabla(0);
+        });
+
+        // Conectamos la tabla con los datos
+        tablaProveedores.setItems(masterData);
+
+        // 📄 Configuración del paginador
+        if (paginadorProveedores != null) {
+            paginadorProveedores.setPageFactory(paginaIndex -> {
+                cargarProveedoresEnTabla(paginaIndex);
+                return new javafx.scene.layout.VBox();
+            });
+        } else {
+            cargarProveedoresEnTabla(0);
+        }
     }
 
     private void configurarTabla() {
@@ -98,32 +138,103 @@ public class ProveedorController {
         colAcciones.setCellFactory(cellFactory);
     }
 
-    private void cargarProveedoresEnTabla() {
-        String json = apiService.obtenerProveedores();
+    private void cargarProveedoresEnTabla(int numeroPagina) {
+        String textoBusqueda = txtBuscarProveedor.getText() == null
+                ? ""
+                : txtBuscarProveedor.getText().trim();
+
+        String campoBusqueda = cmbCampoBusqueda.getValue() == null
+                ? "Empresa"
+                : cmbCampoBusqueda.getValue();
+
+        String json;
+
+        if (textoBusqueda.isEmpty()) {
+            // 📋 Sin búsqueda: paginación normal
+            json = apiService.obtenerProveedores(numeroPagina, 20);
+        } else {
+            // 🔍 Búsqueda global en toda la base de datos
+            json = apiService.buscarProveedores(
+                    textoBusqueda,
+                    campoBusqueda,
+                    numeroPagina,
+                    20
+            );
+        }
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
-                Type tipoLista = new TypeToken<List<Proveedor>>(){}.getType();
-                List<Proveedor> listaProveedores = gson.fromJson(json, tipoLista);
+                com.google.gson.JsonElement elementoParseado = JsonParser.parseString(json);
+                JsonArray arregloProveedores;
 
-                ObservableList<Proveedor> datosObservable = FXCollections.observableArrayList(listaProveedores);
-                tablaProveedores.setItems(datosObservable);
+                if (elementoParseado.isJsonObject()) {
+                    JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
 
-                System.out.println("✅ Tabla cargada con " + listaProveedores.size() + " proveedores.");
+                    if (respuestaServidor.has("totalPages") && paginadorProveedores != null) {
+                        int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
+
+                        paginadorProveedores.setPageCount(
+                                totalPaginas == 0 ? 1 : totalPaginas
+                        );
+                    }
+
+                    arregloProveedores = respuestaServidor.getAsJsonArray("content");
+
+                } else if (elementoParseado.isJsonArray()) {
+                    arregloProveedores = elementoParseado.getAsJsonArray();
+
+                    if (paginadorProveedores != null) {
+                        paginadorProveedores.setPageCount(1);
+                    }
+
+                } else {
+                    throw new RuntimeException("Formato JSON no reconocido");
+                }
+
+                Type tipoLista = new TypeToken<List<Proveedor>>() {}.getType();
+
+                List<Proveedor> listaBackend =
+                        gson.fromJson(arregloProveedores, tipoLista);
+
+                if (listaBackend != null) {
+                    masterData.setAll(listaBackend);
+                }
+
             } catch (Exception e) {
-                System.out.println("❌ Error al convertir el JSON a la tabla: " + e.getMessage());
+                System.out.println("❌ Error al cargar proveedores: " + e.getMessage());
                 e.printStackTrace();
             }
+
         } else {
-            tablaProveedores.setItems(FXCollections.observableArrayList());
-            System.out.println("⚠️ La base de datos está vacía o el JSON vino nulo.");
+            masterData.clear();
+
+            if (paginadorProveedores != null) {
+                paginadorProveedores.setPageCount(1);
+            }
         }
     }
 
+
+
     @FXML
     public void buscarProveedor(ActionEvent event) {
-        String textoBusqueda = txtBuscarProveedor.getText();
-        System.out.println("Buscando en la base de datos: " + textoBusqueda);
+        if (paginadorProveedores != null) {
+            paginadorProveedores.setCurrentPageIndex(0);
+        }
+
+        cargarProveedoresEnTabla(0);
+    }
+
+    @FXML
+    public void limpiarBusqueda() {
+        txtBuscarProveedor.clear();
+        cmbCampoBusqueda.setValue("Empresa");
+
+        if (paginadorProveedores != null) {
+            paginadorProveedores.setCurrentPageIndex(0);
+        }
+
+        cargarProveedoresEnTabla(0);
     }
 
     @FXML
@@ -139,7 +250,7 @@ public class ProveedorController {
             modalStage.setResizable(false);
             modalStage.showAndWait();
 
-            cargarProveedoresEnTabla();
+            cargarProveedoresEnTabla(paginadorProveedores != null ? paginadorProveedores.getCurrentPageIndex() : 0);
         } catch (Exception e) {
             System.err.println("Error al abrir el Pop-up de Proveedores.");
             e.printStackTrace();
@@ -196,7 +307,7 @@ public class ProveedorController {
         if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
             try {
                 apiService.eliminarProveedorDeBaseDeDatos(proveedor.getId());
-                cargarProveedoresEnTabla();
+                cargarProveedoresEnTabla(paginadorProveedores != null ? paginadorProveedores.getCurrentPageIndex() : 0);
             } catch (Exception e) {
                 Alert error = new Alert(Alert.AlertType.ERROR, "No se pudo eliminar: " + e.getMessage());
                 error.showAndWait();
@@ -219,7 +330,7 @@ public class ProveedorController {
             modalStage.setResizable(false);
             modalStage.showAndWait();
 
-            cargarProveedoresEnTabla();
+            cargarProveedoresEnTabla(paginadorProveedores != null ? paginadorProveedores.getCurrentPageIndex() : 0);
         } catch (Exception e) {
             System.err.println("Error al abrir el editor de Proveedores.");
             e.printStackTrace();

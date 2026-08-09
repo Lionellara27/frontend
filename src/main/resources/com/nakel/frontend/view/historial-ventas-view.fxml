@@ -36,6 +36,8 @@
             <TableColumn fx:id="colAcciones" text="Acciones (Ver/Imprimir/Mail)" prefWidth="200"/>
         </columns>
     </TableView>
+    <!-- 🔥 EL NUEVO PAGINADOR NATIVO DE JAVAFX -->
+    <Pagination fx:id="paginadorHistorial" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
 
     <HBox alignment="CENTER_RIGHT" spacing="15" style="-fx-padding: 10 0 0 0;">
         <Label text="Total Facturado en pantalla:" style="-fx-font-size: 14px;"/>

@@ -13,18 +13,12 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.util.Callback;
 import org.kordamp.ikonli.javafx.FontIcon;
 import java.util.Optional;
-import javafx.scene.control.ButtonType;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -43,15 +37,57 @@ public class ClienteController {
     // 1. ACTIVAMOS LA COLUMNA DE ACCIONES (Tipo Void porque no lee texto, dibuja botones)
     @FXML private TableColumn<Cliente, Void> colAcciones;
 
+    @FXML private Pagination paginadorClientes;
+
     private final ClienteApiService apiService = new ClienteApiService();
     private final Gson gson = new Gson();
+
+    // Declarás la lista maestra que contiene los datos puros
+    private final ObservableList<Cliente> masterData = FXCollections.observableArrayList();
 
     @FXML
     public void initialize() {
         System.out.println("¡Módulo de Clientes cargado con éxito!");
         tablaClientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarTabla();
-        cargarClientesEnTabla();
+
+        // 1. Envolvemos la lista maestra en la lupa inteligente
+        javafx.collections.transformation.FilteredList<Cliente> listaFiltrada = new javafx.collections.transformation.FilteredList<>(masterData, p -> true);
+
+        // 2. Le decimos a la barra que escuche el tipeo
+        txtBuscarCliente.textProperty().addListener((observable, valorViejo, valorNuevo) -> {
+            listaFiltrada.setPredicate(cliente -> {
+                if (valorNuevo == null || valorNuevo.trim().isEmpty()) {
+                    return true;
+                }
+
+                String filtroLowerCase = valorNuevo.toLowerCase().trim();
+
+                boolean coincideNombre = cliente.getNombre() != null &&
+                        cliente.getNombre().toLowerCase().contains(filtroLowerCase);
+
+                boolean coincideDni = cliente.getCuit() != null &&
+                        cliente.getCuit().toLowerCase().contains(filtroLowerCase);
+
+                return coincideNombre || coincideDni;
+            });
+        });
+
+        javafx.collections.transformation.SortedList<Cliente> listaOrdenada = new javafx.collections.transformation.SortedList<>(listaFiltrada);
+        listaOrdenada.comparatorProperty().bind(tablaClientes.comparatorProperty());
+
+        // 3. Conectamos la tabla con la lista filtrada
+        tablaClientes.setItems(listaOrdenada);
+
+        // 4. Arrancamos el paginador (que es el que realmente va a ir a buscar los datos a la BD)
+        if (paginadorClientes != null) {
+            paginadorClientes.setPageFactory(paginaIndex -> {
+                cargarClientesEnTabla(paginaIndex);
+                return new javafx.scene.layout.VBox();
+            });
+        } else {
+            cargarClientesEnTabla(0);
+        }
     }
 
     private void configurarTabla() {
@@ -104,32 +140,31 @@ public class ClienteController {
         colAcciones.setCellFactory(cellFactory);
     }
 
-    private void cargarClientesEnTabla() {
-        String json = apiService.obtenerClientes();
+    private void cargarClientesEnTabla(int numeroPagina) {
+        String json = apiService.obtenerClientes(numeroPagina, 20);
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
-                // 1. Leemos la respuesta del servidor como un Objeto JSON completo
                 JsonObject respuestaServidor = JsonParser.parseString(json).getAsJsonObject();
 
-                // 2. Extraemos ÚNICAMENTE la lista que está adentro de "content"
-                JsonArray arregloClientes = respuestaServidor.getAsJsonArray("content");
+                if (respuestaServidor.has("totalPages") && paginadorClientes != null) {
+                    int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
+                    paginadorClientes.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+                }
 
-                // 3. Convertimos ese arreglo a nuestra lista de Java
+                JsonArray arregloClientes = respuestaServidor.getAsJsonArray("content");
                 Type tipoLista = new TypeToken<List<Cliente>>(){}.getType();
                 List<Cliente> listaClientes = gson.fromJson(arregloClientes, tipoLista);
 
-                // 4. Llenamos la tabla de JavaFX
-                ObservableList<Cliente> datosObservable = FXCollections.observableArrayList(listaClientes);
-                tablaClientes.setItems(datosObservable);
-
-                System.out.println("✅ Tabla cargada con " + listaClientes.size() + " clientes.");
+                // 🔥 ACÁ ESTÁ LA CLAVE: Llenamos la masterData para que la lupa los filtre en vivo
+                if (listaClientes != null) {
+                    masterData.setAll(listaClientes);
+                }
             } catch (Exception e) {
-                System.out.println("❌ Error al convertir el JSON a la tabla: " + e.getMessage());
-                e.printStackTrace(); // Opcional: te ayuda a ver en la consola dónde falló exactamente
+                System.out.println("❌ Error: " + e.getMessage());
             }
         } else {
-            System.out.println("⚠️ La base de datos está vacía o el JSON vino nulo.");
+            masterData.clear();
         }
     }
 
@@ -152,7 +187,7 @@ public class ClienteController {
             modalStage.setResizable(false);
             modalStage.showAndWait();
 
-            cargarClientesEnTabla();
+            cargarClientesEnTabla(paginadorClientes != null ? paginadorClientes.getCurrentPageIndex() : 0);
         } catch (Exception e) {
             System.err.println("Error al abrir el Pop-up de Clientes.");
             e.printStackTrace();
@@ -207,7 +242,7 @@ public class ClienteController {
             // Llamamos al Backend para que lo borre de verdad
             try {
                 apiService.eliminarClienteDeBaseDeDatos(cliente.getId());
-                cargarClientesEnTabla(); // Recargamos la tabla automáticamente
+                cargarClientesEnTabla(paginadorClientes != null ? paginadorClientes.getCurrentPageIndex() : 0); // Recargamos la tabla automáticamente
             } catch (Exception e) {
                 Alert error = new Alert(Alert.AlertType.ERROR, "No se pudo eliminar: " + e.getMessage());
                 error.showAndWait();
@@ -231,7 +266,7 @@ public class ClienteController {
             modalStage.setResizable(false);
             modalStage.showAndWait();
 
-            cargarClientesEnTabla(); // Al cerrar, recarga la tabla
+            cargarClientesEnTabla(paginadorClientes != null ? paginadorClientes.getCurrentPageIndex() : 0);// Al cerrar, recarga la tabla
         } catch (Exception e) {
             System.err.println("Error al abrir el editor de Clientes.");
             e.printStackTrace();

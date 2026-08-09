@@ -106,46 +106,81 @@ public class NuevoProveedorController {
         String rubro = cmbRubro.getValue() != null ? cmbRubro.getValue() : "";
         String telefono = txtTelefono.getText().trim();
         String email = txtEmail.getText().trim();
-
-        // 🔥 CAMBIO 3: Ya no es un texto vacío, ahora lee lo que pusimos en el modal
         String cuit = txtCuit.getText() != null ? txtCuit.getText().trim() : "";
-
         String comentarios = txtComentarios.getText() != null ? txtComentarios.getText().trim() : "";
 
         // LÓGICA PARA PARSEAR EL SALDO A FAVOR
         BigDecimal saldoFavor = BigDecimal.ZERO;
+
         if (txtSaldoFavor.getText() != null && !txtSaldoFavor.getText().trim().isEmpty()) {
             try {
                 String saldoLimpiado = txtSaldoFavor.getText().trim().replace(",", ".");
                 saldoFavor = new BigDecimal(saldoLimpiado);
             } catch (NumberFormatException e) {
-                mostrarAlerta("Error de formato", "El Saldo a Favor debe ser un número válido (Ej: 1500.00).", Alert.AlertType.WARNING);
+                mostrarAlerta(
+                        "Error de formato",
+                        "El Saldo a Favor debe ser un número válido (Ej: 1500.00).",
+                        Alert.AlertType.WARNING
+                );
                 return;
             }
         }
 
         // LÓGICA PARA PARSEAR EL SALDO EN CONTRA
         BigDecimal saldoContra = BigDecimal.ZERO;
+
         if (txtSaldoContra.getText() != null && !txtSaldoContra.getText().trim().isEmpty()) {
             try {
                 String saldoLimpiado = txtSaldoContra.getText().trim().replace(",", ".");
                 saldoContra = new BigDecimal(saldoLimpiado);
             } catch (NumberFormatException e) {
-                mostrarAlerta("Error de formato", "El Saldo en Contra debe ser un número válido (Ej: 500.50).", Alert.AlertType.WARNING);
+                mostrarAlerta(
+                        "Error de formato",
+                        "El Saldo en Contra debe ser un número válido (Ej: 500.50).",
+                        Alert.AlertType.WARNING
+                );
                 return;
             }
         }
 
         try {
-            // Mandamos los datos fresquitos a la API
             if (proveedorAEditar == null) {
-                apiService.guardarProveedoresEnBaseDeDatos(razonSocial, contacto, rubro, cuit, telefono, email, saldoFavor, saldoContra, comentarios);
+                // ➕ NUEVO PROVEEDOR
+                apiService.guardarProveedoresEnBaseDeDatos(
+                        razonSocial,
+                        contacto,
+                        rubro,
+                        cuit,
+                        telefono,
+                        email,
+                        saldoFavor,
+                        saldoContra,
+                        comentarios
+                );
             } else {
-                apiService.actualizarProveedoresEnBaseDeDatos(proveedorAEditar.getId(), razonSocial, contacto, rubro, cuit, telefono, email, saldoFavor, saldoContra, comentarios);
+                // ✏️ EDITAR PROVEEDOR
+                apiService.actualizarProveedoresEnBaseDeDatos(
+                        proveedorAEditar.getId(),
+                        razonSocial,
+                        contacto,
+                        rubro,
+                        cuit,
+                        telefono,
+                        email,
+                        saldoFavor,
+                        saldoContra,
+                        comentarios
+                );
             }
+
             cerrarModal(event);
+
         } catch (Exception e) {
-            mostrarAlerta("Error al guardar", e.getMessage(), Alert.AlertType.ERROR);
+            mostrarAlerta(
+                    "Error al guardar",
+                    e.getMessage(),
+                    Alert.AlertType.ERROR
+            );
         }
     }
 

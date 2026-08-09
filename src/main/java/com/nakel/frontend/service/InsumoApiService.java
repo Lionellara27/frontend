@@ -23,11 +23,14 @@ public class InsumoApiService {
         this.gson = new Gson();
     }
 
-    // =============== 1. OBTENER TODOS LOS INSUMOS ===============
-    public String obtenerInsumos() {
+    // =============== 1. OBTENER INSUMOS PAGINADOS (¡NUEVO!) ===============
+    public String obtenerInsumos(int pagina, int cantidadPorPagina) {
         try {
+            // Le pedimos al backend la página exacta (Ojo: Spring Boot empieza a contar desde 0)
+            String urlConPaginacion = API_URL + "?page=" + pagina + "&size=" + cantidadPorPagina;
+
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL))
+                    .uri(URI.create(urlConPaginacion))
                     .GET()
                     .build();
 
@@ -37,9 +40,16 @@ public class InsumoApiService {
                 return respuesta.body();
             }
         } catch (Exception e) {
-            System.out.println("Error de conexión al obtener insumos: " + e.getMessage());
+            System.out.println("Error de conexión al obtener insumos paginados: " + e.getMessage());
         }
         return "[]";
+    }
+
+    // =============== 1.1 OBTENER INSUMOS (Por Defecto) ===============
+    // Mantenemos este para que no se rompa tu controlador actual.
+    // Por defecto, traerá la Página 0 con 20 elementos.
+    public String obtenerInsumos() {
+        return obtenerInsumos(0, 20);
     }
 
     // =============== 2. BUSCADOR PREDICTIVO ===============
@@ -65,10 +75,8 @@ public class InsumoApiService {
     // =============== 3. GUARDAR INSUMO (POST BLINDADO) ===============
     public void guardarInsumoEnBaseDeDatos(Insumo insumo) throws Exception {
 
-        // Gson convierte automáticamente el objeto Insumo a JSON
         String jsonMandar = gson.toJson(insumo);
 
-        // 🔥 MICRÓFONO ACTIVADO: Vemos qué sale del Frontend
         System.out.println("========== GUARDAR INSUMO (FRONTEND) ==========");
         System.out.println("JSON ENVIADO: " + jsonMandar);
 
@@ -80,7 +88,6 @@ public class InsumoApiService {
 
         HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-        // 🔥 MICRÓFONO ACTIVADO: Vemos qué devuelve el Backend
         System.out.println("STATUS: " + respuesta.statusCode());
         System.out.println("BODY DEVUELTO: " + respuesta.body());
         System.out.println("===============================================");
@@ -98,7 +105,7 @@ public class InsumoApiService {
         String jsonMandar = gson.toJson(insumo);
 
         HttpRequest peticion = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL + "/" + id)) // ¡Ojo a la URL! Le pasamos el ID
+                .uri(URI.create(API_URL + "/" + id))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(jsonMandar))
                 .build();
@@ -121,35 +128,28 @@ public class InsumoApiService {
 
         HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-        // Si falló (código 400 o 500) leemos el mensaje exacto que manda el backend
         if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
             throw new Exception("Error " + respuesta.statusCode() + ": " + respuesta.body());
         }
     }
-    //---------------------
+
+    // =============== 5. LISTA COMPLETA DIRECTA (Soporte viejo) ===============
     public List<Insumo> obtenerListaInsumos() {
-
         try {
-
             HttpRequest peticion = HttpRequest.newBuilder()
                     .uri(URI.create(API_URL + "/lista"))
                     .GET()
                     .build();
 
-            HttpResponse<String> respuesta =
-                    insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
             if (respuesta.statusCode() == 200) {
-
                 Type tipo = new TypeToken<List<Insumo>>() {}.getType();
-
                 return gson.fromJson(respuesta.body(), tipo);
             }
-
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         return Collections.emptyList();
     }
 }

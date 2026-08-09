@@ -6,21 +6,17 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Insumo;
+import com.nakel.frontend.model.Categoria;
+import com.nakel.frontend.model.Material;
 import com.nakel.frontend.service.InsumoApiService;
+import com.nakel.frontend.service.ParametrosApiService;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
@@ -33,40 +29,107 @@ import java.util.Optional;
 
 public class InsumoController {
 
+    // --- FILTROS DE BÚSQUEDA ---
     @FXML private TextField txtBuscarInsumo;
+    @FXML private ComboBox<String> cmbFiltroUnidad; // 🔥 Quedó como String para "Metros", "Unidades", etc.
+    @FXML private ComboBox<Material> cmbFiltroMaterial;
 
+    // --- TABLA Y COLUMNAS ---
     @FXML private TableView<Insumo> tablaInsumos;
     @FXML private TableColumn<Insumo, Long> colId;
     @FXML private TableColumn<Insumo, String> colDescripcion;
     @FXML private TableColumn<Insumo, String> colCategoria;
     @FXML private TableColumn<Insumo, String> colUnidad;
     @FXML private TableColumn<Insumo, BigDecimal> colCosto;
-
-    // 🔥 LA NUEVA COLUMNA DE ACCIONES
     @FXML private TableColumn<Insumo, Void> colAcciones;
 
     private final ObservableList<Insumo> listaInsumos = FXCollections.observableArrayList();
     private final Gson gson = new Gson();
 
-    // 🔥 EL SERVICIO REAL DESBLOQUEADO
+    // --- SERVICIOS ---
     private final InsumoApiService apiService = new InsumoApiService();
+    private final ParametrosApiService parametrosService = new ParametrosApiService();
+
+
+    @FXML private Pagination paginadorInsumos;
+
 
     @FXML
     public void initialize() {
         System.out.println("¡Módulo de Gestión de Insumos cargado con éxito!");
 
         tablaInsumos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-
         configurarColumnasTabla();
 
-        tablaInsumos.setItems(listaInsumos);
+        // 1. Arreglamos el texto fantasma de los combos
+        forzarTextoFantasma(cmbFiltroUnidad, "Filtrar Unidad...");
+        forzarTextoFantasma(cmbFiltroMaterial, "Filtrar Material...");
 
-        cargarInsumosDesdeBackend();
+        // 2. Cargamos los combos con los datos reales
+        try {
+            cmbFiltroUnidad.getItems().addAll("Metros", "Unidades", "Horas");
+            cmbFiltroMaterial.getItems().addAll(parametrosService.obtenerMateriales());
+        } catch (Exception e) {
+            System.out.println("⚠️ Aviso: No se pudieron cargar los materiales desde la base de datos.");
+        }
+
+        // 3. Envolvemos la lista original en una lista filtrable
+        javafx.collections.transformation.FilteredList<Insumo> datosFiltrados = new javafx.collections.transformation.FilteredList<>(listaInsumos, b -> true);
+
+        // 4. CREAMOS EL MOTOR MULTI-FILTRO
+        Runnable aplicarFiltros = () -> {
+            datosFiltrados.setPredicate(insumo -> {
+                String texto = txtBuscarInsumo.getText() != null ? txtBuscarInsumo.getText().toLowerCase().trim() : "";
+                String unidadSeleccionada = cmbFiltroUnidad.getValue();
+                Material matSeleccionado = cmbFiltroMaterial.getValue();
+
+                // Regla 1: Texto (Solo busca en el nombre)
+                boolean coincideTexto = texto.isEmpty() || (insumo.getNombre() != null && insumo.getNombre().toLowerCase().contains(texto));
+
+                // Regla 2: Unidad (Transforma la regla del backend a la palabra del frontend)
+                boolean coincideUnidad = true;
+                if (unidadSeleccionada != null && insumo.getCategoria() != null) {
+                    String regla = insumo.getCategoria().getTipoMedicion();
+                    if ("SUPERFICIE".equals(regla) && !unidadSeleccionada.equals("Metros")) coincideUnidad = false;
+                    if ("UNIDAD".equals(regla) && !unidadSeleccionada.equals("Unidades")) coincideUnidad = false;
+                    if ("TIEMPO".equals(regla) && !unidadSeleccionada.equals("Horas")) coincideUnidad = false;
+                } else if (unidadSeleccionada != null) {
+                    coincideUnidad = false;
+                }
+
+                // Regla 3: Material
+                boolean coincideMaterial = matSeleccionado == null ||
+                        (insumo.getMaterial() != null && insumo.getMaterial().getId().equals(matSeleccionado.getId()));
+
+                return coincideTexto && coincideUnidad && coincideMaterial;
+            });
+        };
+
+        // 5. Le decimos a los 3 controles que disparen el motor
+        txtBuscarInsumo.textProperty().addListener((obs, oldV, newV) -> aplicarFiltros.run());
+        cmbFiltroUnidad.valueProperty().addListener((obs, oldV, newV) -> aplicarFiltros.run());
+        cmbFiltroMaterial.valueProperty().addListener((obs, oldV, newV) -> aplicarFiltros.run());
+
+        // 6. Conectamos la tabla
+        javafx.collections.transformation.SortedList<Insumo> datosOrdenados = new javafx.collections.transformation.SortedList<>(datosFiltrados);
+        datosOrdenados.comparatorProperty().bind(tablaInsumos.comparatorProperty());
+        tablaInsumos.setItems(datosOrdenados);
+
+        // 7. 🔥 CONFIGURAMOS EL PAGINADOR NATIVO
+        paginadorInsumos.setPageFactory(paginaIndex -> {
+            // Cada vez que tocan un número, llamamos al backend pidiendo esa página
+            cargarInsumosDesdeBackend(paginaIndex);
+
+            // JavaFX exige devolver un "nodo" visual acá, le pasamos una cajita invisible
+            return new javafx.scene.layout.VBox();
+        });
     }
 
+    // 🔥 ACÁ ESTÁN TUS MÉTODOS RECUPERADOS 🔥
     private void configurarColumnasTabla() {
         if (colId != null) colId.setCellValueFactory(new PropertyValueFactory<>("id"));
         if (colDescripcion != null) colDescripcion.setCellValueFactory(new PropertyValueFactory<>("descripcionCompleta"));
+
         if (colCategoria != null) {
             colCategoria.setCellValueFactory(cellData ->
                     new javafx.beans.property.SimpleStringProperty(
@@ -74,14 +137,11 @@ public class InsumoController {
                     )
             );
         }
-        // PEGÁ ESTO:
+
         if (colCosto != null) {
-            // 1. Le decimos de dónde sacar el dato exacto
             colCosto.setCellValueFactory(cellData ->
                     new javafx.beans.property.SimpleObjectProperty<>(cellData.getValue().getCostoCalculado())
             );
-
-            // 2. Le damos el formato visual lindo para que borre el ".0000" y ponga el "$"
             colCosto.setCellFactory(col -> new javafx.scene.control.TableCell<Insumo, java.math.BigDecimal>() {
                 @Override
                 protected void updateItem(java.math.BigDecimal item, boolean empty) {
@@ -89,17 +149,14 @@ public class InsumoController {
                     if (empty || item == null) {
                         setText(null);
                     } else {
-                        // Acá ocurre la magia visual: lo deja con 2 decimales y el signo pesos
                         setText(String.format("$ %.2f", item));
                     }
                 }
             });
         }
 
-        // Asignamos una unidad de medida por defecto según la regla (Opcional, hasta que el modelo lo traiga directo)
         if (colUnidad != null) {
             colUnidad.setCellValueFactory(cellData -> {
-                // Entramos a la categoría para sacar el tipo de medición (con validación por las dudas)
                 String regla = cellData.getValue().getCategoria() != null
                         ? cellData.getValue().getCategoria().getTipoMedicion()
                         : "UNIDAD";
@@ -110,7 +167,6 @@ public class InsumoController {
             });
         }
 
-        // 🎨 FÁBRICA DE BOTONES PARA LA COLUMNA ACCIONES
         if (colAcciones != null) {
             javafx.util.Callback<TableColumn<Insumo, Void>, TableCell<Insumo, Void>> cellFactory = new javafx.util.Callback<>() {
                 @Override
@@ -148,26 +204,35 @@ public class InsumoController {
         }
     }
 
-    private void cargarInsumosDesdeBackend() {
+    // 🔥 AHORA RECIBE EL NÚMERO DE PÁGINA
+    private void cargarInsumosDesdeBackend(int numeroPagina) {
         listaInsumos.clear();
-        String json = apiService.obtenerInsumos();
+
+        // Le pedimos al servicio la página exacta (de a 20 por página)
+        String json = apiService.obtenerInsumos(numeroPagina, 20);
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
-                // Parseo inteligente igual que en Cliente
                 JsonObject respuestaServidor = JsonParser.parseString(json).getAsJsonObject();
 
-                // Asumimos que Spring Boot devuelve un formato paginado con "content"
+                // 🧠 MAGIA: Leemos cuántas páginas totales hay en la BD y actualizamos la vista
+                if (respuestaServidor.has("totalPages")) {
+                    int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
+                    // Si no hay nada, mostramos 1 página por defecto
+                    if (paginadorInsumos != null) {
+                        paginadorInsumos.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+                    }
+                }
+
                 JsonArray arregloInsumos = respuestaServidor.has("content")
                         ? respuestaServidor.getAsJsonArray("content")
-                        : JsonParser.parseString(json).getAsJsonArray(); // Fallback por si devuelve un array directo
+                        : JsonParser.parseString(json).getAsJsonArray();
 
                 Type tipoLista = new TypeToken<List<Insumo>>(){}.getType();
                 List<Insumo> deLaBaseDeDatos = gson.fromJson(arregloInsumos, tipoLista);
 
                 listaInsumos.setAll(deLaBaseDeDatos);
-                System.out.println("✅ Tabla cargada con " + deLaBaseDeDatos.size() + " insumos.");
-
+                System.out.println("✅ Tabla cargada con " + deLaBaseDeDatos.size() + " insumos (Página " + (numeroPagina + 1) + ").");
             } catch (Exception e) {
                 System.err.println("❌ Error al convertir el JSON a la tabla.");
                 e.printStackTrace();
@@ -175,13 +240,6 @@ public class InsumoController {
         } else {
             System.out.println("⚠️ La base de datos de insumos está vacía o el JSON vino nulo.");
         }
-    }
-
-    @FXML
-    public void buscarInsumo(ActionEvent event) {
-        String textoBusqueda = txtBuscarInsumo.getText().trim();
-        // TODO: Conectar con apiService.buscarInsumos(textoBusqueda)
-        System.out.println("Buscando insumo: " + textoBusqueda);
     }
 
     @FXML
@@ -197,55 +255,58 @@ public class InsumoController {
             modalStage.setResizable(false);
             modalStage.showAndWait();
 
-            cargarInsumosDesdeBackend();
+            cargarInsumosDesdeBackend(paginadorInsumos.getCurrentPageIndex());
         } catch (Exception e) {
             System.err.println("Error al abrir el Pop-up de Insumos.");
             e.printStackTrace();
         }
     }
 
-    // --- ACCIONES DE LOS BOTONES ---
+    @FXML
+    public void limpiarFiltros(ActionEvent event) {
+        if (txtBuscarInsumo != null) txtBuscarInsumo.clear();
+        if (cmbFiltroUnidad != null) cmbFiltroUnidad.setValue(null);
+        if (cmbFiltroMaterial != null) cmbFiltroMaterial.setValue(null);
+    }
+
+    private <T> void forzarTextoFantasma(ComboBox<T> combo, String texto) {
+        combo.setPromptText(texto);
+        combo.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(texto);
+                } else {
+                    setText(item.toString());
+                }
+            }
+        });
+    }
 
     private void mostrarDetalle(Insumo insumo) {
         Alert alerta = new Alert(Alert.AlertType.INFORMATION);
         alerta.setTitle("Detalle del Insumo");
         alerta.setHeaderText(insumo.getNombre() + " (Cod: " + insumo.getId() + ")");
 
-        // Extraemos los datos de la categoría de forma segura
         String nombreCategoria = insumo.getCategoria() != null ? insumo.getCategoria().getNombre() : "N/A";
         String tipoMedicion = insumo.getCategoria() != null ? insumo.getCategoria().getTipoMedicion() : "";
 
         String info = "Categoría: " + nombreCategoria + "\n"
                 + "Costo Total: $" + insumo.getCostoTotal() + "\n";
 
-        // 🔥 Si es SUPERFICIE, sumamos el Material en el bloque general de arriba
         if ("SUPERFICIE".equals(tipoMedicion)) {
             String nombreMaterial = insumo.getMaterial() != null ? insumo.getMaterial().getNombre() : "Sin asignar";
-            info += "Material: " + nombreMaterial + "\n";
-        }
-
-        info += "\n"; // Espaciado limpio para los bloques de stock
-
-        if ("SUPERFICIE".equals(tipoMedicion)) {
-            // 📏 Lógica para Telas, Cueros, etc.
+            info += "Material: " + nombreMaterial + "\n\n";
             info += "Dimensiones Originales: " + insumo.getAnchoLoteCm() + "x" + insumo.getLargoLoteCm() + " cm\n";
-
-            // 🧮 Calculamos el área original en vivo
-            int areaOriginal = 0;
-            if (insumo.getAnchoLoteCm() != null && insumo.getLargoLoteCm() != null) {
-                areaOriginal = insumo.getAnchoLoteCm() * insumo.getLargoLoteCm();
-            }
+            int areaOriginal = (insumo.getAnchoLoteCm() != null && insumo.getLargoLoteCm() != null) ? insumo.getAnchoLoteCm() * insumo.getLargoLoteCm() : 0;
             info += "Área Original Total: " + areaOriginal + " cm²\n";
             info += "Área Actual Disponible: " + (insumo.getAreaActualCm2() != null ? insumo.getAreaActualCm2() : 0) + " cm²\n";
-
         } else if ("UNIDAD".equals(tipoMedicion)) {
-            // 📦 Lógica para Cierres, Hebillas, Avíos
-            info += "Cantidad Original (Lote): " + insumo.getCantidadLote() + " unidades\n";
+            info += "\nCantidad Original (Lote): " + insumo.getCantidadLote() + " unidades\n";
             info += "Stock Actual: " + insumo.getCantidadActual() + " unidades\n";
-
         } else if ("SERVICIO".equals(tipoMedicion) || "TIEMPO".equals(tipoMedicion)) {
-            // ⏳ Lógica por si tocan el botón "Ver" en la mano de obra
-            info += "Costo por Hora de Confección: $" + insumo.getCostoTotal() + "\n";
+            info += "\nCosto por Hora de Confección: $" + insumo.getCostoTotal() + "\n";
         }
 
         alerta.setContentText(info);
@@ -257,7 +318,7 @@ public class InsumoController {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/nuevo-insumo-modal.fxml"));
             javafx.scene.Parent root = loader.load();
 
-            // 🔥 Acá levantás el controlador y le pasás el objeto
+            // 🔥 ESTAS DOS LÍNEAS ESTABAN COMENTADAS. ¡ACTIVÁLAS!
             NuevoInsumoController controller = loader.getController();
             controller.cargarDatosParaEditar(insumo);
 
@@ -268,7 +329,8 @@ public class InsumoController {
             modalStage.setResizable(false);
             modalStage.showAndWait();
 
-            cargarInsumosDesdeBackend();
+            // Refrescamos la tabla en la misma página
+            cargarInsumosDesdeBackend(paginadorInsumos.getCurrentPageIndex());
         } catch (Exception e) {
             System.err.println("Error al abrir el editor de Insumos.");
             e.printStackTrace();
@@ -285,7 +347,7 @@ public class InsumoController {
         if (resultado.isPresent() && resultado.get() == ButtonType.OK) {
             try {
                 apiService.eliminarInsumoDeBaseDeDatos(insumo.getId());
-                cargarInsumosDesdeBackend();
+                cargarInsumosDesdeBackend(paginadorInsumos.getCurrentPageIndex());
             } catch (Exception e) {
                 Alert error = new Alert(Alert.AlertType.ERROR, "No se pudo eliminar: " + e.getMessage());
                 error.showAndWait();

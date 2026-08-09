@@ -29,7 +29,6 @@
     </HBox>
 
     <!-- TABLA DE CLIENTES -->
-    <!-- TABLA DE CLIENTES -->
     <TableView fx:id="tablaClientes" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
         <columns>
             <TableColumn fx:id="colCod" text="Cód." prefWidth="50"/>
@@ -45,5 +44,8 @@
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
         </columns>
     </TableView>
+
+    <!-- 🔥 EL NUEVO PAGINADOR NATIVO DE JAVAFX -->
+    <Pagination fx:id="paginadorClientes" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
 
 </VBox>

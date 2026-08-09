@@ -172,4 +172,24 @@ public class ArticuloApiService {
             return false;
         }
     }
+
+    // 📋 NUEVO: Para el paginador del catálogo (Devuelve el JSON completo con páginas)
+    public String obtenerArticulosPaginados(int pagina, int cantidadPorPagina) {
+        try {
+            String url = API_URL + "?page=" + pagina + "&size=" + cantidadPorPagina;
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
+        } catch (Exception e) {
+            System.out.println("Error al obtener catálogo paginado: " + e.getMessage());
+        }
+        return "[]";
+    }
 }

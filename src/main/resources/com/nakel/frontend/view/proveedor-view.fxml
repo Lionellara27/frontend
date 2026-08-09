@@ -14,29 +14,70 @@
         <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
-    <HBox alignment="CENTER_LEFT">
+    <HBox alignment="CENTER_LEFT" spacing="20">
         <Label text="Directorio de Proveedores" styleClass="titulo-modulo"/>
+        <Pane HBox.hgrow="ALWAYS"/>
+        <Button text="➕ NUEVO PROVEEDOR" styleClass="btn-primario" onAction="#abrirModalNuevoProveedor"/>
     </HBox>
 
-    <HBox spacing="15" alignment="CENTER_LEFT">
-        <TextField fx:id="txtBuscarProveedor" promptText="Buscar por nombre, empresa o rubro..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
-        <Button text="🔍 Buscar" styleClass="btn-secundario" onAction="#buscarProveedor"/>
+    <HBox spacing="15"
+          alignment="CENTER_LEFT"
+          style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
 
-        <Button text="➕ Nuevo Proveedor" styleClass="btn-primario" onAction="#abrirModalNuevoProveedor"/>
+        <Label text="Buscar por:"/>
+
+        <ComboBox fx:id="cmbCampoBusqueda"
+                  promptText="Campo"
+                  prefWidth="150"
+                  styleClass="text-field"/>
+
+        <TextField fx:id="txtBuscarProveedor"
+                   promptText="Buscar proveedor..."
+                   prefWidth="300"
+                   styleClass="input-busqueda"/>
+
+        <Button text="🔍 Buscar"
+                styleClass="btn-secundario"
+                onAction="#buscarProveedor"/>
+
+        <Button text="🧹 Limpiar"
+                onAction="#limpiarBusqueda"/>
     </HBox>
 
-    <TableView fx:id="tablaProveedores" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
+    <TableView fx:id="tablaProveedores"
+               VBox.vgrow="ALWAYS"
+               styleClass="tabla-estandar">
+
         <columns>
-            <TableColumn fx:id="colRazonSocial" text="Razón Social / Empresa" prefWidth="200"/>
-            <TableColumn fx:id="colNombreContacto" text="Nombre Contacto" prefWidth="150"/>
-            <TableColumn fx:id="colTelefono" text="Teléfono" prefWidth="120"/>
-            <TableColumn fx:id="colRubro" text="Rubro (Ej: Cueros)" prefWidth="120"/>
 
-            <!-- 🔥 ACÁ ESTÁ EL CAMBIO: Reemplazamos Saldo por Comentarios -->
-            <TableColumn fx:id="colComentarios" text="Comentarios" prefWidth="200"/>
+            <TableColumn fx:id="colRazonSocial"
+                         text="Razón Social / Empresa"
+                         prefWidth="200"/>
 
-            <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
+            <TableColumn fx:id="colNombreContacto"
+                         text="Nombre Contacto"
+                         prefWidth="150"/>
+
+            <TableColumn fx:id="colTelefono"
+                         text="Teléfono"
+                         prefWidth="120"/>
+
+            <TableColumn fx:id="colRubro"
+                         text="Rubro (Ej: Cueros)"
+                         prefWidth="120"/>
+
+            <TableColumn fx:id="colComentarios"
+                         text="Comentarios"
+                         prefWidth="200"/>
+
+            <TableColumn fx:id="colAcciones"
+                         text="Acciones"
+                         prefWidth="150"/>
+
         </columns>
+
     </TableView>
+
+    <Pagination VBox.vgrow="NEVER" currentPageIndex="0" fx:id="paginadorProveedores" pageCount="1" styleClass="paginador-estandar"/>
 
 </VBox>

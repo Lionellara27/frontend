@@ -56,17 +56,29 @@ public class CajaApiService {
     }
 
     // Este queda igual porque el backend no pide usuario para leer el historial
-    public String obtenerHistorial() {
+    // =============== 3. TRAER HISTORIAL PAGINADO (¡NUEVO!) ===============
+    public String obtenerHistorial(int pagina, int cantidadPorPagina) {
         try {
+            String url = API_URL + "/historial?page=" + pagina + "&size=" + cantidadPorPagina;
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/historial"))
+                    .uri(URI.create(url))
                     .GET()
                     .build();
+
             HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
-            if (respuesta.statusCode() == 200) return respuesta.body();
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
         } catch (Exception e) {
-            System.out.println("❌ Error al obtener historial: " + e.getMessage());
+            System.out.println("❌ Error al obtener historial paginado: " + e.getMessage());
         }
         return "[]";
+    }
+
+    // =============== 3.1 TRAER HISTORIAL (Por Defecto) ===============
+    // Mantenemos este para no romper código viejo si lo usás en otro lado
+    public String obtenerHistorial() {
+        return obtenerHistorial(0, 20);
     }
 }

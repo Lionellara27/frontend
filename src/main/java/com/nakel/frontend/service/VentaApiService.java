@@ -56,4 +56,25 @@ public class VentaApiService {
         }
         return null;
     }
+
+    //nuevo
+    // 📋 NUEVO: Para el paginador del Historial de Ventas
+    public String obtenerHistorialVentasPaginado(int pagina, int cantidadPorPagina) {
+        try {
+            String url = API_URL + "/historial?page=" + pagina + "&size=" + cantidadPorPagina;
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
+        } catch (Exception e) {
+            System.out.println("Error al traer historial paginado: " + e.getMessage());
+        }
+        return "[]";
+    }
 }

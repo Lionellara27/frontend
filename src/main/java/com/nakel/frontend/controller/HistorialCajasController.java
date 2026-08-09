@@ -1,6 +1,9 @@
 package com.nakel.frontend.controller;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.CajaDiaria;
 import com.nakel.frontend.service.CajaApiService;
@@ -9,10 +12,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.control.Button;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import org.kordamp.ikonli.javafx.FontIcon; // 🔥 IMPORTANTE: El icono piola
@@ -31,6 +31,8 @@ public class HistorialCajasController {
     @FXML private TableColumn<CajaDiaria, String> colEstado;
     @FXML private TableColumn<CajaDiaria, Void> colAcciones;
 
+    @FXML private Pagination paginadorHistorial;
+
     private final CajaApiService cajaApiService = new CajaApiService();
     private final Gson gson = new Gson();
     private final ObservableList<CajaDiaria> listaCajas = FXCollections.observableArrayList();
@@ -38,7 +40,14 @@ public class HistorialCajasController {
     @FXML
     public void initialize() {
         configurarTabla();
-        cargarHistorial();
+        if (paginadorHistorial != null) {
+            paginadorHistorial.setPageFactory(paginaIndex -> {
+                cargarHistorial(paginaIndex);
+                return new javafx.scene.layout.VBox();
+            });
+        } else {
+            cargarHistorial(0);
+        }
     }
 
     private void configurarTabla() {
@@ -91,16 +100,49 @@ public class HistorialCajasController {
     }
 
     @FXML
-    public void cargarHistorial() {
-        String json = cajaApiService.obtenerHistorial();
-        if (json != null && !json.isEmpty()) {
-            Type listType = new TypeToken<List<CajaDiaria>>(){}.getType();
-            List<CajaDiaria> cajas = gson.fromJson(json, listType);
-            listaCajas.clear();
-            if (cajas != null) {
-                listaCajas.addAll(cajas);
+    public void cargarHistorial(int numeroPagina) {
+        String json = cajaApiService.obtenerHistorial(numeroPagina, 20);
+
+        if (json != null && !json.equals("[]") && !json.isEmpty()) {
+            try {
+                com.google.gson.JsonElement elementoParseado = JsonParser.parseString(json);
+                JsonArray arregloCajas;
+
+                if (elementoParseado.isJsonObject()) {
+                    JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
+                    if (respuestaServidor.has("totalPages") && paginadorHistorial != null) {
+                        int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
+                        paginadorHistorial.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+                    }
+                    arregloCajas = respuestaServidor.getAsJsonArray("content");
+                } else if (elementoParseado.isJsonArray()) {
+                    arregloCajas = elementoParseado.getAsJsonArray();
+                    if (paginadorHistorial != null) {
+                        paginadorHistorial.setPageCount(1);
+                    }
+                } else {
+                    throw new RuntimeException("Formato JSON no reconocido");
+                }
+
+                Type listType = new TypeToken<List<CajaDiaria>>(){}.getType();
+                List<CajaDiaria> cajas = gson.fromJson(arregloCajas, listType);
+
+                listaCajas.clear();
+                if (cajas != null) {
+                    listaCajas.addAll(cajas);
+                }
+            } catch (Exception e) {
+                System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
             }
+        } else {
+            listaCajas.clear();
         }
+    }
+
+    // Sobrecarga limpia para que el botón "Actualizar" funcione sin romper nada
+    @FXML
+    public void cargarHistorial() {
+        cargarHistorial(paginadorHistorial != null ? paginadorHistorial.getCurrentPageIndex() : 0);
     }
 
     // Abre el modal del detalle con los movimientos al hacer clic en el ojito

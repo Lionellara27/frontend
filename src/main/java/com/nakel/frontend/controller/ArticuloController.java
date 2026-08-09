@@ -1,5 +1,10 @@
 package com.nakel.frontend.controller;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Articulo;
 import com.nakel.frontend.model.Categoria;
 import com.nakel.frontend.model.Material;
@@ -17,6 +22,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +47,7 @@ public class ArticuloController {
     @FXML private TableColumn<Articulo, Articulo> colAcciones;
 
     @FXML private Label lblTotalArticulos;
+    @FXML private Pagination paginadorArticulos;
 
     // --- INSTANCIAMOS LOS DOS SERVICIOS ---
     private final ArticuloApiService apiService = new ArticuloApiService();
@@ -66,7 +73,15 @@ public class ArticuloController {
         cmbOrigen.getItems().addAll("PRODUCCION_PROPIA", "REVENTA");
 
         configurarColumnas();
-        cargarTabla();
+
+        if (paginadorArticulos != null) {
+            paginadorArticulos.setPageFactory(paginaIndex -> {
+                cargarTabla(paginaIndex);
+                return new javafx.scene.layout.VBox();
+            });
+        } else {
+            cargarTabla(0);
+        }
     }
 
     private void configurarColumnas() {
@@ -206,7 +221,7 @@ public class ArticuloController {
         dialog.showAndWait().ifPresent(nuevoArticulo -> {
             if (nuevoArticulo != null) {
                 boolean exito = apiService.guardarArticulo(nuevoArticulo);
-                if (exito) { cargarTabla(); }
+                if (exito) { cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0); }
             }
         });
     }
@@ -303,7 +318,7 @@ public class ArticuloController {
             if (artActualizado != null) {
                 boolean exito = apiService.actualizarArticulo(artActualizado); // 👈 Llama al nuevo método PUT
                 if (exito) {
-                    cargarTabla(); // Refresca catálogo si anduvo bien
+                    cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0); // Refresca catálogo si anduvo bien
                 }
             }
         });
@@ -317,7 +332,7 @@ public class ArticuloController {
                 try {
                     boolean exito = apiService.eliminarArticuloDeBaseDeDatos(articulo.getId());
                     if (exito) {
-                        cargarTabla();
+                        cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0);
                     } else {
                         Alert error = new Alert(Alert.AlertType.ERROR, "No se puede eliminar el artículo porque tiene un historial de ventas asociado o hubo un error en la base de datos.\n\nPara quitarlo del catálogo, edite su stock a 0.");
                         error.setHeaderText("Operación Rechazada por Seguridad");
@@ -331,16 +346,48 @@ public class ArticuloController {
         });
     }
 
-    private void cargarTabla() {
-        List<Articulo> listaBackend = apiService.obtenerTodos();
-        if (listaBackend != null && !listaBackend.isEmpty()) {
-            masterData.setAll(listaBackend); // Llenamos la lista maestra
+    private void cargarTabla(int numeroPagina) {
+        String json = apiService.obtenerArticulosPaginados(numeroPagina, 20);
 
-            // Envolvemos la lista en un FilteredList
-            filteredData = new FilteredList<>(masterData, p -> true);
-            tablaArticulos.setItems(filteredData);
+        if (json != null && !json.equals("[]") && !json.isEmpty()) {
+            try {
+                com.google.gson.JsonElement elementoParseado = JsonParser.parseString(json);
+                JsonArray arregloArticulos;
+                int totalBD = 0;
 
-            lblTotalArticulos.setText("Total en catálogo: " + listaBackend.size() + " artículos");
+                // 🧠 MAGIA: Detectamos si el backend es nuevo (paginado) o viejo (lista cruda)
+                if (elementoParseado.isJsonObject()) {
+                    JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
+                    if (respuestaServidor.has("totalPages") && paginadorArticulos != null) {
+                        int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
+                        paginadorArticulos.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+                    }
+                    arregloArticulos = respuestaServidor.getAsJsonArray("content");
+                    totalBD = respuestaServidor.has("totalElements") ? respuestaServidor.get("totalElements").getAsInt() : 0;
+
+                } else if (elementoParseado.isJsonArray()) {
+                    // Si el backend mandó la lista cruda, la leemos directamente
+                    arregloArticulos = elementoParseado.getAsJsonArray();
+                    if (paginadorArticulos != null) {
+                        paginadorArticulos.setPageCount(1); // 1 sola página porque vino todo junto
+                    }
+                } else {
+                    throw new RuntimeException("Formato JSON no reconocido");
+                }
+
+                Type tipoLista = new TypeToken<List<Articulo>>(){}.getType();
+                List<Articulo> listaBackend = new Gson().fromJson(arregloArticulos, tipoLista);
+
+                masterData.setAll(listaBackend);
+                filteredData = new FilteredList<>(masterData, p -> true);
+                tablaArticulos.setItems(filteredData);
+
+                if (totalBD == 0) totalBD = listaBackend.size();
+                lblTotalArticulos.setText("Total en catálogo: " + totalBD + " artículos");
+
+            } catch (Exception e) {
+                System.out.println("❌ Error: " + e.getMessage());
+            }
         } else {
             tablaArticulos.getItems().clear();
             lblTotalArticulos.setText("Total en catálogo: 0 artículos");

@@ -30,4 +30,7 @@
             <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
         </columnResizePolicy>
     </TableView>
+
+    <Pagination fx:id="paginadorCajas" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
+
 </VBox>

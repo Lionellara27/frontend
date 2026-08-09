@@ -14,11 +14,14 @@ public class ClienteApiService {
     private final HttpClient clienteHttp = HttpClient.newHttpClient();
     private final Gson gson = new Gson();
 
-    // =============== 1. TRAER TODOS LOS CLIENTES ===============
-    public String obtenerClientes() {
+    // =============== 1. TRAER CLIENTES PAGINADOS (¡NUEVO!) ===============
+    public String obtenerClientes(int pagina, int cantidadPorPagina) {
         try {
+            // Le pedimos al backend la página exacta
+            String urlConPaginacion = API_URL + "?page=" + pagina + "&size=" + cantidadPorPagina;
+
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL))
+                    .uri(URI.create(urlConPaginacion))
                     .GET()
                     .build();
 
@@ -28,9 +31,15 @@ public class ClienteApiService {
                 return respuesta.body();
             }
         } catch (Exception e) {
-            System.out.println("Error al traer los clientes: " + e.getMessage());
+            System.out.println("Error al traer los clientes paginados: " + e.getMessage());
         }
         return "[]";
+    }
+
+    // =============== 1.1 TRAER TODOS LOS CLIENTES (Por Defecto) ===============
+    // Mantenemos este para que no se rompa el código viejo.
+    public String obtenerClientes() {
+        return obtenerClientes(0, 20);
     }
 
     // =============== 2. BUSCADOR PREDICTIVO ===============
@@ -56,10 +65,8 @@ public class ClienteApiService {
     // =============== 3. GUARDAR CLIENTE (POST BLINDADO) ===============
     public void guardarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
 
-        // 🔥 1. CAMBIO CLAVE: Usamos <String, Object> para que acepte el Long del ID
         Map<String, Object> datosCliente = new HashMap<>();
 
-        // 🔥 2. LA MAGIA: Si el ID existe, lo inyectamos al JSON
         if (id != null) {
             datosCliente.put("id", id);
         }
@@ -88,8 +95,6 @@ public class ClienteApiService {
     }
 
     // =============== 3.5. ACTUALIZAR CLIENTE (PUT) ===============
-    // =============== 3.5. ACTUALIZAR CLIENTE (PUT) ===============
-    // 🔥 Le sumamos los dos saldos a los parámetros
     public void actualizarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email, double saldoAFavor, double saldoPendiente) throws Exception {
 
         Map<String, Object> datosCliente = new HashMap<>();
@@ -140,7 +145,7 @@ public class ClienteApiService {
         return null;
     }
 
-    // =============== 5. ¡NUEVO! ELIMINAR CLIENTE DE LA BASE DE DATOS ===============
+    // =============== 5. ELIMINAR CLIENTE DE LA BASE DE DATOS ===============
     public void eliminarClienteDeBaseDeDatos(Long id) throws Exception {
         HttpRequest peticion = HttpRequest.newBuilder()
                 .uri(URI.create(API_URL + "/" + id))
@@ -149,7 +154,6 @@ public class ClienteApiService {
 
         HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-        // Si falló (código 400 o 500) leemos el mensaje exacto que manda el backend
         if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
             throw new Exception("Error " + respuesta.statusCode() + ": " + respuesta.body());
         }
