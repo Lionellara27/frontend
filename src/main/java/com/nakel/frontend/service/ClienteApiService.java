@@ -42,6 +42,41 @@ public class ClienteApiService {
         return obtenerClientes(0, 20);
     }
 
+    // =============== 1.2. BUSCAR CLIENTES EN TODA LA BD + PAGINACIÓN ===============
+    public String buscarClientes(String texto, int pagina, int cantidadPorPagina) {
+        try {
+            String parametro = java.net.URLEncoder.encode(
+                    texto,
+                    java.nio.charset.StandardCharsets.UTF_8
+            );
+
+            String url = API_URL
+                    + "?buscar=" + parametro
+                    + "&page=" + pagina
+                    + "&size=" + cantidadPorPagina;
+
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta = clienteHttp.send(
+                    peticion,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error en la búsqueda global de clientes: " + e.getMessage());
+        }
+
+        return "{\"content\":[],\"totalElements\":0,\"totalPages\":0,\"number\":0,\"size\":"
+                + cantidadPorPagina + "}";
+    }
+
     // =============== 2. BUSCADOR PREDICTIVO ===============
     public String buscarClientesPorNombre(String nombre) {
         try {

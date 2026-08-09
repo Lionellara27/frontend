@@ -27,8 +27,10 @@
         <ComboBox fx:id="cmbMaterial" promptText="Material" prefWidth="150" styleClass="text-field"/>
         <ComboBox fx:id="cmbOrigen" promptText="Origen (Propio/Reventa)" prefWidth="170" styleClass="text-field"/>
 
-        <Button text="🔍 Filtrar" styleClass="btn-secundario" onAction="#buscarArticulos"/>
-        <Button text="🧹 Limpiar" onAction="#limpiarFiltros"/>
+        <Button text="🔍Buscar" styleClass="btn-secundario" onAction="#buscarArticulos"/>
+        <Button text="Limpiar"
+                prefWidth="70"
+                onAction="#limpiarFiltros"/>
     </HBox>
 
     <TableView fx:id="tablaArticulos" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">

@@ -40,7 +40,7 @@
                 styleClass="btn-secundario"
                 onAction="#buscarProveedor"/>
 
-        <Button text="🧹 Limpiar"
+        <Button text="Limpiar"
                 onAction="#limpiarBusqueda"/>
     </HBox>
 

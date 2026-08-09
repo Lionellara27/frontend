@@ -48,38 +48,26 @@ public class ClienteController {
     @FXML
     public void initialize() {
         System.out.println("¡Módulo de Clientes cargado con éxito!");
+
         tablaClientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
         configurarTabla();
 
-        // 1. Envolvemos la lista maestra en la lupa inteligente
-        javafx.collections.transformation.FilteredList<Cliente> listaFiltrada = new javafx.collections.transformation.FilteredList<>(masterData, p -> true);
-
-        // 2. Le decimos a la barra que escuche el tipeo
+        // 🔍 Buscar automáticamente mientras se escribe
         txtBuscarCliente.textProperty().addListener((observable, valorViejo, valorNuevo) -> {
-            listaFiltrada.setPredicate(cliente -> {
-                if (valorNuevo == null || valorNuevo.trim().isEmpty()) {
-                    return true;
-                }
 
-                String filtroLowerCase = valorNuevo.toLowerCase().trim();
+            if (paginadorClientes != null) {
+                paginadorClientes.setCurrentPageIndex(0);
+            }
 
-                boolean coincideNombre = cliente.getNombre() != null &&
-                        cliente.getNombre().toLowerCase().contains(filtroLowerCase);
-
-                boolean coincideDni = cliente.getCuit() != null &&
-                        cliente.getCuit().toLowerCase().contains(filtroLowerCase);
-
-                return coincideNombre || coincideDni;
-            });
+            cargarClientesEnTabla(0);
         });
 
-        javafx.collections.transformation.SortedList<Cliente> listaOrdenada = new javafx.collections.transformation.SortedList<>(listaFiltrada);
-        listaOrdenada.comparatorProperty().bind(tablaClientes.comparatorProperty());
+        // 📋 La tabla muestra directamente los resultados
+        // que devuelve el backend.
+        tablaClientes.setItems(masterData);
 
-        // 3. Conectamos la tabla con la lista filtrada
-        tablaClientes.setItems(listaOrdenada);
-
-        // 4. Arrancamos el paginador (que es el que realmente va a ir a buscar los datos a la BD)
+        // 📄 Configuración del paginador
         if (paginadorClientes != null) {
             paginadorClientes.setPageFactory(paginaIndex -> {
                 cargarClientesEnTabla(paginaIndex);
@@ -141,37 +129,96 @@ public class ClienteController {
     }
 
     private void cargarClientesEnTabla(int numeroPagina) {
-        String json = apiService.obtenerClientes(numeroPagina, 20);
+
+        String textoBusqueda = txtBuscarCliente.getText() == null
+                ? ""
+                : txtBuscarCliente.getText().trim();
+
+        String json;
+
+        if (textoBusqueda.isEmpty()) {
+
+            // 📋 Sin búsqueda:
+            // trae los clientes normalmente paginados.
+            json = apiService.obtenerClientes(numeroPagina, 20);
+
+        } else {
+
+            // 🔍 Con búsqueda:
+            // busca en TODA la base de datos y después pagina.
+            json = apiService.buscarClientes(
+                    textoBusqueda,
+                    numeroPagina,
+                    20
+            );
+        }
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
-            try {
-                JsonObject respuestaServidor = JsonParser.parseString(json).getAsJsonObject();
 
-                if (respuestaServidor.has("totalPages") && paginadorClientes != null) {
-                    int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
-                    paginadorClientes.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+            try {
+
+                JsonObject respuestaServidor =
+                        JsonParser.parseString(json).getAsJsonObject();
+
+                // 📄 Actualizamos la cantidad de páginas
+                // según los resultados de la búsqueda.
+                if (respuestaServidor.has("totalPages")
+                        && paginadorClientes != null) {
+
+                    int totalPaginas =
+                            respuestaServidor.get("totalPages").getAsInt();
+
+                    paginadorClientes.setPageCount(
+                            totalPaginas == 0 ? 1 : totalPaginas
+                    );
                 }
 
-                JsonArray arregloClientes = respuestaServidor.getAsJsonArray("content");
-                Type tipoLista = new TypeToken<List<Cliente>>(){}.getType();
-                List<Cliente> listaClientes = gson.fromJson(arregloClientes, tipoLista);
+                JsonArray arregloClientes =
+                        respuestaServidor.getAsJsonArray("content");
 
-                // 🔥 ACÁ ESTÁ LA CLAVE: Llenamos la masterData para que la lupa los filtre en vivo
+                Type tipoLista =
+                        new TypeToken<List<Cliente>>() {}.getType();
+
+                List<Cliente> listaClientes =
+                        gson.fromJson(arregloClientes, tipoLista);
+
                 if (listaClientes != null) {
                     masterData.setAll(listaClientes);
+                } else {
+                    masterData.clear();
                 }
+
             } catch (Exception e) {
-                System.out.println("❌ Error: " + e.getMessage());
+
+                System.out.println(
+                        "❌ Error al cargar clientes: "
+                                + e.getMessage()
+                );
+
+                e.printStackTrace();
             }
+
         } else {
+
             masterData.clear();
+
+            if (paginadorClientes != null) {
+                paginadorClientes.setPageCount(1);
+            }
         }
     }
 
     @FXML
     public void buscarCliente(ActionEvent event) {
-        String textoBusqueda = txtBuscarCliente.getText();
-        System.out.println("Buscando en la base de datos: " + textoBusqueda);
+
+        // 🔄 Siempre que se hace una nueva búsqueda,
+        // volvemos a la primera página.
+        if (paginadorClientes != null) {
+            paginadorClientes.setCurrentPageIndex(0);
+        }
+
+        // 🔍 Ejecutamos la búsqueda contra el backend.
+        cargarClientesEnTabla(0);
     }
 
     @FXML
