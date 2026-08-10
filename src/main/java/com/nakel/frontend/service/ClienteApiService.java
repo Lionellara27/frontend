@@ -77,6 +77,38 @@ public class ClienteApiService {
                 + cantidadPorPagina + "}";
     }
 
+    // =============== 1.3. BUSCAR CLIENTES PAGINADOS COMO LISTA (¡NUEVO!) ===============
+    public java.util.List<com.nakel.frontend.model.Cliente> buscarClientesPaginados(String texto, int pagina, int cantidadPorPagina) {
+        try {
+            // 1. Llamamos a tu método existente que hace la petición HTTP y devuelve el String JSON
+            String json = buscarClientes(texto, pagina, cantidadPorPagina);
+
+            // 2. Parseamos el texto JSON
+            com.google.gson.JsonElement elemento = com.google.gson.JsonParser.parseString(json);
+            com.google.gson.JsonArray arrayClientes;
+
+            // 3. Inteligencia del frontend: Si viene paginado de Spring Boot, extraemos "content"
+            if (elemento.isJsonObject() && elemento.getAsJsonObject().has("content")) {
+                arrayClientes = elemento.getAsJsonObject().getAsJsonArray("content");
+            } else if (elemento.isJsonArray()) {
+                arrayClientes = elemento.getAsJsonArray(); // Si por algún motivo vino la lista directa
+            } else {
+                arrayClientes = new com.google.gson.JsonArray();
+            }
+
+            // 4. Convertimos el Array de JSON a nuestra lista de objetos Cliente de Java
+            java.lang.reflect.Type tipo = new com.google.gson.reflect.TypeToken<java.util.List<com.nakel.frontend.model.Cliente>>() {}.getType();
+            return gson.fromJson(arrayClientes, tipo);
+
+        } catch (Exception e) {
+            System.out.println("❌ Error al parsear clientes paginados para el ComboBox: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Si algo falla, devolvemos una lista vacía para no romper el frontend
+        return java.util.Collections.emptyList();
+    }
+
     // =============== 2. BUSCADOR PREDICTIVO ===============
     public String buscarClientesPorNombre(String nombre) {
         try {

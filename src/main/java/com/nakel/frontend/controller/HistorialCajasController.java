@@ -101,8 +101,9 @@ public class HistorialCajasController {
 
     @FXML
     public void cargarHistorial(int numeroPagina) {
+        System.out.println("🚀 [FRONTEND-CAJAS] Pidiendo historial al Backend. Página: " + numeroPagina);
         String json = cajaApiService.obtenerHistorial(numeroPagina, 20);
-
+        System.out.println("📦 [FRONTEND-CAJAS] JSON Crudo recibido: " + json);
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
                 com.google.gson.JsonElement elementoParseado = JsonParser.parseString(json);
@@ -114,8 +115,10 @@ public class HistorialCajasController {
                         int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
                         paginadorHistorial.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
                     }
+                    System.out.println("🔎 [FRONTEND-CAJAS] Objeto JSON detectado. Extrayendo 'content'...");
                     arregloCajas = respuestaServidor.getAsJsonArray("content");
                 } else if (elementoParseado.isJsonArray()) {
+                    System.out.println("🔎 [FRONTEND-CAJAS] Arreglo plano detectado.");
                     arregloCajas = elementoParseado.getAsJsonArray();
                     if (paginadorHistorial != null) {
                         paginadorHistorial.setPageCount(1);
@@ -126,15 +129,18 @@ public class HistorialCajasController {
 
                 Type listType = new TypeToken<List<CajaDiaria>>(){}.getType();
                 List<CajaDiaria> cajas = gson.fromJson(arregloCajas, listType);
-
+                System.out.println("✅ [FRONTEND-CAJAS] GSON parseó con éxito " + (cajas != null ? cajas.size() : 0) + " cajas.");
                 listaCajas.clear();
                 if (cajas != null) {
                     listaCajas.addAll(cajas);
                 }
             } catch (Exception e) {
+                System.out.println("❌ [FRONTEND-CAJAS] Error al parsear el JSON: " + e.getMessage());
                 System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
+                e.printStackTrace();
             }
         } else {
+            System.out.println("⚠️ [FRONTEND-CAJAS] El servidor devolvió un JSON vacío o nulo.");
             listaCajas.clear();
         }
     }

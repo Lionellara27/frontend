@@ -38,6 +38,16 @@ public class CalculadoraController {
     private double costoTotalReceta = 0.0;
     private final InsumoApiService insumoApi = new InsumoApiService();
 
+    private final ObservableList<Insumo> insumosMaster = FXCollections.observableArrayList();
+    private javafx.collections.transformation.FilteredList<Insumo> insumosFiltrados;
+    private int paginaActualInsumos = 0;
+
+    private boolean scrollListenerConfigurado = false;
+    private int secuenciaBusquedaInsumo = 0;
+    private boolean actualizandoInsumosProgramaticamente = false;
+
+    private static final int TAMANIO_PAGINA_INSUMOS = 50;
+
     @FXML
     public void initialize() {
         this.articuloService = new ArticuloApiService();
@@ -51,6 +61,8 @@ public class CalculadoraController {
 
         // 2. Cargar insumos
         cargarInsumosDesdeBD();
+        configurarBusquedaInsumo();
+        //configurarScrollInfinito();
 
         // 3. Escuchar la selección del ComboBox
         cmbInsumo.getSelectionModel().selectedItemProperty().addListener((obs, viejo, nuevo) -> prepararCampos(nuevo));
@@ -61,13 +73,111 @@ public class CalculadoraController {
 
     private void cargarInsumosDesdeBD() {
         try {
-            cmbInsumo.getItems().clear();
-            cmbInsumo.getItems().addAll(insumoApi.obtenerListaInsumos());
+            paginaActualInsumos = 0;
+            actualizandoInsumosProgramaticamente = true; // 🔒 cerramos el candado
+
+            insumosMaster.clear();
+            insumosMaster.addAll(insumoApi.obtenerInsumosPaginadosComoLista(paginaActualInsumos, TAMANIO_PAGINA_INSUMOS));
+
+            insumosFiltrados = new javafx.collections.transformation.FilteredList<>(insumosMaster, p -> true);
+            cmbInsumo.setItems(insumosFiltrados);
+
+            configurarConverterInsumo();
+
         } catch (Exception e) {
             e.printStackTrace();
             mostrarError("No se pudieron cargar los insumos.");
+        } finally {
+            actualizandoInsumosProgramaticamente = false; // 🔓 abrimos el candado de nuevo
         }
     }
+
+    // 🔥 Para que el ComboBox editable muestre "Telar Negro" en vez del objeto Java entero
+    private void configurarConverterInsumo() {
+        cmbInsumo.setConverter(new javafx.util.StringConverter<Insumo>() {
+            @Override
+            public String toString(Insumo insumo) {
+                return insumo != null ? insumo.getNombre() : "";
+            }
+
+            @Override
+            public Insumo fromString(String texto) {
+                return cmbInsumo.getSelectionModel().getSelectedItem();
+            }
+        });
+    }
+
+    // 🔥 Botón "Cargar más": trae los siguientes 20 y los suma a los ya cargados
+    // 🔥 Trae la siguiente tanda de insumos (llamado por el scroll, no por un botón)
+    private void cargarMasInsumos() {
+        try {
+            paginaActualInsumos++;
+            java.util.List<Insumo> siguientePagina = insumoApi.obtenerInsumosPaginadosComoLista(paginaActualInsumos, TAMANIO_PAGINA_INSUMOS);
+
+            if (siguientePagina == null || siguientePagina.isEmpty()) {
+                paginaActualInsumos--; // no había más, nos quedamos donde estábamos
+                return;
+            }
+
+            insumosMaster.addAll(siguientePagina);
+            System.out.println("✅ Scroll llegó al final: cargados " + siguientePagina.size() + " insumos más (página " + paginaActualInsumos + ")");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            paginaActualInsumos--;
+        }
+    }
+
+    // 🔥 Búsqueda: filtra en RAM al escribir, y busca en TODO el backend al presionar Enter
+    private javafx.animation.PauseTransition debounceBusqueda;
+
+    private void configurarBusquedaInsumo() {
+        debounceBusqueda = new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
+
+        cmbInsumo.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
+            // 🔒 Si el cambio lo hizo el sistema (al seleccionar un ítem), ignoramos para no reventar la RAM
+            if (actualizandoInsumosProgramaticamente) return;
+
+            if (newVal == null || newVal.trim().isEmpty()) {
+                cmbInsumo.hide();
+                return;
+            }
+
+            debounceBusqueda.stop();
+            debounceBusqueda.setOnFinished(e -> buscarEnBackend(newVal.trim()));
+            debounceBusqueda.playFromStart();
+        });
+    }
+
+    private void buscarEnBackend(String texto) {
+        final int miSecuencia = ++secuenciaBusquedaInsumo;
+
+        // 📡 Viajamos al Backend: Buscamos en TODOS los insumos, trayendo los mejores 50
+        java.util.List<Insumo> resultados = insumoApi.buscarInsumosComoLista(texto);
+
+        if (miSecuencia != secuenciaBusquedaInsumo) return;
+
+        actualizandoInsumosProgramaticamente = true; // 🔒 CERRAMOS EL CANDADO
+        try {
+            insumosMaster.setAll(resultados != null ? resultados : java.util.Collections.emptyList());
+            insumosFiltrados.setPredicate(p -> true);
+
+            if (resultados != null && !resultados.isEmpty()) {
+                cmbInsumo.show(); // Despliega la lista si hay resultados
+            } else {
+                cmbInsumo.hide();
+            }
+
+            // Mantenemos el texto que tipeó la clienta y el cursor al final
+            cmbInsumo.getEditor().setText(texto);
+            cmbInsumo.getEditor().positionCaret(texto.length());
+
+        } finally {
+            actualizandoInsumosProgramaticamente = false; // 🔓 ABRIMOS EL CANDADO
+        }
+    }
+
+    // 🔥 Búsqueda real contra el backend, entre TODOS los insumos (no solo los cargados)
 
     private void prepararCampos(Insumo insumo) {
         if (insumo == null || insumo.getCategoria() == null) return;

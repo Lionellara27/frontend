@@ -72,6 +72,70 @@ public class InsumoApiService {
         return "[]";
     }
 
+    // =============== 2.1 BUSCADOR PARA EL COMBOBOX DE LA CALCULADORA (independiente) ===============
+    // No toca el método buscarInsumosPorNombre() que ya usa el módulo de ver insumos
+    public String buscarInsumosParaCombo(String nombre) {
+        try {
+            String parametro = nombre.replace(" ", "%20");
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/buscar?nombre=" + parametro + "&size=50"))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
+        } catch (Exception e) {
+            System.out.println("Error en la búsqueda del combo de insumos: " + e.getMessage());
+        }
+        return "[]";
+    }
+    // =============== 2.2 BUSCADOR PAGINADO PARA LA CALCULADORA (¡NUEVO!) ===============
+    public List<Insumo> buscarInsumosParaCalculadora(String nombre, int pagina, int cantidadPorPagina) {
+        try {
+            // Limpiamos y preparamos el texto para la URL
+            String parametro = (nombre != null && !nombre.isBlank()) ? nombre.replace(" ", "%20") : "";
+
+            // Armamos la URL exacta con la palabra a buscar, la página y la cantidad
+            String url = API_URL + "/buscar?nombre=" + parametro + "&page=" + pagina + "&size=" + cantidadPorPagina;
+
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            if (respuesta.statusCode() == 200) {
+                String json = respuesta.body();
+                com.google.gson.JsonElement elemento = com.google.gson.JsonParser.parseString(json);
+                com.google.gson.JsonArray arrayInsumos;
+
+                // 🧠 Inteligencia del frontend: Si viene paginado (Spring Boot), extrae "content"
+                if (elemento.isJsonObject() && elemento.getAsJsonObject().has("content")) {
+                    arrayInsumos = elemento.getAsJsonObject().getAsJsonArray("content");
+                } else if (elemento.isJsonArray()) {
+                    // Si viene como lista directa por algún motivo
+                    arrayInsumos = elemento.getAsJsonArray();
+                } else {
+                    arrayInsumos = new com.google.gson.JsonArray();
+                }
+
+                Type tipo = new TypeToken<List<Insumo>>() {}.getType();
+                return gson.fromJson(arrayInsumos, tipo);
+            } else {
+                System.out.println("⚠️ Error del backend al buscar insumos para calculadora: Código " + respuesta.statusCode());
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Excepción en la búsqueda paginada de la calculadora: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // Si algo falla, devolvemos una lista vacía para que no explote el ComboBox
+        return Collections.emptyList();
+    }
     // =============== 3. GUARDAR INSUMO (POST BLINDADO) ===============
     public void guardarInsumoEnBaseDeDatos(Insumo insumo) throws Exception {
 
@@ -149,6 +213,57 @@ public class InsumoApiService {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+        return Collections.emptyList();
+    }
+
+    // =============== 6. OBTENER INSUMOS PAGINADOS YA PARSEADOS (para el ComboBox) ===============
+    public List<Insumo> obtenerInsumosPaginadosComoLista(int pagina, int cantidadPorPagina) {
+        try {
+            String json = obtenerInsumos(pagina, cantidadPorPagina);
+
+            com.google.gson.JsonElement elemento = com.google.gson.JsonParser.parseString(json);
+            com.google.gson.JsonArray arrayInsumos;
+
+            // Igual que con clientes: puede venir paginado (con "content") o como lista directa
+            if (elemento.isJsonObject() && elemento.getAsJsonObject().has("content")) {
+                arrayInsumos = elemento.getAsJsonObject().getAsJsonArray("content");
+            } else if (elemento.isJsonArray()) {
+                arrayInsumos = elemento.getAsJsonArray();
+            } else {
+                arrayInsumos = new com.google.gson.JsonArray();
+            }
+
+            Type tipo = new TypeToken<List<Insumo>>() {}.getType();
+            return gson.fromJson(arrayInsumos, tipo);
+
+        } catch (Exception e) {
+            System.out.println("Error al parsear insumos paginados: " + e.getMessage());
+        }
+        return Collections.emptyList();
+    }
+
+    /// =============== 7. BUSCADOR YA PARSEADO (para el ComboBox) ===============
+    public List<Insumo> buscarInsumosComoLista(String nombre) {
+        try {
+            String json = buscarInsumosParaCombo(nombre); // 🔥 usa el método nuevo, no el compartido
+
+            com.google.gson.JsonElement elemento = com.google.gson.JsonParser.parseString(json);
+            com.google.gson.JsonArray arrayInsumos;
+
+            if (elemento.isJsonObject() && elemento.getAsJsonObject().has("content")) {
+                arrayInsumos = elemento.getAsJsonObject().getAsJsonArray("content");
+            } else if (elemento.isJsonArray()) {
+                arrayInsumos = elemento.getAsJsonArray();
+            } else {
+                arrayInsumos = new com.google.gson.JsonArray();
+            }
+
+            Type tipo = new TypeToken<List<Insumo>>() {}.getType();
+            return gson.fromJson(arrayInsumos, tipo);
+
+        } catch (Exception e) {
+            System.out.println("Error al parsear búsqueda de insumos: " + e.getMessage());
         }
         return Collections.emptyList();
     }

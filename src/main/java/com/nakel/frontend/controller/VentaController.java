@@ -27,7 +27,15 @@ public class VentaController {
     private final ArticuloApiService apiService = new ArticuloApiService();
 
     // Cabecera AFIP
-    @FXML private ComboBox<String> cmbCliente;
+// 🔥 ¡ATENCIÓN! Cambiar de <String> a <Cliente>
+    @FXML private ComboBox<com.nakel.frontend.model.Cliente> cmbCliente;
+
+    // 🔒 Variables para la paginación del ComboBox de Clientes
+    private javafx.animation.PauseTransition debounceCliente;
+    private int paginaActualCliente = 0;
+    private String busquedaActualCliente = "";
+    private boolean actualizandoCliente = false;
+    //parte new arriba
     @FXML private ComboBox<String> cmbTipoFactura;
 
     // Buscador y Tabla Principal
@@ -338,70 +346,124 @@ public class VentaController {
     }
 
     private void cargarDatosIniciales() {
-        // 🔥 1. SOLUCIÓN COMPROBANTES Y MEDIOS DE PAGO
+        // 1. SOLUCIÓN COMPROBANTES Y MEDIOS DE PAGO
         cmbTipoFactura.getItems().addAll("Ticket de Venta", "Factura A (Con IVA)", "Presupuesto");
         cmbTipoFactura.setValue("Ticket de Venta");
 
         cmbMedioPago.getItems().addAll("Efectivo", "Transferencia", "MercadoPago", "Tarjeta de Crédito", "Tarjeta de Débito", "Pago Mixto");
         cmbMedioPago.setValue("Efectivo");
 
-        // 🔥 2. CLIENTES DE VERDAD (Con parche para Paginación de Spring Boot)
+        // 2. Encendemos el buscador inteligente de Clientes
+        configurarBuscadorCliente();
+    }
+
+    private void configurarBuscadorCliente() {
         cmbCliente.setEditable(true);
-        clientesMaster.clear();
+        cmbCliente.setVisibleRowCount(10);
 
-        // Siempre dejamos a Consumidor Final como primera opción
-        clientesMaster.add("Consumidor Final");
-
-        try {
-            com.nakel.frontend.service.ClienteApiService clienteApi = new com.nakel.frontend.service.ClienteApiService();
-            String jsonClientes = clienteApi.obtenerClientes();
-
-            if (jsonClientes != null && !jsonClientes.equals("[]")) {
-
-                // 1. Leemos el texto de Spring Boot
-                com.google.gson.JsonElement elemento = com.google.gson.JsonParser.parseString(jsonClientes);
-                com.google.gson.JsonArray arrayClientes;
-
-                // 2. ¿Viene adentro de un "Page" (paginado) o viene la lista suelta?
-                if (elemento.isJsonObject() && elemento.getAsJsonObject().has("content")) {
-                    arrayClientes = elemento.getAsJsonObject().getAsJsonArray("content"); // Sacamos la lista del cajón "content"
-                } else if (elemento.isJsonArray()) {
-                    arrayClientes = elemento.getAsJsonArray(); // Es una lista directa
-                } else {
-                    arrayClientes = new com.google.gson.JsonArray();
-                }
-
-                // 3. Ahora sí, convertimos el array puro a nuestra lista de Java
-                java.lang.reflect.Type listType = new com.google.gson.reflect.TypeToken<ArrayList<com.nakel.frontend.model.Cliente>>(){}.getType();
-                List<com.nakel.frontend.model.Cliente> clientesReales = gson.fromJson(arrayClientes, listType);
-
-                this.listaClientesReales = clientesReales;
-
-                // 4. Llenamos el ComboBox
-                for (com.nakel.frontend.model.Cliente c : clientesReales) {
-                    clientesMaster.add(c.getNombre() + " - " + c.getCuit());
-                }
+        // 1. Convertidor visual: Para que en pantalla diga "Juan - 20334455"
+        cmbCliente.setConverter(new javafx.util.StringConverter<com.nakel.frontend.model.Cliente>() {
+            @Override
+            public String toString(com.nakel.frontend.model.Cliente c) {
+                if (c == null) return "";
+                if (c.getId() != null && c.getId() == -999L) return c.getNombre(); // Botón fantasma
+                return c.getNombre() + (c.getCuit() != null && !c.getCuit().isBlank() ? " - " + c.getCuit() : "");
             }
-        } catch (Exception e) {
-            System.out.println("⚠️ Advertencia: No se pudieron cargar los clientes del servidor: " + e.getMessage());
-        }
-
-        FilteredList<String> clientesFiltrados = new FilteredList<>(clientesMaster, p -> true);
-        cmbCliente.setItems(clientesFiltrados);
-        cmbCliente.setValue("Consumidor Final");
-
-        // Escucha lo que la cajera escribe y filtra en tiempo real
-        cmbCliente.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
-            final String selected = cmbCliente.getSelectionModel().getSelectedItem();
-            if (selected != null && selected.equals(cmbCliente.getEditor().getText())) {
-                return; // Evita bugs si hace clic en una opción
+            @Override
+            public com.nakel.frontend.model.Cliente fromString(String string) {
+                return cmbCliente.getSelectionModel().getSelectedItem();
             }
-            clientesFiltrados.setPredicate(item -> {
-                if (newVal == null || newVal.isBlank()) return true;
-                return item.toLowerCase().contains(newVal.toLowerCase());
-            });
-            cmbCliente.show(); // Despliega la lista automáticamente al tipear
         });
+
+        debounceCliente = new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
+
+        // 2. Escuchador de tipeo en vivo
+        cmbCliente.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
+            if (actualizandoCliente) return;
+
+            if (newVal == null || newVal.trim().isEmpty()) {
+                cmbCliente.hide();
+                return;
+            }
+
+            debounceCliente.stop();
+            debounceCliente.setOnFinished(e -> {
+                busquedaActualCliente = newVal.trim();
+                paginaActualCliente = 0; // Volvemos a la página 0 al buscar algo nuevo
+
+                actualizandoCliente = true;
+                cmbCliente.getItems().clear();
+                actualizandoCliente = false;
+
+                buscarYMostrarCliente(busquedaActualCliente, paginaActualCliente);
+            });
+            debounceCliente.playFromStart();
+        });
+
+        // 3. Escuchador de Selección (El Botón Fantasma)
+        cmbCliente.setOnAction(event -> {
+            if (actualizandoCliente) return;
+
+            com.nakel.frontend.model.Cliente seleccionado = cmbCliente.getSelectionModel().getSelectedItem();
+            if (seleccionado != null) {
+
+                // 🔥 SI TOCÓ EL BOTÓN FALSO DE "SIGUIENTE"
+                if (seleccionado.getId() != null && seleccionado.getId() == -999L) {
+                    paginaActualCliente++;
+
+                    actualizandoCliente = true;
+                    cmbCliente.getItems().remove(seleccionado);
+                    actualizandoCliente = false;
+
+                    buscarYMostrarCliente(busquedaActualCliente, paginaActualCliente);
+                    return;
+                }
+
+                actualizandoCliente = true;
+                cmbCliente.getEditor().setText(seleccionado.getNombre());
+                actualizandoCliente = false;
+            }
+        });
+
+        // 4. Carga inicial: Consumidor Final
+        com.nakel.frontend.model.Cliente consumidorFinal = new com.nakel.frontend.model.Cliente();
+        consumidorFinal.setId(0L);
+        consumidorFinal.setNombre("Consumidor Final");
+        consumidorFinal.setCuit("00000000");
+
+        cmbCliente.getItems().add(consumidorFinal);
+        cmbCliente.setValue(consumidorFinal);
+    }
+
+    private void buscarYMostrarCliente(String texto, int pagina) {
+        // 📡 Viajamos al Backend (Asegurate de tener este método en ClienteApiService)
+        com.nakel.frontend.service.ClienteApiService clienteApi = new com.nakel.frontend.service.ClienteApiService();
+        java.util.List<com.nakel.frontend.model.Cliente> resultados = clienteApi.buscarClientesPaginados(texto, pagina, 20);
+
+        actualizandoCliente = true; // 🔒 CERRAMOS
+        try {
+            if (resultados != null && !resultados.isEmpty()) {
+                cmbCliente.getItems().addAll(resultados);
+
+                // Inyectamos el Botón Fantasma si vinieron 20 exactos
+                if (resultados.size() == 20) {
+                    com.nakel.frontend.model.Cliente btnSiguiente = new com.nakel.frontend.model.Cliente();
+                    btnSiguiente.setId(-999L);
+                    btnSiguiente.setNombre("--- Cargar otros 20 --->");
+                    cmbCliente.getItems().add(btnSiguiente);
+                }
+
+                cmbCliente.show();
+            } else if (pagina == 0) {
+                cmbCliente.hide();
+            }
+
+            cmbCliente.getEditor().setText(texto);
+            cmbCliente.getEditor().positionCaret(texto.length());
+
+        } finally {
+            actualizandoCliente = false; // 🔓 ABRIMOS
+        }
     }
 
     private void cargarInventarioParaVenta(String busqueda, int pagina) {
@@ -445,6 +507,7 @@ public class VentaController {
             return;
         }
 
+        // 1. Convertimos los ítems de la tabla visual a DetalleVenta
         List<DetalleVenta> detalles = new ArrayList<>();
         for (LineaTicket linea : tablaTicket.getItems()) {
             detalles.add(new DetalleVenta(
@@ -455,40 +518,41 @@ public class VentaController {
             ));
         }
 
-        String clienteSeleccionado = cmbCliente.getValue();
-        com.nakel.frontend.model.Cliente clienteParaBackend = new com.nakel.frontend.model.Cliente();
+        // 2. Atrapar el Cliente directo del ComboBox (¡Chau split de Strings!)
+        com.nakel.frontend.model.Cliente clienteSeleccionado = cmbCliente.getValue();
+        com.nakel.frontend.model.Cliente clienteParaBackend;
 
-        if (clienteSeleccionado != null && clienteSeleccionado.contains(" - ")) {
-            String[] partes = clienteSeleccionado.split(" - ");
-            clienteParaBackend.setCuit(partes[1].trim());
+        if (clienteSeleccionado != null && clienteSeleccionado.getId() != null && clienteSeleccionado.getId() > 0) {
+            // Es un cliente real traído de la base de datos
+            clienteParaBackend = clienteSeleccionado;
         } else {
-            clienteParaBackend.setCuit("00000000"); // Consumidor Final genérico
+            // Fallback para Consumidor Final genérico
+            clienteParaBackend = new com.nakel.frontend.model.Cliente();
+            clienteParaBackend.setNombre("Consumidor Final");
+            clienteParaBackend.setCuit("00000000");
         }
 
+        // 3. Armar la entidad Venta
         com.nakel.frontend.model.Venta ventaFinal = new com.nakel.frontend.model.Venta(
                 clienteParaBackend,
                 obtenerTotalNumerico(),
-                true,
-                false, // 🔥 ACÁ PONÉ UN FALSE GIGANTE, NUNCA CHKREGALO
+                true,  // esFiscal
+                false, // esTicketCambio (es venta original)
                 detalles,
                 listaPagos
         );
 
-        ventaFinal.setEsParaRegalo(chkRegalo.isSelected());
+        // 4. Configurar banderas de regalo / comprobante
+        boolean esRegalo = chkRegalo.isSelected();
+        ventaFinal.setEsParaRegalo(esRegalo);
+        ventaFinal.setTipoComprobante(esRegalo ? "TICKET_REGALO" : "TICKET_NORMAL");
 
-// Y si querías guardar si era regalo o no para imprimir el papelito extra,
-// a lo sumo se lo metés al campo 'tipoComprobante' (que lo agregaste hoy).
-        if (chkRegalo.isSelected()) {
-            ventaFinal.setTipoComprobante("TICKET_REGALO");
-        } else {
-            ventaFinal.setTipoComprobante("TICKET_NORMAL");
-        }
-
+        // 5. Registrar en Backend
         VentaApiService apiVentas = new VentaApiService();
         boolean exito = apiVentas.registrarVenta(ventaFinal);
 
         if (exito) {
-            // 🔥 ACÁ ESTÁ LA MAGIA: Si la venta se guardó y había un vale, lo quemamos
+            // Si la venta se guardó bien y se usó un vale de cambio, lo quemamos
             if (valeUsado != null) {
                 com.nakel.frontend.service.ValeApiService valeApi = new com.nakel.frontend.service.ValeApiService();
                 valeApi.consumirVale(valeUsado.getCodigo());
@@ -496,10 +560,16 @@ public class VentaController {
             }
 
             mostrarAlerta(Alert.AlertType.INFORMATION, "¡Venta Exitosa!", "La transacción se registró correctamente.");
+
+            // 6. Limpiar mostrador para la siguiente venta
             tablaTicket.getItems().clear();
             actualizarTotal();
             chkRegalo.setSelected(false);
-            cmbCliente.setValue("Consumidor Final");
+
+            // Reseteamos la selección del combo de clientes
+            cmbCliente.getSelectionModel().clearSelection();
+            cmbCliente.getEditor().clear();
+
             txtCodigoBarras.requestFocus();
         } else {
             mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo guardar la venta en la Base de Datos.");
@@ -551,10 +621,19 @@ public class VentaController {
 
             dialog.showAndWait().ifPresent(resultado -> {
                 if (resultado != null) {
-                    if (!cmbCliente.getItems().contains(resultado)) {
-                        clientesMaster.add(resultado); // 🔥 Agrega a la lista master
+                    // Como el resultado que devuelve el modal de alta exprés es un String (o un Cliente,
+                    // dependiendo de cómo devuelva el resultado, aquí lo adaptamos al tipo de tu ComboBox).
+                    // Si cmbCliente es de tipo ComboBox<Cliente>, necesitamos pasarlo a objeto Cliente
+                    // o agregarlo correctamente a los items del ComboBox:
+
+                    // Creamos o buscamos el objeto Cliente correspondiente al texto/resultado recibido:
+                    com.nakel.frontend.model.Cliente nuevoCliente = new com.nakel.frontend.model.Cliente();
+                    nuevoCliente.setNombre(resultado);
+
+                    if (!cmbCliente.getItems().contains(nuevoCliente)) {
+                        cmbCliente.getItems().add(nuevoCliente);
                     }
-                    cmbCliente.setValue(resultado);
+                    cmbCliente.setValue(nuevoCliente);
                 }
             });
 
@@ -580,18 +659,12 @@ public class VentaController {
 
             PagoMixtoController controladorModal = loader.getController();
 
-            // 🔥 NUEVO: Rescatamos el ID del cliente seleccionado para el Vale
-            String clienteSeleccionado = cmbCliente.getValue();
+            // 🔥 NUEVO: Atrapamos el ID directo desde el objeto Cliente (¡Chau split y chau For!)
+            com.nakel.frontend.model.Cliente clienteSeleccionado = cmbCliente.getValue();
             Long idClienteParaVale = null;
 
-            if (clienteSeleccionado != null && clienteSeleccionado.contains(" - ")) {
-                String cuitBuscado = clienteSeleccionado.split(" - ")[1].trim();
-                for (com.nakel.frontend.model.Cliente c : listaClientesReales) {
-                    if (c.getCuit().equals(cuitBuscado)) {
-                        idClienteParaVale = c.getId(); // ¡Acá atrapamos el ID!
-                        break;
-                    }
-                }
+            if (clienteSeleccionado != null && clienteSeleccionado.getId() != null && clienteSeleccionado.getId() > 0) {
+                idClienteParaVale = clienteSeleccionado.getId(); // ¡Atrapamos el ID directo del objeto!
             }
 
             // 🔥 NUEVO: Le pasamos el idClienteParaVale al controlador del modal
