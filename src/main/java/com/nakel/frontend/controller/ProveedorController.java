@@ -214,8 +214,6 @@ public class ProveedorController {
         }
     }
 
-
-
     @FXML
     public void buscarProveedor(ActionEvent event) {
         if (paginadorProveedores != null) {

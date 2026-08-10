@@ -68,14 +68,18 @@ public class VentaApiService {
     }
 
     // 🔥 ACTUALIZADO: Ahora recibe la búsqueda y el mes
-    public String obtenerHistorialVentasPaginado(int pagina, int cantidadPorPagina, String busqueda, int mes) {
+    public String obtenerHistorialVentasPaginado(int pagina, int cantidadPorPagina, String busqueda, String criterio, int mes) {
         try {
             String textoBusqueda = (busqueda != null) ? busqueda.trim() : "";
+            // 🔥 Agregamos el criterio con un valor por defecto por las dudas
+            String textoCriterio = (criterio != null) ? criterio : "Nro. Comprobante";
 
+            // 🔥 Sumamos el criterio a la URL codificándolo igual que la búsqueda
             String url = API_URL
                     + "/historial?page=" + pagina
                     + "&size=" + cantidadPorPagina
                     + "&buscar=" + java.net.URLEncoder.encode(textoBusqueda, java.nio.charset.StandardCharsets.UTF_8)
+                    + "&criterio=" + java.net.URLEncoder.encode(textoCriterio, java.nio.charset.StandardCharsets.UTF_8)
                     + "&mes=" + mes;
 
             HttpRequest peticion = HttpRequest.newBuilder()
@@ -102,12 +106,16 @@ public class VentaApiService {
     }
 
     // 🔥 NUEVO: Le pide a la base de datos la suma global de plata
-    public double obtenerTotalGlobal(String busqueda, int mes) {
+    public double obtenerTotalGlobal(String busqueda, String criterio, int mes) {
         try {
             String textoBusqueda = (busqueda != null) ? busqueda.trim() : "";
+            // 🔥 Agregamos el criterio con un valor por defecto
+            String textoCriterio = (criterio != null) ? criterio : "Nro. Comprobante";
 
+            // 🔥 Sumamos el criterio a la URL codificándolo igual que la búsqueda
             String url = API_URL
                     + "/historial/total?buscar=" + java.net.URLEncoder.encode(textoBusqueda, java.nio.charset.StandardCharsets.UTF_8)
+                    + "&criterio=" + java.net.URLEncoder.encode(textoCriterio, java.nio.charset.StandardCharsets.UTF_8)
                     + "&mes=" + mes;
 
             HttpRequest peticion = HttpRequest.newBuilder()

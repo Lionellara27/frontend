@@ -22,8 +22,16 @@
 
     <HBox spacing="15" alignment="CENTER_LEFT">
         <ComboBox fx:id="cmbMes" promptText="Mes actual" styleClass="text-field"/>
-        <TextField fx:id="txtBuscarVenta" promptText="Buscar por Nro, Cliente o DNI..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
-        <Button text="🔍 Filtrar" styleClass="btn-secundario"/>
+
+        <!-- 🔥 NUEVO 1: Selector de tipo de búsqueda -->
+        <ComboBox fx:id="cmbCampoBusqueda" styleClass="text-field" prefWidth="180"/>
+
+        <TextField fx:id="txtBuscarVenta" promptText="Escriba aquí..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
+
+        <Button text="🔍 Filtrar" styleClass="btn-secundario" onAction="#buscarVenta"/>
+
+        <!-- 🔥 NUEVO 2: Botón de Limpiar conectado al método de ondita -->
+        <Button text="🧹 Limpiar" styleClass="btn-secundario" onAction="#limpiarBusqueda"/>
     </HBox>
 
     <TableView fx:id="tablaVentas" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">

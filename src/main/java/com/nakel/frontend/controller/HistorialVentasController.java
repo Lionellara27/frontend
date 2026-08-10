@@ -35,6 +35,8 @@ public class HistorialVentasController {
 
     @FXML private Pagination paginadorHistorial;
 
+    @FXML private ComboBox<String> cmbCampoBusqueda; // 🔥 NUEVO: El selector de tipo de búsqueda
+
     private final VentaApiService apiService = new VentaApiService();
     private final Gson gson = new Gson();
 
@@ -49,7 +51,18 @@ public class HistorialVentasController {
                 "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre");
         cmbMes.setValue("Todos");
 
-        // 🔥 2. Escuchadores para filtrar al instante (ComboBox)
+        // 🔥 NUEVO: Llenamos el ComboBox de Campo de Búsqueda
+        if (cmbCampoBusqueda != null) {
+            cmbCampoBusqueda.getItems().addAll("Nro. Comprobante", "Cliente (Nombre/DNI)");
+            cmbCampoBusqueda.setValue("Nro. Comprobante");
+
+            // Escuchador al cambiar el criterio (busca de cero al cambiar entre Factura o Cliente)
+            cmbCampoBusqueda.valueProperty().addListener((observable, valorViejo, valorNuevo) -> {
+                recargarHistorialDesdeCero();
+            });
+        }
+
+        // 🔥 2. Escuchadores para filtrar al instante (ComboBox Mes)
         cmbMes.setOnAction(e -> recargarHistorialDesdeCero());
 
         // 🔥 3. Búsqueda predictiva en tiempo real (Al tipear letra por letra)
@@ -226,10 +239,25 @@ public class HistorialVentasController {
 
     private void cargarVentas(int numeroPagina) {
         String busqueda = txtBuscarVenta.getText() != null ? txtBuscarVenta.getText().trim() : "";
+
+        // 🔥 AGREGAMOS: Leemos qué eligió la cajera en el ComboBox
+        String criterio = (cmbCampoBusqueda != null && cmbCampoBusqueda.getValue() != null)
+                ? cmbCampoBusqueda.getValue()
+                : "Nro. Comprobante";
+
+        // 🔥 TRADUCTOR INTELIGENTE CONDICIONAL: Solo recorta si busca por Nro. Comprobante
+        if ("Nro. Comprobante".equals(criterio)) {
+            if (busqueda.contains("0001 -")) {
+                busqueda = busqueda.replaceAll(".*0001\\s*-\\s*", "").replaceFirst("^0+", "");
+            } else if (busqueda.matches("0+\\d+")) {
+                busqueda = busqueda.replaceFirst("^0+", "");
+            }
+        }
+
         int mesNumero = convertirMesANumero(cmbMes.getValue());
 
-        // 🔥 1. Le pasamos la búsqueda y el mes a tu API (Lo actualizamos en el próximo paso)
-        String json = apiService.obtenerHistorialVentasPaginado(numeroPagina, 20, busqueda, mesNumero);
+        // 🔥 1. Le pasamos la búsqueda limpia, el CRITERIO nuevo y el mes a tu API
+        String json = apiService.obtenerHistorialVentasPaginado(numeroPagina, 20, busqueda, criterio, mesNumero);
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
@@ -256,8 +284,8 @@ public class HistorialVentasController {
                 javafx.collections.ObservableList<Venta> datosObservable = javafx.collections.FXCollections.observableArrayList(listaVentas);
                 tablaVentas.setItems(datosObservable);
 
-                // 🔥 2. Pedimos el TOTAL GLOBAL real a la base de datos (Sin importar la página)
-                double totalGlobal = apiService.obtenerTotalGlobal(busqueda, mesNumero);
+                // 🔥 2. Pedimos el TOTAL GLOBAL real a la base de datos (pasando el criterio también)
+                double totalGlobal = apiService.obtenerTotalGlobal(busqueda, criterio, mesNumero);
 
                 // Formateamos el total grande con los puntitos
                 String totalFormateado = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "AR")).format(totalGlobal);
@@ -268,8 +296,16 @@ public class HistorialVentasController {
             }
         } else {
             tablaVentas.getItems().clear();
-            if (lblTotalFacturado != null) lblTotalFacturado.setText("TOTAL: $ 0,00");
+            if (lblTotalFacturado != null) lblTotalFacturado.setText("TOTAL: $ 0,00 💰");
         }
+    }
+
+    @FXML
+    public void limpiarBusqueda() {
+        txtBuscarVenta.clear();
+        if (cmbCampoBusqueda != null) cmbCampoBusqueda.setValue("Nro. Comprobante");
+        cmbMes.setValue("Todos");
+        recargarHistorialDesdeCero();
     }
 
     // Traductor del ComboBox para el Backend
