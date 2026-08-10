@@ -331,7 +331,6 @@ public class VentaController {
                 .sum();
     }
 
-
     private void configurarTablaInventario() {
         tablaInventario.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -361,12 +360,11 @@ public class VentaController {
         cmbCliente.setEditable(true);
         cmbCliente.setVisibleRowCount(10);
 
-        // 1. Convertidor visual: Para que en pantalla diga "Juan - 20334455"
+        // 1. Convertidor visual: Para que en pantalla diga "Juan - 20334455" (SIN FANTASMAS)
         cmbCliente.setConverter(new javafx.util.StringConverter<com.nakel.frontend.model.Cliente>() {
             @Override
             public String toString(com.nakel.frontend.model.Cliente c) {
                 if (c == null) return "";
-                if (c.getId() != null && c.getId() == -999L) return c.getNombre(); // Botón fantasma
                 return c.getNombre() + (c.getCuit() != null && !c.getCuit().isBlank() ? " - " + c.getCuit() : "");
             }
             @Override
@@ -379,10 +377,39 @@ public class VentaController {
 
         // 2. Escuchador de tipeo en vivo
         cmbCliente.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
+
             if (actualizandoCliente) return;
 
+            // 🔥 FIX: Si acabamos de seleccionar un cliente,
+            // el StringConverter cambia el texto del editor.
+            // NO debemos interpretar ese cambio como una nueva búsqueda.
+            com.nakel.frontend.model.Cliente seleccionado =
+                    cmbCliente.getSelectionModel().getSelectedItem();
+
+            if (seleccionado != null) {
+
+                String textoSeleccionado =
+                        seleccionado.getNombre()
+                                + (seleccionado.getCuit() != null
+                                && !seleccionado.getCuit().isBlank()
+                                ? " - " + seleccionado.getCuit()
+                                : "");
+
+                if (textoSeleccionado.equals(newVal)) {
+                    return;
+                }
+            }
+
+            // 🔥 FIX: Si el campo está vacío, traemos los primeros 20 por defecto
+
+            // 🔥 FIX: Si el campo está vacío, traemos los primeros 20 por defecto en vez de ocultar
             if (newVal == null || newVal.trim().isEmpty()) {
-                cmbCliente.hide();
+                paginaActualCliente = 0;
+                actualizandoCliente = true;
+                cmbCliente.getItems().clear();
+                actualizandoCliente = false;
+
+                buscarYMostrarCliente("", 0);
                 return;
             }
 
@@ -400,71 +427,160 @@ public class VentaController {
             debounceCliente.playFromStart();
         });
 
-        // 3. Escuchador de Selección (El Botón Fantasma)
+        // 3. Escuchador de Selección (LIMPIO)
         cmbCliente.setOnAction(event -> {
+
             if (actualizandoCliente) return;
 
-            com.nakel.frontend.model.Cliente seleccionado = cmbCliente.getSelectionModel().getSelectedItem();
+            System.out.println();
+            System.out.println("========== 🕵️ DEBUG SELECCIÓN CLIENTE ==========");
+
+            com.nakel.frontend.model.Cliente seleccionado =
+                    cmbCliente.getSelectionModel().getSelectedItem();
+
+            System.out.println("🎯 Cliente seleccionado:");
+
             if (seleccionado != null) {
 
-                // 🔥 SI TOCÓ EL BOTÓN FALSO DE "SIGUIENTE"
-                if (seleccionado.getId() != null && seleccionado.getId() == -999L) {
-                    paginaActualCliente++;
-
-                    actualizandoCliente = true;
-                    cmbCliente.getItems().remove(seleccionado);
-                    actualizandoCliente = false;
-
-                    buscarYMostrarCliente(busquedaActualCliente, paginaActualCliente);
-                    return;
-                }
+                System.out.println(" ├─ ID: " + seleccionado.getId());
+                System.out.println(" ├─ Nombre: " + seleccionado.getNombre());
+                System.out.println(" └─ CUIT: " + seleccionado.getCuit());
 
                 actualizandoCliente = true;
-                cmbCliente.getEditor().setText(seleccionado.getNombre());
+
+                cmbCliente.setValue(seleccionado);
+
                 actualizandoCliente = false;
+
+                System.out.println("✅ Value después de setValue(): "
+                        + cmbCliente.getValue());
+
+            } else {
+
+                System.out.println("❌ NO HAY CLIENTE SELECCIONADO.");
+                System.out.println(" ├─ Value: " + cmbCliente.getValue());
+                System.out.println(" ├─ Editor: " + cmbCliente.getEditor().getText());
+                System.out.println(" └─ Items: " + cmbCliente.getItems().size());
             }
+
+            System.out.println("========== 🕵️ FIN DEBUG SELECCIÓN CLIENTE ==========");
         });
 
-        // 4. Carga inicial: Consumidor Final
-        com.nakel.frontend.model.Cliente consumidorFinal = new com.nakel.frontend.model.Cliente();
-        consumidorFinal.setId(0L);
-        consumidorFinal.setNombre("Consumidor Final");
-        consumidorFinal.setCuit("00000000");
+        // 4. Disparo inicial: Traemos la primera página apenas abre la pantalla (Incluye Consumidor Final inyectado en buscarYMostrarCliente)
+        buscarYMostrarCliente("", 0);
 
-        cmbCliente.getItems().add(consumidorFinal);
-        cmbCliente.setValue(consumidorFinal);
+        // Seleccionamos al primer cliente de la lista por defecto
+        if (!cmbCliente.getItems().isEmpty()) {
+            cmbCliente.setValue(cmbCliente.getItems().get(0));
+        }
     }
 
     private void buscarYMostrarCliente(String texto, int pagina) {
-        // 📡 Viajamos al Backend (Asegurate de tener este método en ClienteApiService)
-        com.nakel.frontend.service.ClienteApiService clienteApi = new com.nakel.frontend.service.ClienteApiService();
-        java.util.List<com.nakel.frontend.model.Cliente> resultados = clienteApi.buscarClientesPaginados(texto, pagina, 20);
+
+        System.out.println();
+        System.out.println("========== 🕵️ DEBUG BÚSQUEDA CLIENTE ==========");
+        System.out.println("🔎 [CLIENTE DEBUG 1] Texto buscado: '" + texto + "'");
+        System.out.println("📄 [CLIENTE DEBUG 1] Página solicitada: " + pagina);
+
+        // 📡 Viajamos al Backend
+        com.nakel.frontend.service.ClienteApiService clienteApi =
+                new com.nakel.frontend.service.ClienteApiService();
+
+        java.util.List<com.nakel.frontend.model.Cliente> resultados =
+                clienteApi.buscarClientesPaginados(texto, pagina, 20);
+
+        System.out.println("📡 [CLIENTE DEBUG 2] Resultados recibidos del Backend: "
+                + (resultados == null ? "NULL" : resultados.size()));
+
+        if (resultados != null) {
+            for (com.nakel.frontend.model.Cliente c : resultados) {
+                System.out.println(
+                        "   👤 Cliente recibido → ID: " + c.getId()
+                                + " | Nombre: " + c.getNombre()
+                                + " | CUIT: " + c.getCuit()
+                );
+            }
+        }
 
         actualizandoCliente = true; // 🔒 CERRAMOS
-        try {
-            if (resultados != null && !resultados.isEmpty()) {
-                cmbCliente.getItems().addAll(resultados);
 
-                // Inyectamos el Botón Fantasma si vinieron 20 exactos
-                if (resultados.size() == 20) {
-                    com.nakel.frontend.model.Cliente btnSiguiente = new com.nakel.frontend.model.Cliente();
-                    btnSiguiente.setId(-999L);
-                    btnSiguiente.setNombre("--- Cargar otros 20 --->");
-                    cmbCliente.getItems().add(btnSiguiente);
+        try {
+
+            // 🔥 LA MAGIA: Si la barra está vacía, clavamos a Consumidor Final
+            if (texto == null || texto.trim().isEmpty()) {
+
+                com.nakel.frontend.model.Cliente consumidorFinal =
+                        new com.nakel.frontend.model.Cliente();
+
+                consumidorFinal.setId(0L);
+                consumidorFinal.setNombre("Consumidor Final");
+                consumidorFinal.setCuit("00000000");
+
+                cmbCliente.getItems().add(consumidorFinal);
+
+                System.out.println("🧾 [CLIENTE DEBUG 3] Agregado Consumidor Final:");
+                System.out.println("   ├─ ID: " + consumidorFinal.getId());
+                System.out.println("   ├─ Nombre: " + consumidorFinal.getNombre());
+                System.out.println("   └─ CUIT: " + consumidorFinal.getCuit());
+            }
+
+            if (resultados != null && !resultados.isEmpty()) {
+
+                System.out.println("📋 [CLIENTE DEBUG 4] Agregando clientes al ComboBox...");
+
+                // Agregamos los clientes reales de la base de datos
+                for (com.nakel.frontend.model.Cliente c : resultados) {
+
+                    // Filtramos por las dudas para no duplicar Consumidor Final
+                    if (c.getNombre() != null
+                            && !c.getNombre().equalsIgnoreCase("Consumidor Final")) {
+
+                        cmbCliente.getItems().add(c);
+
+                        System.out.println(
+                                "   ➕ Agregado → ID: " + c.getId()
+                                        + " | Nombre: " + c.getNombre()
+                                        + " | CUIT: " + c.getCuit()
+                        );
+                    }
                 }
 
+                System.out.println("📦 [CLIENTE DEBUG 5] Items actuales del ComboBox: "
+                        + cmbCliente.getItems().size());
+
                 cmbCliente.show();
-            } else if (pagina == 0) {
+
+            } else if (pagina == 0 && cmbCliente.getItems().isEmpty()) {
+
+                System.out.println("⚠️ [CLIENTE DEBUG 5] No hay resultados. ComboBox vacío.");
                 cmbCliente.hide();
             }
 
             cmbCliente.getEditor().setText(texto);
             cmbCliente.getEditor().positionCaret(texto.length());
 
+            // 🔥 CHISMOSO CLAVE
+            System.out.println("🎯 [CLIENTE DEBUG 6] Estado FINAL del ComboBox:");
+            System.out.println("   ├─ Value: "
+                    + (cmbCliente.getValue() == null
+                    ? "NULL"
+                    : cmbCliente.getValue().getNombre()));
+            System.out.println("   ├─ ID Value: "
+                    + (cmbCliente.getValue() == null
+                    ? "NULL"
+                    : cmbCliente.getValue().getId()));
+            System.out.println("   ├─ Editor: '" + cmbCliente.getEditor().getText() + "'");
+            System.out.println("   └─ Items: " + cmbCliente.getItems().size());
+
         } finally {
+
             actualizandoCliente = false; // 🔓 ABRIMOS
         }
+
+        System.out.println("========== 🕵️ FIN DEBUG BÚSQUEDA CLIENTE ==========");
+        System.out.println();
     }
+
 
     private void cargarInventarioParaVenta(String busqueda, int pagina) {
         System.out.println("🕵️‍♂️ [DEBUG] Mostrador pidiendo página " + pagina + " al Backend (Búsqueda: '" + busqueda + "')...");
@@ -502,10 +618,15 @@ public class VentaController {
 
     // 🔥 1. Agregamos el Vale como segundo parámetro
     private void ejecutarProcesoDeCierreDeVenta(List<Pago> listaPagos, com.nakel.frontend.model.Vale valeUsado) {
+
+        System.out.println(); System.out.println("========== 🕵️ DEBUG CIERRE DE VENTA ==========");
+
         if (tablaTicket.getItems().isEmpty()) {
             mostrarAlerta(Alert.AlertType.WARNING, "Ticket vacío", "No hay productos en el mostrador para cobrar.");
             return;
         }
+
+        System.out.println("🛒 [CHISMOSO 0] Productos en el ticket: " + tablaTicket.getItems().size());
 
         // 1. Convertimos los ítems de la tabla visual a DetalleVenta
         List<DetalleVenta> detalles = new ArrayList<>();
@@ -518,18 +639,26 @@ public class VentaController {
             ));
         }
 
-        // 2. Atrapar el Cliente directo del ComboBox (¡Chau split de Strings!)
+        System.out.println("📦 [CHISMOSO 1] Detalles preparados para la venta: " + detalles.size());
+
+        // 2. Atrapar el Cliente directo del ComboBox (¡100% Seguro!)
         com.nakel.frontend.model.Cliente clienteSeleccionado = cmbCliente.getValue();
         com.nakel.frontend.model.Cliente clienteParaBackend;
 
+        System.out.println("👤 [CHISMOSO 2] Cliente obtenido del ComboBox:");
+
+        // Si es un cliente real (ID mayor a 0)
         if (clienteSeleccionado != null && clienteSeleccionado.getId() != null && clienteSeleccionado.getId() > 0) {
-            // Es un cliente real traído de la base de datos
             clienteParaBackend = clienteSeleccionado;
+            System.out.println("✅ [CHISMOSO 3] Se detectó un cliente REAL."); System.out.println(" ├─ ID: " + clienteParaBackend.getId()); System.out.println(" ├─ Nombre: " + clienteParaBackend.getNombre()); System.out.println(" └─ CUIT: " + clienteParaBackend.getCuit());
         } else {
-            // Fallback para Consumidor Final genérico
+            // 🔥 ESCUDO: Fallback para Consumidor Final genérico
+            // Le mandamos el CUIT 00000000 para que tu Backend lo encuentre sin explotar
             clienteParaBackend = new com.nakel.frontend.model.Cliente();
             clienteParaBackend.setNombre("Consumidor Final");
             clienteParaBackend.setCuit("00000000");
+
+            System.out.println("⚠️ [CHISMOSO 3] NO se detectó un cliente real."); System.out.println(" └─ Se utilizará CONSUMIDOR FINAL genérico.");
         }
 
         // 3. Armar la entidad Venta
@@ -543,13 +672,22 @@ public class VentaController {
         );
 
         // 4. Configurar banderas de regalo / comprobante
+
+        //CHISMOSO 4: Verificar qué cliente quedó finalmente dentro de Venta
+        System.out.println("💾 [CHISMOSO 4] Cliente dentro de ventaFinal:"); if (ventaFinal.getCliente() != null) { System.out.println(" ├─ ID: " + ventaFinal.getCliente().getId()); System.out.println(" ├─ Nombre: " + ventaFinal.getCliente().getNombre()); System.out.println(" └─ CUIT: " + ventaFinal.getCliente().getCuit()); } else { System.out.println(" ❌ ventaFinal.getCliente() = NULL"); }
+        //System.out.println("💾 [CHISMOSO 4] Cliente dentro de ventaFinal:");
         boolean esRegalo = chkRegalo.isSelected();
         ventaFinal.setEsParaRegalo(esRegalo);
         ventaFinal.setTipoComprobante(esRegalo ? "TICKET_REGALO" : "TICKET_NORMAL");
 
+        System.out.println("🎁 [CHISMOSO 5] Tipo de comprobante: " + ventaFinal.getTipoComprobante()); System.out.println("💰 [CHISMOSO 5] Total de venta: " + ventaFinal.getTotal());
+
+
         // 5. Registrar en Backend
+        System.out.println("🚀 [CHISMOSO 6] Enviando venta al Backend...");
         VentaApiService apiVentas = new VentaApiService();
         boolean exito = apiVentas.registrarVenta(ventaFinal);
+        System.out.println("📡 [CHISMOSO 7] Resultado del registro: " + exito);
 
         if (exito) {
             // Si la venta se guardó bien y se usó un vale de cambio, lo quemamos
@@ -566,14 +704,30 @@ public class VentaController {
             actualizarTotal();
             chkRegalo.setSelected(false);
 
-            // Reseteamos la selección del combo de clientes
+            //🔥 CHISMOSO 8: Verificamos que el cliente se resetee después de vender
+            System.out.println("🧹 [CHISMOSO 8] Limpiando cliente del ComboBox...");
+
+            // 🔥 Magia: Reseteamos el combo y volvemos a clavar a "Consumidor Final" para el próximo cliente
             cmbCliente.getSelectionModel().clearSelection();
             cmbCliente.getEditor().clear();
+            buscarYMostrarCliente("", 0);
+            if (!cmbCliente.getItems().isEmpty()) {
+                cmbCliente.setValue(cmbCliente.getItems().get(0));
+
+                System.out.println("🔄 [CHISMOSO 8] Cliente seleccionado después del reset:");
+
+                if (cmbCliente.getValue() != null) { System.out.println(" ├─ ID: " + cmbCliente.getValue().getId()); System.out.println(" ├─ Nombre: " + cmbCliente.getValue().getNombre()); System.out.println(" └─ CUIT: " + cmbCliente.getValue().getCuit()); }
+
+            }
 
             txtCodigoBarras.requestFocus();
         } else {
+
+            System.out.println("❌ [CHISMOSO 7] EL BACKEND RECHAZÓ LA VENTA.");
+
             mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo guardar la venta en la Base de Datos.");
         }
+        System.out.println("========== 🕵️ FIN DEBUG CIERRE DE VENTA =========="); System.out.println();
     }
 
     private void mostrarAlerta(Alert.AlertType tipo, String titulo, String mensaje) {
@@ -604,7 +758,8 @@ public class VentaController {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/cliente-express-modal.fxml"));
             javafx.scene.Parent root = loader.load();
 
-            javafx.scene.control.Dialog<String> dialog = new javafx.scene.control.Dialog<>();
+            // 🔥 CAMBIO 1: El Dialog ahora maneja y espera un OBJETO Cliente, no un simple String
+            javafx.scene.control.Dialog<com.nakel.frontend.model.Cliente> dialog = new javafx.scene.control.Dialog<>();
             dialog.setTitle("Alta Exprés");
             dialog.getDialogPane().setContent(root);
 
@@ -615,25 +770,22 @@ public class VentaController {
             ClienteExpressController controladorModal = loader.getController();
 
             dialog.setResultConverter(btn -> {
-                if (btn == btnGuardar) return controladorModal.procesarGuardado();
+                // 🔥 CAMBIO 2: procesarGuardado() debe guardar en la BD y devolver el Cliente real
+                if (btn == btnGuardar) {
+                    return controladorModal.procesarGuardado();
+                }
                 return null;
             });
 
-            dialog.showAndWait().ifPresent(resultado -> {
-                if (resultado != null) {
-                    // Como el resultado que devuelve el modal de alta exprés es un String (o un Cliente,
-                    // dependiendo de cómo devuelva el resultado, aquí lo adaptamos al tipo de tu ComboBox).
-                    // Si cmbCliente es de tipo ComboBox<Cliente>, necesitamos pasarlo a objeto Cliente
-                    // o agregarlo correctamente a los items del ComboBox:
-
-                    // Creamos o buscamos el objeto Cliente correspondiente al texto/resultado recibido:
-                    com.nakel.frontend.model.Cliente nuevoCliente = new com.nakel.frontend.model.Cliente();
-                    nuevoCliente.setNombre(resultado);
-
-                    if (!cmbCliente.getItems().contains(nuevoCliente)) {
-                        cmbCliente.getItems().add(nuevoCliente);
+            // 🔥 CAMBIO 3: Atrapamos el cliente real (con su ID y CUIT) y lo metemos al ComboBox
+            dialog.showAndWait().ifPresent(clienteReal -> {
+                if (clienteReal != null) {
+                    // Si el ComboBox no lo tiene en su lista, lo agregamos
+                    if (!cmbCliente.getItems().contains(clienteReal)) {
+                        cmbCliente.getItems().add(clienteReal);
                     }
-                    cmbCliente.setValue(nuevoCliente);
+                    // Lo dejamos seleccionado automáticamente para cobrar al instante
+                    cmbCliente.setValue(clienteReal);
                 }
             });
 

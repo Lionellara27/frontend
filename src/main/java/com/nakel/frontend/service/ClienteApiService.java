@@ -130,34 +130,43 @@ public class ClienteApiService {
     }
 
     // =============== 3. GUARDAR CLIENTE (POST BLINDADO) ===============
-    public void guardarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email) throws Exception {
+    public boolean guardarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email) {
+        try {
+            Map<String, Object> datosCliente = new HashMap<>();
 
-        Map<String, Object> datosCliente = new HashMap<>();
+            if (id != null) {
+                datosCliente.put("id", id);
+            }
 
-        if (id != null) {
-            datosCliente.put("id", id);
-        }
+            datosCliente.put("nombre", nombre);
+            datosCliente.put("cuit", cuit);
+            datosCliente.put("condicionIva", condicionIva);
+            datosCliente.put("telefono", telefono);
+            datosCliente.put("email", email);
 
-        datosCliente.put("nombre", nombre);
-        datosCliente.put("cuit", cuit);
-        datosCliente.put("condicionIva", condicionIva);
-        datosCliente.put("telefono", telefono);
-        datosCliente.put("email", email);
+            String jsonMandar = gson.toJson(datosCliente);
 
-        String jsonMandar = gson.toJson(datosCliente);
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonMandar))
+                    .build();
 
-        HttpRequest peticion = HttpRequest.newBuilder()
-                .uri(URI.create(API_URL))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonMandar))
-                .build();
+            HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-        HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+            if (respuesta.statusCode() == 400) {
+                System.out.println("⚠️ Error 400: " + respuesta.body());
+                return false;
+            } else if (respuesta.statusCode() != 200 && respuesta.statusCode() != 201) {
+                System.out.println("⚠️ Error al comunicarse con el servidor (Código: " + respuesta.statusCode() + ")");
+                return false;
+            }
 
-        if (respuesta.statusCode() == 400) {
-            throw new RuntimeException(respuesta.body());
-        } else if (respuesta.statusCode() != 200 && respuesta.statusCode() != 201) {
-            throw new RuntimeException("Error al comunicarse con el servidor (Código: " + respuesta.statusCode() + ")");
+            return true; // ¡Todo salió bien y guardó con éxito!
+
+        } catch (Exception e) {
+            System.out.println("❌ Error al guardar cliente: " + e.getMessage());
+            return false;
         }
     }
 

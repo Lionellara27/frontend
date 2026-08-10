@@ -42,7 +42,8 @@ public class HistorialVentasController {
 
     @FXML
     public void initialize() {
-        System.out.println("Módulo de Historial de Ventas listo.");
+        System.out.println("========== HISTORIAL VENTAS ==========");
+        System.out.println("🚀 Inicializando módulo de Historial de Ventas...");
         tablaVentas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarColumnas();
 
@@ -86,6 +87,8 @@ public class HistorialVentasController {
         } else {
             cargarVentas(0);
         }
+        System.out.println("======================================");
+
     }
 
     // 🔥 Atrapa el clic del botón de la lupa para que no tire error
@@ -121,14 +124,7 @@ public class HistorialVentasController {
         });
 
         // 🔥 ACÁ VOLVEMOS A AGREGAR LA COLUMNA DEL CLIENTE QUE SE HABÍA BORRADO
-        colCliente.setCellValueFactory(cell -> {
-            if (cell.getValue() != null && cell.getValue().getCliente() != null) {
-                String nombreCliente = cell.getValue().getCliente().getNombre();
-                if (nombreCliente != null && !nombreCliente.trim().isEmpty()) {
-                    return new SimpleStringProperty(nombreCliente);
-                }
-            }
-            return new SimpleStringProperty("Consumidor Final");
+        colCliente.setCellValueFactory(cell -> { com.nakel.frontend.model.Venta venta = cell.getValue(); System.out.println(); System.out.println("👀 [HISTORIAL CHISMOSO] Renderizando cliente de una venta..."); if (venta == null) { System.out.println("❌ [HISTORIAL CHISMOSO] Venta = NULL"); return new javafx.beans.property.SimpleStringProperty("Consumidor Final"); } System.out.println("🧾 [HISTORIAL CHISMOSO] Venta ID: " + venta.getId()); if (venta.getCliente() != null) { System.out.println("👤 [HISTORIAL CHISMOSO] Cliente recibido:"); System.out.println(" ├─ ID: " + venta.getCliente().getId()); System.out.println(" ├─ Nombre: " + venta.getCliente().getNombre()); System.out.println(" └─ CUIT: " + venta.getCliente().getCuit()); String nombreCliente = venta.getCliente().getNombre(); if (nombreCliente != null && !nombreCliente.trim().isEmpty()) { return new javafx.beans.property.SimpleStringProperty(nombreCliente); } } else { System.out.println("⚠️ [HISTORIAL CHISMOSO] venta.getCliente() = NULL"); System.out.println(" └─ Se mostrará: Consumidor Final"); } return new javafx.beans.property.SimpleStringProperty("Consumidor Final");
         });
 
         // Simulamos un número de comprobante con el ID de la base de datos
@@ -240,12 +236,13 @@ public class HistorialVentasController {
     private void cargarVentas(int numeroPagina) {
         String busqueda = txtBuscarVenta.getText() != null ? txtBuscarVenta.getText().trim() : "";
 
-        // 🔥 AGREGAMOS: Leemos qué eligió la cajera en el ComboBox
+        // 🔥 CHISMOSO 1: Ver qué busca y a qué página exacta está apuntando el Frontend
+        System.out.println("🔍 [DEBUG HISTORIAL] Pidiendo página al Backend: " + numeroPagina + " | Buscando: '" + busqueda + "'");
+
         String criterio = (cmbCampoBusqueda != null && cmbCampoBusqueda.getValue() != null)
                 ? cmbCampoBusqueda.getValue()
                 : "Nro. Comprobante";
 
-        // 🔥 TRADUCTOR INTELIGENTE CONDICIONAL: Solo recorta si busca por Nro. Comprobante
         if ("Nro. Comprobante".equals(criterio)) {
             if (busqueda.contains("0001 -")) {
                 busqueda = busqueda.replaceAll(".*0001\\s*-\\s*", "").replaceFirst("^0+", "");
@@ -256,7 +253,6 @@ public class HistorialVentasController {
 
         int mesNumero = convertirMesANumero(cmbMes.getValue());
 
-        // 🔥 1. Le pasamos la búsqueda limpia, el CRITERIO nuevo y el mes a tu API
         String json = apiService.obtenerHistorialVentasPaginado(numeroPagina, 20, busqueda, criterio, mesNumero);
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
@@ -266,13 +262,33 @@ public class HistorialVentasController {
 
                 if (elementoParseado.isJsonObject()) {
                     com.google.gson.JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
+
+                    // 🔥 CHISMOSO CLAVE: ¿Cuántos registros dice el Backend que existen EN TOTAL?
+                    if (respuestaServidor.has("totalElements")) {
+                        long totalElementos = respuestaServidor.get("totalElements").getAsLong();
+
+                        System.out.println("📊 [DEBUG HISTORIAL] TOTAL DE VENTAS SEGÚN BACKEND: " + totalElementos);
+                    } else {
+                        System.out.println("⚠️ [DEBUG HISTORIAL] El JSON NO contiene 'totalElements'");
+                    }
+                    //------------chismeeeeeeeeee
+
                     if (respuestaServidor.has("totalPages") && paginadorHistorial != null) {
                         int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
                         paginadorHistorial.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+
+                        // 🔥 CHISMOSO 2: El Backend te dice cuántas páginas totales armó (debería decir 3)
+                        System.out.println("📄 [DEBUG HISTORIAL] Total de páginas calculadas por el Backend: " + totalPaginas);
                     }
+
                     arregloVentas = respuestaServidor.getAsJsonArray("content");
+
+                    // 🔥 CHISMOSO 3: Cuántas ventas vienen en este bloque específico
+                    System.out.println("📦 [DEBUG HISTORIAL] Ventas detectadas en el 'content' de esta página: " + (arregloVentas != null ? arregloVentas.size() : 0));
+
                 } else if (elementoParseado.isJsonArray()) {
                     arregloVentas = elementoParseado.getAsJsonArray();
+                    System.out.println("📦 [DEBUG HISTORIAL] Llegó un Array directo de tamaño: " + arregloVentas.size());
                     if (paginadorHistorial != null) paginadorHistorial.setPageCount(1);
                 } else {
                     throw new RuntimeException("Formato JSON no reconocido");
@@ -281,20 +297,22 @@ public class HistorialVentasController {
                 java.lang.reflect.Type tipoLista = new com.google.gson.reflect.TypeToken<java.util.List<Venta>>(){}.getType();
                 java.util.List<Venta> listaVentas = gson.fromJson(arregloVentas, tipoLista);
 
+                // 🔥 CHISMOSO 4: Cuántos objetos Java reales se metieron en la tabla
+                System.out.println("✅ [DEBUG HISTORIAL] Objetos listos para renderizar en la TableView: " + (listaVentas != null ? listaVentas.size() : 0));
+
                 javafx.collections.ObservableList<Venta> datosObservable = javafx.collections.FXCollections.observableArrayList(listaVentas);
                 tablaVentas.setItems(datosObservable);
 
-                // 🔥 2. Pedimos el TOTAL GLOBAL real a la base de datos (pasando el criterio también)
                 double totalGlobal = apiService.obtenerTotalGlobal(busqueda, criterio, mesNumero);
-
-                // Formateamos el total grande con los puntitos
                 String totalFormateado = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "AR")).format(totalGlobal);
                 lblTotalFacturado.setText("TOTAL: " + totalFormateado + " 💰");
 
             } catch (Exception e) {
                 System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
+                e.printStackTrace();
             }
         } else {
+            System.out.println("⚠️ [DEBUG HISTORIAL] La respuesta del servidor vino vacía o nula.");
             tablaVentas.getItems().clear();
             if (lblTotalFacturado != null) lblTotalFacturado.setText("TOTAL: $ 0,00 💰");
         }
@@ -338,9 +356,7 @@ public class HistorialVentasController {
         com.nakel.frontend.util.Navegador.cargarVista("/com/nakel/frontend/view/venta-view.fxml");
     }
 
-    // --- ACCIONES DE LOS BOTONES DE LA TABLA ---
-
-
+    // --- ACCIONES DE LOS BOTONES DE LA TABLA -----------------------
 
     private void verDetalleVenta(Venta venta) {
         System.out.println("👁️ Abriendo modal de detalles para la venta: " + venta.getId());

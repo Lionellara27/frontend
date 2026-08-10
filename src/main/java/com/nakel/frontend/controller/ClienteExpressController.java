@@ -15,8 +15,8 @@ public class ClienteExpressController {
     private final ClienteApiService api = new ClienteApiService();
     private final Gson gson = new Gson();
 
-    // 🔥 Este método hace la magia y devuelve el texto para el ComboBox
-    public String procesarGuardado() {
+    // 🔥 CAMBIO CLAVE: Ahora devuelve un objeto Cliente real, no un String
+    public Cliente procesarGuardado() {
         String dni = txtDni.getText();
         String nombreIngresado = txtNombre.getText();
 
@@ -38,11 +38,22 @@ public class ClienteExpressController {
                 alerta.setContentText("Se cargará automáticamente en el mostrador.");
                 alerta.showAndWait();
 
-                return pepeHistorico.getNombre() + " - " + pepeHistorico.getCuit();
+                // 🔥 Devolvemos el objeto real con su ID intacto
+                return pepeHistorico;
             } else {
                 // 🆕 NO EXISTE: LO CREAMOS NUEVO
-                api.guardarClienteEnBaseDeDatos(null, nombreIngresado, dni, "CONSUMIDOR_FINAL", "", "");
-                return nombreIngresado + " - " + dni;
+                boolean guardadoExitoso = api.guardarClienteEnBaseDeDatos(null, nombreIngresado, dni, "CONSUMIDOR_FINAL", "", "");
+
+                if (guardadoExitoso) {
+                    // 🔥 MAGIA: Lo volvemos a buscar rapidísimo para atrapar el ID que le acaba de dar la base de datos
+                    String clienteNuevoJson = api.buscarClientePorCuit(dni);
+                    if (clienteNuevoJson != null && !clienteNuevoJson.isBlank()) {
+                        return gson.fromJson(clienteNuevoJson, Cliente.class); // ¡Devuelve el cliente con su ID nuevito!
+                    }
+                } else {
+                    mostrarError("Error", "No se pudo guardar el cliente en el servidor.");
+                }
+                return null;
             }
         } catch (Exception e) {
             mostrarError("Error al conectar", "No se pudo crear el cliente: " + e.getMessage());
