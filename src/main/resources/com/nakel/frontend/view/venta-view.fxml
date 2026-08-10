@@ -14,51 +14,110 @@
         <Insets top="20" right="20" bottom="20" left="20"/>
     </padding>
 
-    <!-- 0. CABECERA DE FACTURACIÓN (¡Lo nuevo para AFIP!) -->
-    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
+    <!-- 0. CABECERA DE FACTURACIÓN -->
+    <HBox spacing="15" alignment="CENTER_LEFT"
+          style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
+
         <Label text="Cliente:" style="-fx-font-weight: bold;"/>
-        <ComboBox fx:id="cmbCliente" promptText="Consumidor Final" prefWidth="250" styleClass="text-field"/>
 
-        <Button text="➕ Cliente nuevo" styleClass="btn-secundario" onAction="#abrirClienteExpress" style="-fx-background-color: #1976d2; -fx-text-fill: white;"/>
+        <ComboBox fx:id="cmbCliente"
+                  promptText="Consumidor Final"
+                  prefWidth="250"
+                  styleClass="text-field"/>
 
-        <Pane HBox.hgrow="ALWAYS"/> <Label text="Comprobante:" style="-fx-font-weight: bold;"/>
-        <ComboBox fx:id="cmbTipoFactura" promptText="Seleccionar..." prefWidth="150" styleClass="text-field"/>
+        <Button text="➕ Cliente nuevo"
+                styleClass="btn-secundario"
+                onAction="#abrirClienteExpress"
+                style="-fx-background-color: #1976d2; -fx-text-fill: white;"/>
+
+        <Pane HBox.hgrow="ALWAYS"/>
+
+        <Label text="Comprobante:" style="-fx-font-weight: bold;"/>
+
+        <ComboBox fx:id="cmbTipoFactura"
+                  promptText="Seleccionar..."
+                  prefWidth="150"
+                  styleClass="text-field"/>
     </HBox>
 
     <!-- 1. BARRA SUPERIOR: Buscador y Lector Láser -->
     <HBox spacing="10" alignment="CENTER_LEFT">
-        <TextField fx:id="txtCodigoBarras" promptText="Escanear código o tipear producto..." HBox.hgrow="ALWAYS" styleClass="input-laser"/>
-        <Button text="🔍 Buscar (F3)" styleClass="btn-buscar" onAction="#buscarProducto"/>
+
+        <TextField fx:id="txtCodigoBarras"
+                   promptText="Escanear código o tipear producto..."
+                   HBox.hgrow="ALWAYS"
+                   styleClass="input-laser"/>
+
+        <Button text="🔍 Buscar (F3)"
+                styleClass="btn-buscar"
+                onAction="#buscarProducto"/>
     </HBox>
 
-    <!-- 2. CENTRO: La Tabla del Ticket -->
+    <!-- 2. CENTRO: Inventario + Ticket -->
     <HBox spacing="10" VBox.vgrow="ALWAYS">
 
-        <VBox HBox.hgrow="ALWAYS">
+        <!-- INVENTARIO -->
+        <VBox HBox.hgrow="ALWAYS" spacing="5">
+
             <Label text="Inventario"/>
-            <TableView fx:id="tablaInventario">
+
+            <TableView fx:id="tablaInventario"
+                       VBox.vgrow="ALWAYS">
 
                 <columns>
-                    <TableColumn fx:id="colInvCodigo" text="Código" prefWidth="100"/>
-                    <TableColumn fx:id="colInvNombre" text="Producto" prefWidth="200"/>
-                    <TableColumn fx:id="colInvPrecio" text="Precio" prefWidth="100"/>
+                    <TableColumn fx:id="colInvCodigo"
+                                 text="Código"
+                                 prefWidth="100"/>
+
+                    <TableColumn fx:id="colInvNombre"
+                                 text="Producto"
+                                 prefWidth="200"/>
+
+                    <TableColumn fx:id="colInvPrecio"
+                                 text="Precio"
+                                 prefWidth="100"/>
                 </columns>
 
             </TableView>
+
+            <!-- PAGINADOR DEL INVENTARIO -->
+            <Pagination fx:id="paginadorInventario"
+                        pageCount="1"
+                        maxPageIndicatorCount="5"/>
         </VBox>
 
-        <VBox HBox.hgrow="ALWAYS">
+        <!-- TICKET ACTUAL -->
+        <VBox HBox.hgrow="ALWAYS" spacing="5">
+
             <Label text="Ticket Actual"/>
 
-            <TableView fx:id="tablaTicket">
+            <TableView fx:id="tablaTicket"
+                       VBox.vgrow="ALWAYS">
 
                 <columns>
-                    <TableColumn fx:id="colCodigo" text="Código" prefWidth="120"/>
-                    <TableColumn fx:id="colNombre" text="Descripción" prefWidth="270"/>
-                    <TableColumn fx:id="colCantidad" text="Cant." prefWidth="130"/>
-                    <TableColumn fx:id="colPrecio" text="Precio U." prefWidth="120"/>
-                    <TableColumn fx:id="colSubtotal" text="Subtotal" prefWidth="120"/>
-                    <TableColumn fx:id="colAccion" text="Acción" prefWidth="80"/>
+                    <TableColumn fx:id="colCodigo"
+                                 text="Código"
+                                 prefWidth="120"/>
+
+                    <TableColumn fx:id="colNombre"
+                                 text="Descripción"
+                                 prefWidth="270"/>
+
+                    <TableColumn fx:id="colCantidad"
+                                 text="Cant."
+                                 prefWidth="130"/>
+
+                    <TableColumn fx:id="colPrecio"
+                                 text="Precio U."
+                                 prefWidth="120"/>
+
+                    <TableColumn fx:id="colSubtotal"
+                                 text="Subtotal"
+                                 prefWidth="120"/>
+
+                    <TableColumn fx:id="colAccion"
+                                 text="Acción"
+                                 prefWidth="80"/>
                 </columns>
 
             </TableView>
@@ -68,19 +127,39 @@
 
     <!-- 3. INFERIOR: Totales y Cobro -->
     <HBox spacing="20" alignment="CENTER_RIGHT">
+
         <VBox alignment="CENTER_RIGHT" spacing="5">
+
             <HBox spacing="10" alignment="CENTER_RIGHT">
-                <Label text="TOTAL:" styleClass="label-total-texto" style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
-                <Label fx:id="lblTotal" text="/$ 0.00" styleClass="label-total-numero" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
+
+                <Label text="TOTAL:"
+                       styleClass="label-total-texto"
+                       style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+
+                <Label fx:id="lblTotal"
+                       text="Total: $0.00"
+                       styleClass="label-total-numero"
+                       style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
             </HBox>
 
             <HBox spacing="15" alignment="CENTER_RIGHT">
-                <CheckBox fx:id="chkRegalo" text="🎁 ¿Es para regalo?" style="-fx-font-size: 14px; -fx-padding: 5 10 0 0;"/>
 
-                <ComboBox fx:id="cmbMedioPago" promptText="Medio de Pago" styleClass="combo-pago"/>
-                <Button text="💵 COBRAR (F12)" styleClass="btn-cobrar" onAction="#cobrarVenta" style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16px; -fx-padding: 10 20;"/>
+                <CheckBox fx:id="chkRegalo"
+                          text="🎁 ¿Es para regalo?"
+                          style="-fx-font-size: 14px; -fx-padding: 5 10 0 0;"/>
+
+                <ComboBox fx:id="cmbMedioPago"
+                          promptText="Medio de Pago"
+                          styleClass="combo-pago"/>
+
+                <Button text="💵 COBRAR (F12)"
+                        styleClass="btn-cobrar"
+                        onAction="#cobrarVenta"
+                        style="-fx-background-color: #2e7d32; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 16px; -fx-padding: 10 20;"/>
             </HBox>
+
         </VBox>
+
     </HBox>
 
 </VBox>

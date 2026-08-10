@@ -35,7 +35,7 @@
 
     <TableView fx:id="tablaArticulos" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
         <columns>
-            <TableColumn fx:id="colNro" text="Nro." prefWidth="90"/>
+            <TableColumn fx:id="colNro" text="Cód." prefWidth="90"/>
             <TableColumn fx:id="colCodigo" text="Cód. SKU" prefWidth="120"/>
             <TableColumn fx:id="colNombre" text="Descripción" prefWidth="250"/>
             <TableColumn fx:id="colCategoria" text="Categoría" prefWidth="100"/>

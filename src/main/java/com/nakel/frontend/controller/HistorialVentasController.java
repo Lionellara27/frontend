@@ -44,6 +44,27 @@ public class HistorialVentasController {
         tablaVentas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarColumnas();
 
+        // 🔥 1. Llenamos el ComboBox de Meses
+        cmbMes.getItems().addAll("Todos", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre");
+        cmbMes.setValue("Todos");
+
+        // 🔥 2. Escuchadores para filtrar al instante (ComboBox)
+        cmbMes.setOnAction(e -> recargarHistorialDesdeCero());
+
+        // 🔥 3. Búsqueda predictiva en tiempo real (Al tipear letra por letra)
+        txtBuscarVenta.textProperty().addListener((observable, oldValue, newValue) -> {
+            recargarHistorialDesdeCero();
+        });
+
+        // 🔥 4. Respaldo por si la cajera presiona ENTER por inercia
+        txtBuscarVenta.setOnKeyReleased(event -> {
+            if (event.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                recargarHistorialDesdeCero();
+            }
+        });
+
+        // 🔥 5. Conexión del paginador nativo
         if (paginadorHistorial != null) {
             paginadorHistorial.setPageFactory(paginaIndex -> {
                 cargarVentas(paginaIndex);
@@ -54,19 +75,47 @@ public class HistorialVentasController {
         }
     }
 
+    // 🔥 Atrapa el clic del botón de la lupa para que no tire error
+    @FXML
+    public void buscarVenta(javafx.event.ActionEvent event) {
+        // No hace falta poner código acá porque el listener de arriba ya hace el trabajo al tipear
+        System.out.println("Lupa clickeada. Filtrando...");
+    }
+
+    // Método de apoyo para resetear la página a 0 cuando buscás algo nuevo
+    private void recargarHistorialDesdeCero() {
+        if (paginadorHistorial != null) {
+            paginadorHistorial.setCurrentPageIndex(0);
+        }
+        cargarVentas(0);
+    }
+
     private void configurarColumnas() {
         // 1. Datos directos
+// 1. Datos directos
         colTotal.setCellValueFactory(new PropertyValueFactory<>("total"));
-
-        // 2. Datos procesados (Magia de JavaFX para adaptar el modelo a la vista)
-
-        // 🔥 ACÁ ESTÁ EL CAMBIO: Evaluamos si hay cliente y sacamos su nombre
-        colCliente.setCellValueFactory(cell -> {
-            if (cell.getValue().getCliente() != null) {
-                return new SimpleStringProperty(cell.getValue().getCliente().getNombre());
-            } else {
-                return new SimpleStringProperty("Consumidor Final");
+        colTotal.setCellFactory(column -> new TableCell<Venta, Double>() {
+            @Override
+            protected void updateItem(Double item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    // Magia: Formatea el número a $ 2.338.000
+                    setText(java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "AR")).format(item));
+                }
             }
+        });
+
+        // 🔥 ACÁ VOLVEMOS A AGREGAR LA COLUMNA DEL CLIENTE QUE SE HABÍA BORRADO
+        colCliente.setCellValueFactory(cell -> {
+            if (cell.getValue() != null && cell.getValue().getCliente() != null) {
+                String nombreCliente = cell.getValue().getCliente().getNombre();
+                if (nombreCliente != null && !nombreCliente.trim().isEmpty()) {
+                    return new SimpleStringProperty(nombreCliente);
+                }
+            }
+            return new SimpleStringProperty("Consumidor Final");
         });
 
         // Simulamos un número de comprobante con el ID de la base de datos
@@ -176,15 +225,17 @@ public class HistorialVentasController {
     }
 
     private void cargarVentas(int numeroPagina) {
-        // 🔥 1. Llamamos a tu nuevo método paginado
-        String json = apiService.obtenerHistorialVentasPaginado(numeroPagina, 20);
+        String busqueda = txtBuscarVenta.getText() != null ? txtBuscarVenta.getText().trim() : "";
+        int mesNumero = convertirMesANumero(cmbMes.getValue());
+
+        // 🔥 1. Le pasamos la búsqueda y el mes a tu API (Lo actualizamos en el próximo paso)
+        String json = apiService.obtenerHistorialVentasPaginado(numeroPagina, 20, busqueda, mesNumero);
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
                 com.google.gson.JsonElement elementoParseado = com.google.gson.JsonParser.parseString(json);
                 com.google.gson.JsonArray arregloVentas;
 
-                // 🔥 2. Detectamos si viene paginado (Objeto con "content") o lista directa (Array)
                 if (elementoParseado.isJsonObject()) {
                     com.google.gson.JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
                     if (respuestaServidor.has("totalPages") && paginadorHistorial != null) {
@@ -194,31 +245,42 @@ public class HistorialVentasController {
                     arregloVentas = respuestaServidor.getAsJsonArray("content");
                 } else if (elementoParseado.isJsonArray()) {
                     arregloVentas = elementoParseado.getAsJsonArray();
-                    if (paginadorHistorial != null) {
-                        paginadorHistorial.setPageCount(1);
-                    }
+                    if (paginadorHistorial != null) paginadorHistorial.setPageCount(1);
                 } else {
                     throw new RuntimeException("Formato JSON no reconocido");
                 }
 
-                // 🔥 3. Convertimos a Java y llenamos la tabla
                 java.lang.reflect.Type tipoLista = new com.google.gson.reflect.TypeToken<java.util.List<Venta>>(){}.getType();
                 java.util.List<Venta> listaVentas = gson.fromJson(arregloVentas, tipoLista);
 
                 javafx.collections.ObservableList<Venta> datosObservable = javafx.collections.FXCollections.observableArrayList(listaVentas);
                 tablaVentas.setItems(datosObservable);
 
-                calcularTotalPantalla(listaVentas);
+                // 🔥 2. Pedimos el TOTAL GLOBAL real a la base de datos (Sin importar la página)
+                double totalGlobal = apiService.obtenerTotalGlobal(busqueda, mesNumero);
 
-                System.out.println("✅ Historial cargado con " + listaVentas.size() + " ventas (Página " + numeroPagina + ").");
+                // Formateamos el total grande con los puntitos
+                String totalFormateado = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "AR")).format(totalGlobal);
+                lblTotalFacturado.setText("TOTAL: " + totalFormateado + " 💰");
+
             } catch (Exception e) {
                 System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
             }
         } else {
             tablaVentas.getItems().clear();
-            if (lblTotalFacturado != null) {
-                lblTotalFacturado.setText("$ 0.00");
-            }
+            if (lblTotalFacturado != null) lblTotalFacturado.setText("TOTAL: $ 0,00");
+        }
+    }
+
+    // Traductor del ComboBox para el Backend
+    private int convertirMesANumero(String mes) {
+        if (mes == null || mes.equals("Todos")) return 0;
+        switch (mes) {
+            case "Enero": return 1; case "Febrero": return 2; case "Marzo": return 3;
+            case "Abril": return 4; case "Mayo": return 5; case "Junio": return 6;
+            case "Julio": return 7; case "Agosto": return 8; case "Septiembre": return 9;
+            case "Octubre": return 10; case "Noviembre": return 11; case "Diciembre": return 12;
+            default: return 0;
         }
     }
 

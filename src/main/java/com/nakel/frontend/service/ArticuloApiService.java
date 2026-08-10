@@ -18,6 +18,13 @@ public class ArticuloApiService {
     private final HttpClient http = HttpClient.newHttpClient();
     private final Gson gson = new Gson();
 
+    // 🔥 Variable de memoria para el paginador del mostrador
+    private int ultimasPaginasMostrador = 1;
+
+    public int getUltimasPaginasMostrador() {
+        return ultimasPaginasMostrador == 0 ? 1 : ultimasPaginasMostrador;
+    }
+
     // 🔫 El método que usa la Pistola Láser (mostrador)
     public String buscarArticuloPorCodigo(String codigoBarras) {
         try {
@@ -37,7 +44,7 @@ public class ArticuloApiService {
         return null;
     }
 
-    // 📋 NUEVO: Para llenar la tabla del catálogo
+    // 📋 NUEVO: Para llenar la tabla del catálogo (Ahora soporta Paginación)
     public List<Articulo> obtenerTodos() {
         try {
             HttpRequest peticion = HttpRequest.newBuilder()
@@ -48,8 +55,19 @@ public class ArticuloApiService {
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
             if (respuesta.statusCode() == 200) {
+                com.google.gson.JsonElement elementoParseado = com.google.gson.JsonParser.parseString(respuesta.body());
+                com.google.gson.JsonArray arregloArticulos;
+
+                if (elementoParseado.isJsonObject() && elementoParseado.getAsJsonObject().has("content")) {
+                    arregloArticulos = elementoParseado.getAsJsonObject().getAsJsonArray("content");
+                } else if (elementoParseado.isJsonArray()) {
+                    arregloArticulos = elementoParseado.getAsJsonArray();
+                } else {
+                    return new ArrayList<>();
+                }
+
                 Type listType = new TypeToken<ArrayList<Articulo>>(){}.getType();
-                return gson.fromJson(respuesta.body(), listType);
+                return gson.fromJson(arregloArticulos, listType);
             }
         } catch (Exception e) {
             System.out.println("Error al obtener el catálogo: " + e.getMessage());
@@ -83,9 +101,9 @@ public class ArticuloApiService {
         try {
             String jsonArticulo = gson.toJson(articulo);
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/" + articulo.getId())) // Usa el ID para actualizar
+                    .uri(URI.create(API_URL + "/" + articulo.getId()))
                     .header("Content-Type", "application/json")
-                    .PUT(HttpRequest.BodyPublishers.ofString(jsonArticulo)) // Usamos PUT para modificar
+                    .PUT(HttpRequest.BodyPublishers.ofString(jsonArticulo))
                     .build();
 
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
@@ -107,11 +125,9 @@ public class ArticuloApiService {
 
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-            // 200 OK o 204 No Content significan que lo borró con éxito
             if (respuesta.statusCode() == 200 || respuesta.statusCode() == 204) {
                 return true;
             } else {
-                // Si devuelve cualquier otro código (ej: 500 por clave foránea, o 404 si no existe)
                 System.out.println("⚠️ El servidor rechazó el borrado. Código: " + respuesta.statusCode());
                 return false;
             }
@@ -173,8 +189,6 @@ public class ArticuloApiService {
         }
     }
 
-    // 📋 NUEVO: Para el paginador del catálogo (Devuelve el JSON completo con páginas)
-    // 📋 Catálogo paginado + filtros
     // 📋 CATÁLOGO PAGINADO + FILTROS
     public String obtenerArticulosPaginados(
             int pagina,
@@ -189,31 +203,27 @@ public class ArticuloApiService {
             url.append("?page=").append(pagina);
             url.append("&size=").append(cantidadPorPagina);
 
-            // 🔍 Buscar por nombre o código
             if (buscar != null && !buscar.isBlank()) {
                 url.append("&buscar=")
                         .append(java.net.URLEncoder.encode(
                                 buscar.trim(),
-                                java.nio.charset.StandardCharsets.UTF_8
+                                "UTF-8"
                         ));
             }
 
-            // 🏷️ Filtrar por categoría
             if (categoriaId != null) {
                 url.append("&categoriaId=").append(categoriaId);
             }
 
-            // 🧵 Filtrar por material
             if (materialId != null) {
                 url.append("&materialId=").append(materialId);
             }
 
-            // 🔥 Filtrar por origen
             if (origen != null && !origen.isBlank()) {
                 url.append("&origen=")
                         .append(java.net.URLEncoder.encode(
                                 origen.trim(),
-                                java.nio.charset.StandardCharsets.UTF_8
+                                "UTF-8"
                         ));
             }
 
@@ -233,18 +243,10 @@ public class ArticuloApiService {
                 return respuesta.body();
             }
 
-            System.out.println(
-                    "⚠️ Error al obtener catálogo. Código HTTP: "
-                            + respuesta.statusCode()
-            );
-
-            System.out.println("Respuesta: " + respuesta.body());
+            System.out.println("⚠️ Error al obtener catálogo. Código HTTP: " + respuesta.statusCode());
 
         } catch (Exception e) {
-            System.out.println(
-                    "❌ Error al obtener catálogo paginado: "
-                            + e.getMessage()
-            );
+            System.out.println("❌ Error al obtener catálogo paginado: " + e.getMessage());
         }
 
         return "[]";
@@ -264,31 +266,27 @@ public class ArticuloApiService {
             url.append("?page=").append(pagina);
             url.append("&size=").append(cantidadPorPagina);
 
-            // 🔎 Texto: nombre o código
             if (buscar != null && !buscar.isBlank()) {
                 url.append("&buscar=")
                         .append(java.net.URLEncoder.encode(
                                 buscar.trim(),
-                                java.nio.charset.StandardCharsets.UTF_8
+                                "UTF-8"
                         ));
             }
 
-            // 🏷️ Categoría
             if (categoriaId != null) {
                 url.append("&categoriaId=").append(categoriaId);
             }
 
-            // 🧵 Material
             if (materialId != null) {
                 url.append("&materialId=").append(materialId);
             }
 
-            // 🔥 Origen
             if (origen != null && !origen.isBlank()) {
                 url.append("&origen=")
                         .append(java.net.URLEncoder.encode(
                                 origen,
-                                java.nio.charset.StandardCharsets.UTF_8
+                                "UTF-8"
                         ));
             }
 
@@ -307,18 +305,67 @@ public class ArticuloApiService {
                 return respuesta.body();
             }
 
-            System.out.println(
-                    "⚠️ Error al buscar artículos. Código: "
-                            + respuesta.statusCode()
-            );
+            System.out.println("⚠️ Error al buscar artículos. Código: " + respuesta.statusCode());
 
         } catch (Exception e) {
-            System.out.println(
-                    "❌ Error al buscar artículos: "
-                            + e.getMessage()
-            );
+            System.out.println("❌ Error al buscar artículos: " + e.getMessage());
         }
 
         return "[]";
+    }
+
+    // 🔍 BÚSQUEDA PARA EL MOSTRADOR (Paginada, con stock y memoria de páginas)
+    public List<Articulo> buscarParaVenta(String busqueda, int pagina, int size) {
+        try {
+            String textoBusqueda = (busqueda != null) ? busqueda.trim() : "";
+
+            String url = API_URL
+                    + "?page=" + pagina
+                    + "&size=" + size
+                    + "&buscar=" + java.net.URLEncoder.encode(textoBusqueda, "UTF-8")
+                    + "&stockDisponible=true";
+
+            System.out.println("🌐 GET búsqueda Mostrador paginada: " + url);
+
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .GET()
+                    .build();
+
+            HttpResponse<String> respuesta = http.send(
+                    peticion,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            if (respuesta.statusCode() == 200) {
+                com.google.gson.JsonElement elementoParseado =
+                        com.google.gson.JsonParser.parseString(respuesta.body());
+
+                if (elementoParseado.isJsonObject()) {
+                    com.google.gson.JsonObject json = elementoParseado.getAsJsonObject();
+
+                    // 🔥 LA MAGIA: Guardamos el total de páginas
+                    if (json.has("totalPages")) {
+                        this.ultimasPaginasMostrador = json.get("totalPages").getAsInt();
+                    }
+
+                    if (json.has("content")) {
+                        Type listType = new TypeToken<ArrayList<Articulo>>() {}.getType();
+                        return gson.fromJson(json.getAsJsonArray("content"), listType);
+                    }
+                } else if (elementoParseado.isJsonArray()) {
+                    this.ultimasPaginasMostrador = 1;
+                    Type listType = new TypeToken<ArrayList<Articulo>>() {}.getType();
+                    return gson.fromJson(elementoParseado.getAsJsonArray(), listType);
+                }
+            }
+
+            System.out.println("⚠️ Error al buscar productos para venta. Código: " + respuesta.statusCode());
+
+        } catch (Exception e) {
+            System.out.println("❌ Error en búsqueda para venta: " + e.getMessage());
+        }
+
+        return new ArrayList<>();
     }
 }

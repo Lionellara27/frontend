@@ -58,6 +58,8 @@ public class VentaController {
     @FXML private TableColumn<LineaTicket, Double> colSubtotal;
     @FXML private TableColumn<LineaTicket, Void> colAccion;
 
+    @FXML private Pagination paginadorInventario;
+
     // 🔥 NUEVO: Listas para el buscador del inventario
     private ObservableList<Articulo> masterInventario = FXCollections.observableArrayList();
     private FilteredList<Articulo> filteredInventario;
@@ -73,40 +75,52 @@ public class VentaController {
         configurarEventos();
         configurarTabla();
         configurarTablaInventario();
+        cargarDatosIniciales();
 
-        cargarDatosIniciales(); // 🔥 Ahora carga los nuevos comprobantes y el buscador de clientes
-        cargarInventarioParaVenta(); // 🔥 Ahora carga la Lupita inteligente
+        // 🔥 CONFIGURAMOS EL PAGINADOR NATIVO DEL MOSTRADOR
+        if (paginadorInventario != null) {
+            paginadorInventario.setPageFactory(paginaIndex -> {
+                String textoBusqueda = txtCodigoBarras.getText() != null ? txtCodigoBarras.getText().trim() : "";
+                cargarInventarioParaVenta(textoBusqueda, paginaIndex);
+
+                // JavaFX exige devolver un nodo visual, pasamos una caja invisible
+                return new javafx.scene.layout.VBox();
+            });
+        } else {
+            // Fallback por si el FXML no inicializó el componente todavía
+            cargarInventarioParaVenta("", 0);
+        }
 
         System.out.println("Terminal de Punto de Venta (POS) Iniciada.");
     }
 
     private void configurarEventos() {
-        // 🔍 1. FILTRADO EN TIEMPO REAL A MEDIDA QUE ESCRIBE (Nombre, Código, Categoría, Material)
-        txtCodigoBarras.textProperty().addListener((obs, oldVal, newVal) -> {
+        // 🔥 1. BÚSQUEDA DINÁMICA (RAM): Filtra al instante la página actual mientras escribe
+        txtCodigoBarras.textProperty().addListener((observable, oldValue, newValue) -> {
             if (filteredInventario != null) {
-                filteredInventario.setPredicate(art -> {
-                    if (newVal == null || newVal.isBlank()) return true;
+                filteredInventario.setPredicate(articulo -> {
+                    if (newValue == null || newValue.isBlank()) return true;
 
-                    String busqueda = newVal.toLowerCase().trim();
-
-                    // Coincidencia por Código / SKU
-                    boolean coincideCodigo = art.getCodigo() != null && art.getCodigo().toLowerCase().contains(busqueda);
-                    // Coincidencia por Nombre
-                    boolean coincideNombre = art.getNombre() != null && art.getNombre().toLowerCase().contains(busqueda);
-                    // Coincidencia por Categoría
-                    boolean coincideCat = art.getCategoria() != null && art.getCategoria().getNombre().toLowerCase().contains(busqueda);
-                    // Coincidencia por Material
-                    boolean coincideMat = art.getMaterial() != null && art.getMaterial().getNombre().toLowerCase().contains(busqueda);
-
-                    return coincideCodigo || coincideNombre || coincideCat || coincideMat;
+                    String busqueda = newValue.toLowerCase().trim();
+                    return (articulo.getNombre() != null && articulo.getNombre().toLowerCase().contains(busqueda)) ||
+                            (articulo.getCodigo() != null && articulo.getCodigo().toLowerCase().contains(busqueda)) ||
+                            (articulo.getCategoria() != null && articulo.getCategoria().getNombre() != null && articulo.getCategoria().getNombre().toLowerCase().contains(busqueda)) ||
+                            (articulo.getMaterial() != null && articulo.getMaterial().getNombre() != null && articulo.getMaterial().getNombre().toLowerCase().contains(busqueda));
                 });
             }
         });
 
-        // 🔫 2. AL PRESIONAR ENTER (Pistola láser o tipeo manual)
-        txtCodigoBarras.setOnAction(event -> procesarBusquedaInventario());
+        // 🔥 2. BÚSQUEDA GLOBAL (BACKEND): ENTER para ir a buscar a la Base de Datos
+        txtCodigoBarras.setOnAction(event -> {
+            String texto = txtCodigoBarras.getText() != null ? txtCodigoBarras.getText().trim() : "";
+            // Reseteamos visualmente a la página 1 (índice 0) y disparamos la búsqueda
+            if (paginadorInventario != null) {
+                paginadorInventario.setCurrentPageIndex(0);
+            }
+            cargarInventarioParaVenta(texto, 0);
+        });
 
-        // 🖱️ 3. DOBLE CLICK en la tabla de inventario filtrada
+        // 3. Doble click → agregar
         tablaInventario.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2) {
                 Articulo seleccionado = tablaInventario.getSelectionModel().getSelectedItem();
@@ -116,7 +130,7 @@ public class VentaController {
             }
         });
 
-        // ⌨️ 4. ENTER estando parado en la tabla de inventario
+        // 4. ENTER en tabla → agregar
         tablaInventario.setOnKeyPressed(event -> {
             if (event.getCode() == KeyCode.ENTER) {
                 Articulo seleccionado = tablaInventario.getSelectionModel().getSelectedItem();
@@ -127,7 +141,7 @@ public class VentaController {
             }
         });
 
-        // ⌨️ 5. ESCAPAR (ESC) limpia el buscador al instante
+        // 5. ESC → limpiar
         Platform.runLater(() -> {
             if (txtCodigoBarras.getScene() != null) {
                 txtCodigoBarras.getScene().setOnKeyPressed(event -> {
@@ -139,40 +153,59 @@ public class VentaController {
         });
     }
 
-    // ⚡ LÓGICA DE BÚSQUEDA AL DAR ENTER
     private void procesarBusquedaInventario() {
         String texto = txtCodigoBarras.getText();
-        if (texto == null || texto.isBlank()) return;
 
-        String busquedaLimpia = texto.trim();
-
-        // A) ¿Es un CÓDIGO DE BARRAS / SKU EXACTO? (Ej: disparó con la pistola láser)
-        Articulo codigoExacto = masterInventario.stream()
-                .filter(a -> a.getCodigo() != null && a.getCodigo().equalsIgnoreCase(busquedaLimpia))
-                .findFirst()
-                .orElse(null);
-
-        if (codigoExacto != null) {
-            // ¡PUM! Directo al ticket y limpiamos la barra para la próxima
-            agregarAlTicket(codigoExacto);
-            txtCodigoBarras.clear();
+        if (texto == null || texto.isBlank()) {
             return;
         }
 
-        // B) Si NO es un código exacto, pero la tabla filtrada tiene EXACTAMENTE 1 solo resultado
-        if (filteredInventario != null && filteredInventario.size() == 1) {
-            agregarAlTicket(filteredInventario.get(0));
-            txtCodigoBarras.clear();
-            return;
-        }
+        String busqueda = texto.trim();
+        System.out.println("🕵️‍♂️ [DEBUG] Pistola Láser / Lupa disparó la búsqueda en el Backend: '" + busqueda + "'");
 
-        // C) Si hay varios resultados (ej: buscó "mate" y hay 3 mates), la tabla de la izquierda ya se los muestra.
-        // Se puede hacer foco en la tabla para que la cajera elija con las flechas o haga doble clic.
-        if (filteredInventario != null && !filteredInventario.isEmpty()) {
+        try {
+            List<Articulo> resultados = articuloApi.buscarParaVenta(busqueda, 0, 100);
+
+            System.out.println("🕵️‍♂️ [DEBUG] Búsqueda finalizada. Resultados: " + (resultados != null ? resultados.size() : "null"));
+
+            if (resultados == null || resultados.isEmpty()) {
+                if (paginadorInventario != null) paginadorInventario.setPageCount(1);
+                mostrarAlerta(
+                        Alert.AlertType.WARNING,
+                        "Sin Coincidencias",
+                        "No se encontró ningún producto disponible que coincida con: " + texto
+                );
+                return;
+            }
+
+            masterInventario.setAll(resultados);
+
+            // 🔥 ACTUALIZAMOS EL PAGINADOR TAMBIÉN AL BUSCAR CON LA LUPA/PISTOLA
+            int paginasReales = articuloApi.getUltimasPaginasMostrador();
+            if (paginadorInventario != null) {
+                paginadorInventario.setPageCount(paginasReales);
+            }
+
+            filteredInventario = new FilteredList<>(masterInventario, p -> true);
+            tablaInventario.setItems(filteredInventario);
+
+            if (resultados.size() == 1) {
+                agregarAlTicket(resultados.get(0));
+                txtCodigoBarras.clear();
+                return;
+            }
+
             tablaInventario.requestFocus();
             tablaInventario.getSelectionModel().selectFirst();
-        } else {
-            mostrarAlerta(Alert.AlertType.WARNING, "Sin Coincidencias", "No se encontró ningún producto que coincida con: " + texto);
+
+        } catch (Exception e) {
+            System.out.println("❌ Error al buscar productos para venta: " + e.getMessage());
+
+            mostrarAlerta(
+                    Alert.AlertType.ERROR,
+                    "Error de búsqueda",
+                    "No se pudo realizar la búsqueda del producto."
+            );
         }
     }
 
@@ -180,38 +213,46 @@ public class VentaController {
     public void buscarProducto(ActionEvent event) {
         procesarBusquedaInventario();
     }
-
     // 🧹 Botón para limpiar la búsqueda del inventario
     @FXML
     public void limpiarBusquedaInventario(ActionEvent event) {
         txtCodigoBarras.clear();
-        if (filteredInventario != null) {
-            filteredInventario.setPredicate(art -> true); // Muestra todo de nuevo
-        }
-        txtCodigoBarras.requestFocus(); // Devuelve el foco a la barra para seguir escaneando
+
+        cargarInventarioParaVenta("", 0);
+
+        txtCodigoBarras.requestFocus();
     }
 
     private void configurarTabla() {
         tablaTicket.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        colCodigo.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getArticulo().getCodigo()));
-        colNombre.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
-        colPrecio.setCellValueFactory(cell -> new SimpleDoubleProperty(cell.getValue().getArticulo().getPrecio()).asObject());
+        colCodigo.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getArticulo().getCodigo()));
+
+        colNombre.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
+
+        colPrecio.setCellValueFactory(cell ->
+                new SimpleDoubleProperty(cell.getValue().getArticulo().getPrecio()).asObject());
 
         colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
+
         colCantidad.setCellFactory(param -> new TableCell<LineaTicket, Integer>() {
             private final Button btnMenos = new Button("-");
             private final Label lblCantidad = new Label();
             private final Button btnMas = new Button("+");
-            private final javafx.scene.layout.HBox panel = new javafx.scene.layout.HBox(8, btnMenos, lblCantidad, btnMas);
+            private final javafx.scene.layout.HBox panel =
+                    new javafx.scene.layout.HBox(8, btnMenos, lblCantidad, btnMas);
 
             {
                 panel.setAlignment(javafx.geometry.Pos.CENTER);
+
                 btnMenos.getStyleClass().add("btn-cantidad-accion");
                 btnMas.getStyleClass().add("btn-cantidad-accion");
 
                 btnMas.setOnAction(e -> {
                     LineaTicket linea = getTableView().getItems().get(getIndex());
+
                     if (linea.getCantidad() < linea.getArticulo().getStockActual()) {
                         linea.setCantidad(linea.getCantidad() + 1);
                         getTableView().refresh();
@@ -221,6 +262,7 @@ public class VentaController {
 
                 btnMenos.setOnAction(e -> {
                     LineaTicket linea = getTableView().getItems().get(getIndex());
+
                     if (linea.getCantidad() > 1) {
                         linea.setCantidad(linea.getCantidad() - 1);
                         getTableView().refresh();
@@ -232,8 +274,10 @@ public class VentaController {
             @Override
             protected void updateItem(Integer item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) setGraphic(null);
-                else {
+
+                if (empty || item == null) {
+                    setGraphic(null);
+                } else {
                     lblCantidad.setText(String.valueOf(item));
                     setGraphic(panel);
                 }
@@ -244,28 +288,53 @@ public class VentaController {
 
         colAccion.setCellFactory(param -> new TableCell<LineaTicket, Void>() {
             private final Button btnEliminar = new Button("❌");
+
             {
                 btnEliminar.getStyleClass().add("btn-eliminar");
+
                 btnEliminar.setOnAction(e -> {
                     LineaTicket linea = getTableView().getItems().get(getIndex());
-                    tablaTicket.getItems().remove(linea);
-                    actualizarTotal();
+
+                    if (linea != null) {
+                        tablaTicket.getItems().remove(linea);
+                        actualizarTotal();
+                    }
                 });
             }
+
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty) setGraphic(null);
-                else setGraphic(btnEliminar);
+
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(btnEliminar);
+                }
             }
         });
     }
 
+    // 🧮 Método para sumar los precios de la tabla del ticket
+    private double obtenerTotalNumerico() {
+        // Recorre LineaTicket y suma los subtotales reales (precio * cantidad)
+        return tablaTicket.getItems().stream()
+                .mapToDouble(LineaTicket::getSubtotal)
+                .sum();
+    }
+
+
     private void configurarTablaInventario() {
         tablaInventario.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        colInvCodigo.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getCodigo()));
-        colInvNombre.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getNombre()));
-        colInvPrecio.setCellValueFactory(cell -> new SimpleDoubleProperty(cell.getValue().getPrecio()).asObject());
+
+        colInvCodigo.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getCodigo()));
+
+        colInvNombre.setCellValueFactory(cell ->
+                new SimpleStringProperty(cell.getValue().getNombre()));
+
+        colInvPrecio.setCellValueFactory(cell ->
+                new SimpleDoubleProperty(cell.getValue().getPrecio()).asObject());
     }
 
     private void cargarDatosIniciales() {
@@ -335,32 +404,38 @@ public class VentaController {
         });
     }
 
-    private void cargarInventarioParaVenta() {
-        List<Articulo> inventario = apiService.obtenerTodos();
+    private void cargarInventarioParaVenta(String busqueda, int pagina) {
+        System.out.println("🕵️‍♂️ [DEBUG] Mostrador pidiendo página " + pagina + " al Backend (Búsqueda: '" + busqueda + "')...");
 
-        if (inventario != null && !inventario.isEmpty()) {
+        try {
+            // Llamamos al método del API service enviando la búsqueda, la página actual y el tamaño por página (100)
+            List<Articulo> inventario = articuloApi.buscarParaVenta(busqueda, pagina, 100);
 
-            // 🔥 LA MAGIA: Filtramos la lista para que al Mostrador
-            // SOLO lleguen los artículos que tienen 1 o más de stock.
-            List<Articulo> soloConStock = inventario.stream()
-                    .filter(art -> art.getStockActual() > 0)
-                    .toList();
+            masterInventario.clear();
 
-            // Usamos la lista limpia para llenar la tabla
-            masterInventario.setAll(soloConStock);
+            if (inventario != null && !inventario.isEmpty()) {
+                masterInventario.setAll(inventario);
+
+                // 🔥 LA MAGIA VISUAL: Le avisamos al componente cuántas páginas existen
+                int paginasReales = articuloApi.getUltimasPaginasMostrador();
+                if (paginadorInventario != null) {
+                    paginadorInventario.setPageCount(paginasReales);
+                }
+
+                System.out.println("✅ Mostrador listo: " + inventario.size() + " productos en pantalla (Total de páginas: " + paginasReales + ").");
+            } else {
+                if (paginadorInventario != null) {
+                    paginadorInventario.setPageCount(1);
+                }
+                System.out.println("⚠️ El inventario está vacío en esta página.");
+            }
+
             filteredInventario = new FilteredList<>(masterInventario, p -> true);
             tablaInventario.setItems(filteredInventario);
 
-            System.out.println("✅ Mostrador listo: " + soloConStock.size() + " productos disponibles para vender.");
-        } else {
-            System.out.println("⚠️ El inventario está vacío.");
+        } catch (Exception e) {
+            System.out.println("❌ Error al cargar inventario paginado en mostrador: " + e.getMessage());
         }
-    }
-
-    private double obtenerTotalNumerico() {
-        return tablaTicket.getItems().stream()
-                .mapToDouble(LineaTicket::getSubtotal)
-                .sum();
     }
 
     // 🔥 1. Agregamos el Vale como segundo parámetro
