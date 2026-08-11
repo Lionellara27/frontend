@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.Articulo;
 
 import java.lang.reflect.Type;
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -367,5 +368,86 @@ public class ArticuloApiService {
         }
 
         return new ArrayList<>();
+    }
+
+    // 🔥 AUMENTO MASIVO DE PRECIOS
+// categoriaId == null → aumenta TODOS los artículos
+// categoriaId != null → aumenta solamente esa categoría
+    public int aumentarPrecios(Long categoriaId, BigDecimal porcentaje) {
+        try {
+            StringBuilder url = new StringBuilder(
+                    API_URL + "/aumentar-precios?porcentaje=" + porcentaje
+            );
+
+            if (categoriaId != null) {
+                url.append("&categoriaId=").append(categoriaId);
+            }
+
+            System.out.println("========== AUMENTO MASIVO ==========");
+            System.out.println("📦 Categoría ID: " + categoriaId);
+            System.out.println("📈 Porcentaje: " + porcentaje);
+            System.out.println("🌐 URL: " + url);
+
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(url.toString()))
+                    .PUT(HttpRequest.BodyPublishers.noBody())
+                    .build();
+
+            HttpResponse<String> respuesta = http.send(
+                    peticion,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+
+            System.out.println("📥 HTTP: " + respuesta.statusCode());
+            System.out.println("📥 BODY: " + respuesta.body());
+
+            if (respuesta.statusCode() == 200) {
+                try {
+                    return Integer.parseInt(respuesta.body().trim());
+                } catch (NumberFormatException e) {
+                    System.out.println(
+                            "⚠️ El backend respondió correctamente, " +
+                                    "pero no devolvió una cantidad válida."
+                    );
+                    return -1;
+                }
+            }
+
+            System.out.println(
+                    "⚠️ El servidor rechazó el aumento. Código: "
+                            + respuesta.statusCode()
+            );
+
+            return -1;
+
+        } catch (Exception e) {
+            System.out.println(
+                    "❌ Error al aplicar aumento masivo: "
+                            + e.getMessage()
+            );
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    // 📦 Objeto que representa lo que enviamos al backend
+//    private static class AumentoPreciosRequest {
+//
+//        private final Long categoriaId;
+//        private final double porcentaje;
+//
+//        public AumentoPreciosRequest(Long categoriaId, double porcentaje) {
+//            this.categoriaId = categoriaId;
+//            this.porcentaje = porcentaje;
+//        }
+//    }
+    public static class AumentoPreciosRequest {
+        public Long categoriaId;
+        public BigDecimal porcentaje;
+
+        public AumentoPreciosRequest(Long categoriaId, BigDecimal porcentaje) {
+            this.categoriaId = categoriaId;
+            this.porcentaje = porcentaje;
+        }
     }
 }
