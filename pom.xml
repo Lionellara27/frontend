@@ -101,6 +101,32 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 📦 PLUGIN PARA CREAR EL FAT JAR (TODO EN UNO) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <transformers>
+                                <!-- 1. Define la clase principal para que el JAR sea ejecutable -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.nakel.frontend.Launcher</mainClass>
+                                </transformer>
+                                <!-- 2. CLAVE: Evita que los íconos de Ikonli se rompan al compilar -->
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 </project>

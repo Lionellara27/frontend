@@ -1,14 +1,5 @@
 package com.nakel.frontend.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class ItemCambio {
 
     private Long id;
@@ -19,4 +10,55 @@ public class ItemCambio {
 
     // Nota: No hace falta poner el atributo "Cambio cambio" en el front,
     // porque el backend se encarga de enlazarlo automáticamente cuando lo recibe.
+
+    public ItemCambio() {
+    }
+
+    public ItemCambio(Long id, Articulo articulo, int cantidad, double precioUnitario, String tipo) {
+        this.id = id;
+        this.articulo = articulo;
+        this.cantidad = cantidad;
+        this.precioUnitario = precioUnitario;
+        this.tipo = tipo;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Articulo getArticulo() {
+        return articulo;
+    }
+
+    public void setArticulo(Articulo articulo) {
+        this.articulo = articulo;
+    }
+
+    public int getCantidad() {
+        return cantidad;
+    }
+
+    public void setCantidad(int cantidad) {
+        this.cantidad = cantidad;
+    }
+
+    public double getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setPrecioUnitario(double precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+
+    public String getTipo() {
+        return tipo;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
+    }
 }

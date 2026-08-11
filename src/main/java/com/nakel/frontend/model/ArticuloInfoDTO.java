@@ -1,16 +1,40 @@
 package com.nakel.frontend.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class ArticuloInfoDTO {
     private Articulo articulo;
     private int cantidad;
     private double precioUnitario;
+
+    public ArticuloInfoDTO() {
+    }
+
+    public ArticuloInfoDTO(Articulo articulo, int cantidad, double precioUnitario) {
+        this.articulo = articulo;
+        this.cantidad = cantidad;
+        this.precioUnitario = precioUnitario;
+    }
+
+    public Articulo getArticulo() {
+        return articulo;
+    }
+
+    public void setArticulo(Articulo articulo) {
+        this.articulo = articulo;
+    }
+
+    public int getCantidad() {
+        return cantidad;
+    }
+
+    public void setCantidad(int cantidad) {
+        this.cantidad = cantidad;
+    }
+
+    public double getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setPrecioUnitario(double precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
 }
