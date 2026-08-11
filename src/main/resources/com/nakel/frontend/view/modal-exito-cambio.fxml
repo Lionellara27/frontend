@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<AnchorPane prefHeight="400.0" prefWidth="500.0" style="-fx-background-color: transparent;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nakel.frontend.controller.ModalExitoCambioController">
+    <children>
+        <VBox alignment="CENTER" layoutX="10.0" layoutY="10.0" spacing="25.0" style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 10; -fx-background-radius: 10; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 15, 0, 0, 5);" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="10.0">
+            <padding>
+                <Insets bottom="30.0" left="40.0" right="40.0" top="30.0" />
+            </padding>
+            <children>
+                <Label fx:id="lblTitulo" style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #28a745;" text="¡Cambio Registrado con Éxito!" />
+
+                <VBox alignment="CENTER" prefWidth="400.0" spacing="10.0" style="-fx-background-color: #f8f9fa; -fx-padding: 20; -fx-background-radius: 8; -fx-border-color: #e9ecef; -fx-border-radius: 8;">
+                    <children>
+                        <Label fx:id="lblMensajePrincipal" style="-fx-font-size: 18px; -fx-text-fill: #495057;" text="Saldo a favor del cliente: $0.00" />
+
+                        <!-- 🔥 NUEVO: Subtítulo separador -->
+                        <Label fx:id="lblSubtitulo" style="-fx-font-size: 16px; -fx-text-fill: #6c757d; -fx-padding: 10 0 0 0;" text="Código de Vale generado:" />
+
+                        <!-- 🔥 EL CÓDIGO GIGANTE -->
+                        <Label fx:id="lblDetalleVale" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #000000; -fx-alignment: center;" text="NAKEL-XXXX" textAlignment="CENTER" wrapText="true" />
+                    </children>
+                </VBox>
+
+                <HBox alignment="CENTER" spacing="20.0">
+                    <children>
+                        <Button mnemonicParsing="false" onAction="#onImprimirClick" style="-fx-font-size: 14px; -fx-padding: 10 20; -fx-cursor: hand; -fx-background-color: #e2e6ea; -fx-text-fill: #333333; -fx-background-radius: 5;" text="Imprimir" />
+                        <Button mnemonicParsing="false" onAction="#onPdfClick" style="-fx-font-size: 14px; -fx-padding: 10 20; -fx-cursor: hand; -fx-background-color: #e2e6ea; -fx-text-fill: #333333; -fx-background-radius: 5;" text="Guardar PDF" />
+                    </children>
+                </HBox>
+
+                <Button mnemonicParsing="false" onAction="#onOkClick" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 12 50; -fx-cursor: hand; -fx-background-radius: 5;" text="✅ OK (Cerrar)" />
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

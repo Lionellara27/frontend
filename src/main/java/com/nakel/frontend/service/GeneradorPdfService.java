@@ -13,6 +13,9 @@ import java.util.Date;
 
 public class GeneradorPdfService {
 
+    // ====================================================================
+    // 🟢 1. TU MÉTODO ORIGINAL (Formato A4 para Ventas y Presupuestos)
+    // ====================================================================
     public void generarPdf(Venta venta, String rutaDestino) {
         // Creamos un documento tamaño A4 con márgenes
         Document documento = new Document(PageSize.A4, 50, 50, 50, 50);
@@ -76,10 +79,62 @@ public class GeneradorPdfService {
             documento.add(total);
 
             documento.close();
-            System.out.println("✅ ¡PDF generado con éxito en " + rutaDestino + "!");
+            System.out.println("✅ ¡PDF A4 generado con éxito en " + rutaDestino + "!");
 
         } catch (Exception e) {
-            System.err.println("❌ Error al generar PDF: " + e.getMessage());
+            System.err.println("❌ Error al generar PDF A4: " + e.getMessage());
+        }
+    }
+
+    // ====================================================================
+    // 🔥 2. EL NUEVO MÉTODO ESTÁTICO (Para el Modal de Cambios y Vales)
+    // ====================================================================
+    public static void generarComprobanteCambio(String rutaDestino, String nombreCliente, double saldo, String codigoVale) {
+        try {
+            // Creamos un documento finito, simulando un ticket de 80mm
+            Document document = new Document(new Rectangle(226, 400));
+            document.setMargins(10, 10, 10, 10);
+
+            PdfWriter.getInstance(document, new FileOutputStream(rutaDestino));
+            document.open();
+
+            // Tipografías
+            Font fontTitulo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14);
+            Font fontTexto = FontFactory.getFont(FontFactory.HELVETICA, 10);
+            Font fontVale = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16);
+
+            // Armamos el diseño del Ticket
+            Paragraph titulo = new Paragraph("NAKEL SOFTWARE", fontTitulo);
+            titulo.setAlignment(Element.ALIGN_CENTER);
+            document.add(titulo);
+
+            document.add(new Paragraph("----------------------------------", fontTexto));
+            document.add(new Paragraph("COMPROBANTE DE CAMBIO", fontTitulo));
+            document.add(new Paragraph("Cliente: " + nombreCliente, fontTexto));
+            document.add(new Paragraph("Saldo a favor: $" + String.format("%.2f", saldo), fontTexto));
+
+            if (codigoVale != null && !codigoVale.isEmpty()) {
+                document.add(new Paragraph("----------------------------------", fontTexto));
+                Paragraph subtituloVale = new Paragraph("CÓDIGO DE VALE:", fontTexto);
+                subtituloVale.setAlignment(Element.ALIGN_CENTER);
+                document.add(subtituloVale);
+
+                Paragraph pVale = new Paragraph(codigoVale, fontVale);
+                pVale.setAlignment(Element.ALIGN_CENTER);
+                document.add(pVale);
+            }
+
+            document.add(new Paragraph("----------------------------------", fontTexto));
+            Paragraph pie = new Paragraph("¡Gracias por su visita!", fontTexto);
+            pie.setAlignment(Element.ALIGN_CENTER);
+            document.add(pie);
+
+            document.close();
+            System.out.println("✅ PDF Ticket Generado exitosamente en: " + rutaDestino);
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al generar el PDF de Cambio: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

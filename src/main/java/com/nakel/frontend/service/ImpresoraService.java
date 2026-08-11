@@ -3,11 +3,15 @@ package com.nakel.frontend.service;
 import com.nakel.frontend.model.DetalleVenta;
 import com.nakel.frontend.model.Venta;
 import javax.print.*;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ImpresoraService {
 
+    // ====================================================================
+    // 🟢 1. TU MÉTODO ORIGINAL (Para imprimir el Ticket de Venta normal)
+    // ====================================================================
     public void imprimirTicket(Venta venta) {
         String textoTicket = armarDisenoTicket(venta);
 
@@ -74,5 +78,33 @@ public class ImpresoraService {
         sb.append("\n\n\n\n\n");
 
         return sb.toString();
+    }
+
+    // ====================================================================
+    // 🔥 2. EL NUEVO MÉTODO ESTÁTICO (Para imprimir el Vale desde el Modal)
+    // ====================================================================
+    public static void imprimirTexto(String texto) {
+        try {
+            PrintService impresora = PrintServiceLookup.lookupDefaultPrintService();
+
+            if (impresora == null) {
+                System.out.println("❌ No se encontró ninguna impresora predeterminada en Windows.");
+                return;
+            }
+
+            System.out.println("🖨️ Mandando comprobante a: " + impresora.getName());
+
+            // Usamos UTF-8 para que los acentos y símbolos salgan bien
+            byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
+            Doc doc = new SimpleDoc(bytes, DocFlavor.BYTE_ARRAY.AUTOSENSE, null);
+            DocPrintJob job = impresora.createPrintJob();
+
+            job.print(doc, null);
+            System.out.println("✅ ¡Impresión de texto libre finalizada!");
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al imprimir texto: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

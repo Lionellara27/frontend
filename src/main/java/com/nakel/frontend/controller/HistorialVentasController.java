@@ -23,7 +23,7 @@ public class HistorialVentasController {
     @FXML private ComboBox<String> cmbMes;
     @FXML private TextField txtBuscarVenta;
     @FXML private Label lblTotalFacturado;
-
+//
     // La tabla y sus columnas (conectadas al FXML)
     @FXML private TableView<Venta> tablaVentas;
     @FXML private TableColumn<Venta, String> colFecha;
@@ -42,8 +42,8 @@ public class HistorialVentasController {
 
     @FXML
     public void initialize() {
-        System.out.println("========== HISTORIAL VENTAS ==========");
-        System.out.println("🚀 Inicializando módulo de Historial de Ventas...");
+       System.out.println("========== HISTORIAL VENTAS ==========");
+//        System.out.println("🚀 Inicializando módulo de Historial de Ventas...");
         tablaVentas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarColumnas();
 
@@ -87,7 +87,7 @@ public class HistorialVentasController {
         } else {
             cargarVentas(0);
         }
-        System.out.println("======================================");
+//        System.out.println("======================================");
 
     }
 
@@ -95,7 +95,7 @@ public class HistorialVentasController {
     @FXML
     public void buscarVenta(javafx.event.ActionEvent event) {
         // No hace falta poner código acá porque el listener de arriba ya hace el trabajo al tipear
-        System.out.println("Lupa clickeada. Filtrando...");
+//        System.out.println("Lupa clickeada. Filtrando...");
     }
 
     // Método de apoyo para resetear la página a 0 cuando buscás algo nuevo
@@ -124,7 +124,18 @@ public class HistorialVentasController {
         });
 
         // 🔥 ACÁ VOLVEMOS A AGREGAR LA COLUMNA DEL CLIENTE QUE SE HABÍA BORRADO
-        colCliente.setCellValueFactory(cell -> { com.nakel.frontend.model.Venta venta = cell.getValue(); System.out.println(); System.out.println("👀 [HISTORIAL CHISMOSO] Renderizando cliente de una venta..."); if (venta == null) { System.out.println("❌ [HISTORIAL CHISMOSO] Venta = NULL"); return new javafx.beans.property.SimpleStringProperty("Consumidor Final"); } System.out.println("🧾 [HISTORIAL CHISMOSO] Venta ID: " + venta.getId()); if (venta.getCliente() != null) { System.out.println("👤 [HISTORIAL CHISMOSO] Cliente recibido:"); System.out.println(" ├─ ID: " + venta.getCliente().getId()); System.out.println(" ├─ Nombre: " + venta.getCliente().getNombre()); System.out.println(" └─ CUIT: " + venta.getCliente().getCuit()); String nombreCliente = venta.getCliente().getNombre(); if (nombreCliente != null && !nombreCliente.trim().isEmpty()) { return new javafx.beans.property.SimpleStringProperty(nombreCliente); } } else { System.out.println("⚠️ [HISTORIAL CHISMOSO] venta.getCliente() = NULL"); System.out.println(" └─ Se mostrará: Consumidor Final"); } return new javafx.beans.property.SimpleStringProperty("Consumidor Final");
+        colCliente.setCellValueFactory(cell -> {
+            Venta venta = cell.getValue();
+
+            if (venta != null && venta.getCliente() != null) {
+                String nombreCliente = venta.getCliente().getNombre();
+
+                if (nombreCliente != null && !nombreCliente.trim().isEmpty()) {
+                    return new javafx.beans.property.SimpleStringProperty(nombreCliente);
+                }
+            }
+
+            return new javafx.beans.property.SimpleStringProperty("Consumidor Final");
         });
 
         // Simulamos un número de comprobante con el ID de la base de datos
@@ -237,7 +248,7 @@ public class HistorialVentasController {
         String busqueda = txtBuscarVenta.getText() != null ? txtBuscarVenta.getText().trim() : "";
 
         // 🔥 CHISMOSO 1: Ver qué busca y a qué página exacta está apuntando el Frontend
-        System.out.println("🔍 [DEBUG HISTORIAL] Pidiendo página al Backend: " + numeroPagina + " | Buscando: '" + busqueda + "'");
+//       System.out.println("🔍 [DEBUG HISTORIAL] Pidiendo página al Backend: " + numeroPagina + " | Buscando: '" + busqueda + "'");
 
         String criterio = (cmbCampoBusqueda != null && cmbCampoBusqueda.getValue() != null)
                 ? cmbCampoBusqueda.getValue()
@@ -267,9 +278,9 @@ public class HistorialVentasController {
                     if (respuestaServidor.has("totalElements")) {
                         long totalElementos = respuestaServidor.get("totalElements").getAsLong();
 
-                        System.out.println("📊 [DEBUG HISTORIAL] TOTAL DE VENTAS SEGÚN BACKEND: " + totalElementos);
+//                        System.out.println("📊 [DEBUG HISTORIAL] TOTAL DE VENTAS SEGÚN BACKEND: " + totalElementos);
                     } else {
-                        System.out.println("⚠️ [DEBUG HISTORIAL] El JSON NO contiene 'totalElements'");
+//                        System.out.println("⚠️ [DEBUG HISTORIAL] El JSON NO contiene 'totalElements'");
                     }
                     //------------chismeeeeeeeeee
 
@@ -278,17 +289,17 @@ public class HistorialVentasController {
                         paginadorHistorial.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
 
                         // 🔥 CHISMOSO 2: El Backend te dice cuántas páginas totales armó (debería decir 3)
-                        System.out.println("📄 [DEBUG HISTORIAL] Total de páginas calculadas por el Backend: " + totalPaginas);
+//                        System.out.println("📄 [DEBUG HISTORIAL] Total de páginas calculadas por el Backend: " + totalPaginas);
                     }
 
                     arregloVentas = respuestaServidor.getAsJsonArray("content");
 
                     // 🔥 CHISMOSO 3: Cuántas ventas vienen en este bloque específico
-                    System.out.println("📦 [DEBUG HISTORIAL] Ventas detectadas en el 'content' de esta página: " + (arregloVentas != null ? arregloVentas.size() : 0));
+//                    System.out.println("📦 [DEBUG HISTORIAL] Ventas detectadas en el 'content' de esta página: " + (arregloVentas != null ? arregloVentas.size() : 0));
 
                 } else if (elementoParseado.isJsonArray()) {
                     arregloVentas = elementoParseado.getAsJsonArray();
-                    System.out.println("📦 [DEBUG HISTORIAL] Llegó un Array directo de tamaño: " + arregloVentas.size());
+//                    System.out.println("📦 [DEBUG HISTORIAL] Llegó un Array directo de tamaño: " + arregloVentas.size());
                     if (paginadorHistorial != null) paginadorHistorial.setPageCount(1);
                 } else {
                     throw new RuntimeException("Formato JSON no reconocido");
@@ -298,7 +309,7 @@ public class HistorialVentasController {
                 java.util.List<Venta> listaVentas = gson.fromJson(arregloVentas, tipoLista);
 
                 // 🔥 CHISMOSO 4: Cuántos objetos Java reales se metieron en la tabla
-                System.out.println("✅ [DEBUG HISTORIAL] Objetos listos para renderizar en la TableView: " + (listaVentas != null ? listaVentas.size() : 0));
+//                System.out.println("✅ [DEBUG HISTORIAL] Objetos listos para renderizar en la TableView: " + (listaVentas != null ? listaVentas.size() : 0));
 
                 javafx.collections.ObservableList<Venta> datosObservable = javafx.collections.FXCollections.observableArrayList(listaVentas);
                 tablaVentas.setItems(datosObservable);
@@ -308,11 +319,11 @@ public class HistorialVentasController {
                 lblTotalFacturado.setText("TOTAL: " + totalFormateado + " 💰");
 
             } catch (Exception e) {
-                System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
+//                System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
                 e.printStackTrace();
             }
         } else {
-            System.out.println("⚠️ [DEBUG HISTORIAL] La respuesta del servidor vino vacía o nula.");
+//            System.out.println("⚠️ [DEBUG HISTORIAL] La respuesta del servidor vino vacía o nula.");
             tablaVentas.getItems().clear();
             if (lblTotalFacturado != null) lblTotalFacturado.setText("TOTAL: $ 0,00 💰");
         }
@@ -359,7 +370,7 @@ public class HistorialVentasController {
     // --- ACCIONES DE LOS BOTONES DE LA TABLA -----------------------
 
     private void verDetalleVenta(Venta venta) {
-        System.out.println("👁️ Abriendo modal de detalles para la venta: " + venta.getId());
+//        System.out.println("👁️ Abriendo modal de detalles para la venta: " + venta.getId());
         try {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/detalle-venta-modal.fxml"));
             javafx.scene.Parent root = loader.load();
@@ -381,76 +392,156 @@ public class HistorialVentasController {
         }
     }
 
+
+    //
+//    // 🔥 EL PATOVICA DE LOS CAMBIOS (1 libre, 2 con clave, 3 bloqueado)
+//    private void procesarIntentoDeCambio(Venta venta) {
+//        try {
+//            // 1. Instanciamos la API de Cambios
+//            com.nakel.frontend.service.CambioApiService cambioApi = new com.nakel.frontend.service.CambioApiService();
+//
+//            // 2. ¡LA MAGIA DEL OJITO! Consultamos en vivo al backend
+//            java.util.List<com.nakel.frontend.model.Cambio> historialReal = cambioApi.obtenerHistorialPorVenta(venta.getId());
+//            int cantidadCambios = (historialReal != null) ? historialReal.size() : 0;
+//
+//            // 3. Validar vencimiento de 30 días
+//            java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(venta.getFechaHora());
+//            boolean estaVencido = java.time.LocalDateTime.now().isAfter(fechaVenta.plusDays(30));
+//
+//            // 🔴 BLOQUEO DEFINITIVO
+//            if (cantidadCambios >= 2) {
+//                Alert error = new Alert(Alert.AlertType.ERROR, "Esta venta ya superó el límite máximo de 2 cambios permitidos.");
+//                error.setHeaderText("Límite alcanzado");
+//                error.showAndWait();
+//                return;
+//            }
+//
+//            // 🟡 SEGUNDO CAMBIO O VENCIDO: Requiere contraseña
+//            if (cantidadCambios == 1 || estaVencido) {
+//                String mensajeAlerta = (cantidadCambios == 1)
+//                        ? "ATENCIÓN: Esta venta ya registra un cambio previo.\nIngrese la contraseña de Administrador:"
+//                        : "El plazo de 30 días ha vencido.\nIngrese contraseña de Administrador para forzar el cambio:";
+//
+//                Dialog<String> dialog = new Dialog<>();
+//                dialog.setTitle("Autorización Requerida");
+//                dialog.setHeaderText(mensajeAlerta);
+//
+//                PasswordField pwdField = new PasswordField();
+//                pwdField.setPromptText("Contraseña");
+//
+//                javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(10, new Label("Contraseña:"), pwdField);
+//                dialog.getDialogPane().setContent(content);
+//                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+//
+//                dialog.setResultConverter(dialogButton -> {
+//                    if (dialogButton == ButtonType.OK) {
+//                        return pwdField.getText();
+//                    }
+//                    return null;
+//                });
+//
+//                java.util.Optional<String> resultado = dialog.showAndWait();
+//
+//                if (resultado.isPresent()) {
+//                    String claveIngresada = resultado.get();
+//
+//                    // ⚠️ VALIDACIÓN DE CONTRASEÑA (Por ahora admin123, luego lo conectás a UsuarioApiService)
+//                    if ("admin123".equals(claveIngresada)) {
+//                        System.out.println("✅ Autorizado por contraseña. Abriendo segundo cambio...");
+//                        abrirPantallaCambio(venta);
+//                    } else {
+//                        Alert error = new Alert(Alert.AlertType.ERROR, "Contraseña incorrecta para el usuario '" + usuarioActual + "'. Operación cancelada.");
+//                        error.setHeaderText("Acceso Denegado");
+//                        error.showAndWait();
+//                    }
+//                }
+//            } else {
+//                // 🟢 PRIMER CAMBIO: Pasa de forma directa
+//                System.out.println("✅ Primer cambio en regla. Abriendo módulo...");
+//                abrirPantallaCambio(venta);
+//            }
+//        } catch (Exception e) {
+//            System.err.println("❌ Error al verificar historial en el backend: " + e.getMessage());
+//        }
+//    }
+
     private void iniciarProcesoCambio(Venta venta) {
         try {
-            int cantidadCambios = (venta.getHistorialCambios() != null) ? venta.getHistorialCambios().size() : 0;
+            // 1. Instanciamos la API de Cambios
+            com.nakel.frontend.service.CambioApiService cambioApi = new com.nakel.frontend.service.CambioApiService();
 
-            // Medida de seguridad extra por si logran clickear el botón bloqueado
+            // 2. ¡LA MAGIA DEL OJITO! Consultamos en vivo al backend
+            java.util.List<com.nakel.frontend.model.Cambio> historialReal = cambioApi.obtenerHistorialPorVenta(venta.getId());
+            int cantidadCambios = (historialReal != null) ? historialReal.size() : 0;
+
+            // 3. Validar vencimiento de 30 días
+            java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(venta.getFechaHora());
+            boolean estaVencido = java.time.LocalDateTime.now().isAfter(fechaVenta.plusDays(30));
+
+            // 🔴 BLOQUEO DEFINITIVO
             if (cantidadCambios >= 2) {
-                Alert error = new Alert(Alert.AlertType.ERROR, "Esta venta ya superó el límite máximo de cambios permitidos.");
+                Alert error = new Alert(Alert.AlertType.ERROR, "Esta venta ya superó el límite máximo de 2 cambios permitidos.");
+                error.setHeaderText("Límite alcanzado");
                 error.showAndWait();
                 return;
             }
 
-            // Validación de fechas
-            java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(venta.getFechaHora());
-            java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30);
-            boolean estaVencido = java.time.LocalDateTime.now().isAfter(fechaLimite);
-
-            // 🛑 Si tiene 1 cambio previo O está vencido, pedimos clave
+            // 🟡 SEGUNDO CAMBIO O VENCIDO: Requiere contraseña
             if (cantidadCambios == 1 || estaVencido) {
-
                 String mensajeAlerta = (cantidadCambios == 1)
-                        ? "ATENCIÓN: Esta venta ya tiene un cambio previo.\nIngrese la contraseña:"
+                        ? "ATENCIÓN: Esta venta ya registra un cambio previo.\nIngrese la contraseña de Administrador:"
                         : "El plazo de 30 días ha vencido.\nIngrese contraseña de Administrador para forzar el cambio:";
 
                 Dialog<String> dialog = new Dialog<>();
                 dialog.setTitle("Autorización Requerida");
                 dialog.setHeaderText(mensajeAlerta);
 
-                ButtonType btnAutorizar = new ButtonType("Autorizar", ButtonBar.ButtonData.OK_DONE);
-                dialog.getDialogPane().getButtonTypes().addAll(btnAutorizar, ButtonType.CANCEL);
+                PasswordField pwdField = new PasswordField();
+                pwdField.setPromptText("Contraseña");
 
-                PasswordField txtClave = new PasswordField();
-                txtClave.setPromptText("Contraseña...");
-                dialog.getDialogPane().setContent(txtClave);
+                javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(10, new Label("Contraseña:"), pwdField);
+                dialog.getDialogPane().setContent(content);
+                dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
                 dialog.setResultConverter(dialogButton -> {
-                    if (dialogButton == btnAutorizar) return txtClave.getText();
+                    if (dialogButton == ButtonType.OK) {
+                        return pwdField.getText();
+                    }
                     return null;
                 });
 
-                dialog.showAndWait().ifPresent(clave -> {
-                    // 1. Agarramos el usuario que está usando el sistema ahora mismo (ej: "ad")
-                    String usuarioActual = com.nakel.frontend.util.SesionActual.getUsuarioLogueado();
+                java.util.Optional<String> resultado = dialog.showAndWait();
 
-                    // 2. Le preguntamos a tu API si esa clave es correcta
+                if (resultado.isPresent()) {
+                    String claveIngresada = resultado.get();
+
+                    // 🔥 VALIDACIÓN REAL CONTRA EL BACKEND
+                    String usuarioActual = com.nakel.frontend.util.SesionActual.getUsuarioLogueado();
                     com.nakel.frontend.service.UsuarioApiService usuarioApi = new com.nakel.frontend.service.UsuarioApiService();
-                    boolean esClaveCorrecta = usuarioApi.login(usuarioActual, clave);
+                    boolean esClaveCorrecta = usuarioApi.login(usuarioActual, claveIngresada);
 
                     if (esClaveCorrecta) {
                         System.out.println("✅ Autorizado por el backend para el usuario: " + usuarioActual);
                         abrirPantallaCambio(venta);
                     } else {
                         Alert error = new Alert(Alert.AlertType.ERROR, "Contraseña incorrecta para el usuario '" + usuarioActual + "'. Operación cancelada.");
+                        error.setHeaderText("Acceso Denegado");
                         error.showAndWait();
                     }
-                });
-
+                }
             } else {
-                // ✅ 0 CAMBIOS Y DENTRO DE LOS 30 DÍAS: Pasa directo
-                System.out.println("En regla. Abriendo módulo de cambio...");
+                // 🟢 PRIMER CAMBIO: Pasa de forma directa
+                System.out.println("✅ Primer cambio en regla. Abriendo módulo...");
                 abrirPantallaCambio(venta);
             }
-
         } catch (Exception e) {
-            System.err.println("Error al procesar el cambio: " + e.getMessage());
+            System.err.println("❌ Error al verificar historial en el backend: " + e.getMessage());
         }
     }
 
     // El método que va a abrir la ventana pesada de stock (La armamos en el próximo paso)
     private void abrirPantallaCambio(Venta venta) {
-        System.out.println("🚀 ¡Abriendo el módulo maestro de Cambios y Devoluciones para la venta: " + venta.getId() + "!");
+//        System.out.println("🚀 ¡Abriendo el módulo maestro de Cambios y Devoluciones para la venta: " + venta.getId() + "!");
         try {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/cambio-venta-modal.fxml"));
             javafx.scene.Parent root = loader.load();

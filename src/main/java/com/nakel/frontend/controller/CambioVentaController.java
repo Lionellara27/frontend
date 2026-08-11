@@ -142,6 +142,9 @@ public class CambioVentaController {
 
         double diferencia = costoNuevosProductos - saldoAFavorCliente;
         String resumen = generarResumenArticulos();
+
+        // Obtenemos los datos del cliente real (o Consumidor Final)
+        String nombreCliente = (ventaOriginal.getCliente() != null) ? ventaOriginal.getCliente().getNombre() : "Consumidor Final";
         Long idCliente = (ventaOriginal.getCliente() != null) ? ventaOriginal.getCliente().getId() : null;
 
         if (diferencia > 0) {
@@ -152,8 +155,8 @@ public class CambioVentaController {
                 actualizarStockEnBaseDeDatos();
                 registrarCambioEnBackend(resumen, diferencia, null); // 📝 Guardamos el rastro histórico
 
-                Alert alert = new Alert(Alert.AlertType.INFORMATION, "¡Cambio registrado y diferencia cobrada con éxito!");
-                alert.showAndWait();
+                // 🟢 ÉXITO SIN VALE (El cliente pagó la diferencia)
+                abrirModalExitoCambio(nombreCliente, 0.0, null);
                 cerrarModal(event);
             } else {
                 System.out.println("El usuario canceló el pago. No se guardan los cambios.");
@@ -167,10 +170,8 @@ public class CambioVentaController {
                 actualizarStockEnBaseDeDatos();
                 registrarCambioEnBackend(resumen, diferencia, nuevoVale.getCodigo()); // 📝 Guardamos el rastro histórico
 
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Cambio Procesado");
-                alert.setContentText("Stock actualizado.\n\nSe ha generado el VALE DE CAMBIO:\nCÓDIGO: " + nuevoVale.getCodigo() + "\nMONTO A FAVOR: $" + nuevoVale.getMonto());
-                alert.showAndWait();
+                // 🟡 ÉXITO CON VALE O SALDO A FAVOR (Sobra plata)
+                abrirModalExitoCambio(nombreCliente, montoVoucher, nuevoVale.getCodigo());
                 cerrarModal(event);
             } else {
                 mostrarError("Error de Conexión", "No se pudo generar el vale en el servidor.");
@@ -181,9 +182,34 @@ public class CambioVentaController {
             actualizarStockEnBaseDeDatos();
             registrarCambioEnBackend(resumen, 0.0, null); // 📝 Guardamos el rastro histórico
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "¡Cambio Directo Exitoso! Stock actualizado.");
-            alert.showAndWait();
+            // 🟢 ÉXITO MANO A MANO (Saldo 0)
+            abrirModalExitoCambio(nombreCliente, 0.0, null);
             cerrarModal(event);
+        }
+    }
+
+    // 🔥 EL DISPARADOR DEL MODAL PREMIUM
+    private void abrirModalExitoCambio(String nombreCliente, double saldoAFavor, String codigoVale) {
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/modal-exito-cambio.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            // Le pasamos los datos al nuevo controlador
+            com.nakel.frontend.controller.ModalExitoCambioController controller = loader.getController();
+            controller.inicializarDatos(nombreCliente, saldoAFavor, codigoVale);
+
+            javafx.stage.Stage modalStage = new javafx.stage.Stage();
+            modalStage.setTitle("¡Cambio Procesado!");
+            modalStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            modalStage.setScene(new javafx.scene.Scene(root));
+            modalStage.setResizable(false);
+
+            // 🛑 FRENO DE MANO: El código frena acá hasta que la dueña toque "OK (Cerrar)"
+            modalStage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("❌ Error al abrir el modal de éxito premium.");
         }
     }
 
@@ -288,7 +314,7 @@ public class CambioVentaController {
                     itemsDelCambio.add(itemDevuelto);
                 }
             }
-
+//
             // B) Agarramos lo que se lleva NUEVO
             for (com.nakel.frontend.model.DetalleVenta nuev : masterInventario) {
                 if (nuev.getCantidad() > 0) {
