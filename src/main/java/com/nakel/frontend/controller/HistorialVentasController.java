@@ -563,14 +563,16 @@ public class HistorialVentasController {
         }
     }
 
-
     private void abrirOpcionesImpresionEnvio(Venta venta) {
         System.out.println("🖨️/📧 Abriendo opciones de imprimir/mail para la venta: " + venta.getId());
+
         try {
-            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/opciones-impresion-modal.fxml"));
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                    getClass().getResource("/com/nakel/frontend/view/opciones-impresion-modal.fxml")
+            );
+
             javafx.scene.Parent root = loader.load();
 
-            // Pasamos la venta seleccionada al controlador
             OpcionesImpresionController controller = loader.getController();
             controller.cargarVenta(venta);
 

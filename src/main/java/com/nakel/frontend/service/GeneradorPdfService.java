@@ -40,9 +40,37 @@ public class GeneradorPdfService {
             documento.add(new Paragraph(" ")); // Salto de línea
 
             // 📅 Fechas y Datos
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            String fecha = (venta.getFechaHora() != null) ? sdf.format(venta.getFechaHora()) : sdf.format(new Date());
-            String cliente = (venta.getCliente() != null && venta.getCliente().getNombre() != null) ? venta.getCliente().getNombre() : "Consumidor Final";
+// 📅 Fechas y Datos
+            System.out.println("🔎 fechaHora = " + venta.getFechaHora());
+            System.out.println("🔎 tipo fechaHora = " +
+                    (venta.getFechaHora() != null
+                            ? venta.getFechaHora().getClass().getName()
+                            : "NULL"));
+
+            String fecha;
+
+            if (venta.getFechaHora() != null && !venta.getFechaHora().isBlank()) {
+                try {
+                    java.time.LocalDateTime fechaHora =
+                            java.time.LocalDateTime.parse(venta.getFechaHora());
+
+                    fecha = fechaHora.format(
+                            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+                    );
+                } catch (Exception e) {
+                    System.err.println("⚠️ No se pudo interpretar fechaHora: " + venta.getFechaHora());
+                    fecha = venta.getFechaHora();
+                }
+            } else {
+                fecha = java.time.LocalDateTime.now().format(
+                        java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+                );
+            }
+
+            String cliente = (venta.getCliente() != null
+                    && venta.getCliente().getNombre() != null)
+                    ? venta.getCliente().getNombre()
+                    : "Consumidor Final";
 
             documento.add(new Paragraph("Local: NAKEL", fuenteSubTitulo));
             documento.add(new Paragraph("Fecha: " + fecha, fuenteNormal));

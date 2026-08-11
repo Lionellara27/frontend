@@ -57,6 +57,31 @@ public class CambioVentaController {
         colNuePrecio.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty("$ " + cell.getValue().getPrecioUnitario()));
 
         cargarCatalogoCompleto();
+
+        // 🎧 LA MAGIA DE LA LUPITA: Este es el escuchador en vivo
+        // 🎧 ESCUCHADOR EN VIVO PARA LA LUPITA DE NUEVOS ARTÍCULOS EN CAMBIOS
+        if (txtBuscarNuevo != null) {
+            txtBuscarNuevo.textProperty().addListener((observable, oldValue, newValue) -> {
+                try {
+                    if (newValue == null || newValue.trim().isEmpty()) {
+                        cargarCatalogoCompleto();
+                    } else {
+                        // Llama a la API buscando en todo el backend por nombre o código
+                        java.util.List<com.nakel.frontend.model.Articulo> resultados = articuloApi.buscarParaVenta(newValue.trim(), 0, 100);
+                        if (resultados != null) {
+                            masterInventario.clear();
+                            for (com.nakel.frontend.model.Articulo art : resultados) {
+                                if (art.getStockActual() > 0) {
+                                    masterInventario.add(new DetalleVenta(0, art.getPrecio(), 0.0, art));
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Error en la búsqueda de cambios: " + e.getMessage());
+                }
+            });
+        }
     }
 
     public void cargarVentaOriginal(Venta venta) {
@@ -417,18 +442,20 @@ public class CambioVentaController {
 
     private void cargarCatalogoCompleto() {
         try {
-            java.util.List<com.nakel.frontend.model.Articulo> articulosBBDD = articuloApi.obtenerTodos();
+            // 🔥 LA REGLA DE ORO: Vamos al Backend a pedir solo los primeros 100 con stock > 0
+            java.util.List<com.nakel.frontend.model.Articulo> articulosBBDD = articuloApi.buscarParaVenta("", 0, 100);
+
             if (articulosBBDD != null) {
                 masterInventario.clear();
                 for (com.nakel.frontend.model.Articulo art : articulosBBDD) {
-                    if (art.getStockActual() > 0) {
-                        masterInventario.add(new DetalleVenta(0, art.getPrecio(), 0.0, art));
-                    }
+                    masterInventario.add(new DetalleVenta(0, art.getPrecio(), 0.0, art));
                 }
                 filteredInventario = new javafx.collections.transformation.FilteredList<>(masterInventario, p -> true);
                 tablaNuevos.setItems(filteredInventario);
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            System.err.println("❌ Error al cargar catálogo en cambios: " + e.getMessage());
+        }
     }
 
     private void configurarColumnaCantidadNuevos() {
@@ -484,5 +511,23 @@ public class CambioVentaController {
         }
         lblCostoNuevos.setText(String.format("$ %.2f", costoNuevosProductos));
         calcularDiferencias();
+    }
+
+    // 🔍 NUEVO MÉTODO: El cerebro de la búsqueda global para Cambios
+    private void procesarBusquedaInventario(String busqueda) {
+        try {
+            java.util.List<com.nakel.frontend.model.Articulo> resultados = articuloApi.buscarParaVenta(busqueda, 0, 100);
+
+            if (resultados != null) {
+                masterInventario.clear();
+                for (com.nakel.frontend.model.Articulo art : resultados) {
+                    masterInventario.add(new DetalleVenta(0, art.getPrecio(), 0.0, art));
+                }
+                filteredInventario = new javafx.collections.transformation.FilteredList<>(masterInventario, p -> true);
+                tablaNuevos.setItems(filteredInventario);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error al buscar productos para el cambio: " + e.getMessage());
+        }
     }
 }
