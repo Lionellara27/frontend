@@ -45,7 +45,9 @@ public class LoginController {
 
                 // Cargar pantalla principal
                 FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/nakel/frontend/view/main-layout.fxml"));
-                Scene scene = new Scene(fxmlLoader.load(), 1224, 768);
+
+                // 🔥 CAMBIO 1: Quitamos los números fijos (1224, 768). Dejamos que cargue su tamaño dinámico natural.
+                Scene scene = new Scene(fxmlLoader.load());
 
                 // Cargar CSS global
                 java.net.URL cssUrl = getClass().getResource("/css/nakel.css");
@@ -62,7 +64,9 @@ public class LoginController {
                 stage.setScene(scene);
                 stage.setTitle("Nakel Software - Mostrador Principal");
                 stage.setResizable(true);
-                stage.centerOnScreen();
+
+                // 🔥 CAMBIO 2 y 3: Maximizamos para que ocupe todo el monitor de la clienta (y borramos el centerOnScreen)
+                stage.setMaximized(true);
 
             } catch (IOException e) {
                 mostrarAlerta("Error", "No se pudo abrir la pantalla principal: " + e.getMessage());

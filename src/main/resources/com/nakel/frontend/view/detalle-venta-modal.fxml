@@ -25,13 +25,33 @@
                                 </Label>
                                 <Label fx:id="lblFecha" text="Fecha: 23/06/2026 - 22:06" textFill="#555555" />
                                 <Label fx:id="lblCliente" text="Cliente: Consumidor Final" textFill="#555555" />
+
+                                <!-- 🔥 NUEVO: Muestra el desglose de los pagos -->
+                                <Label fx:id="lblPagos" text="Pagos: ..." textFill="#1565c0">
+                                    <font>
+                                        <Font name="System Bold" size="13.0" />
+                                    </font>
+                                </Label>
                             </children>
                         </VBox>
-                        <Label fx:id="lblRegalo" alignment="CENTER" managed="false" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 5 10;" text="🎁 ES PARA REGALO" visible="false">
-                            <font>
-                                <Font name="System Bold" size="14.0" />
-                            </font>
-                        </Label>
+
+                        <!-- Contenedor para los Cartelitos (Regalo / Vales) -->
+                        <VBox alignment="TOP_RIGHT" spacing="10.0">
+                            <children>
+                                <Label fx:id="lblRegalo" alignment="CENTER" managed="false" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 5 10;" text="🎁 ES PARA REGALO" visible="false">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+
+                                <!-- 🔥 NUEVO: Cartelito que avisa si usó un Vale -->
+                                <Label fx:id="lblAvisoVale" alignment="CENTER" managed="false" style="-fx-background-color: #9c27b0; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 5 15;" text="VALE APLICADO" visible="false">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+                            </children>
+                        </VBox>
                     </children>
                 </HBox>
 
@@ -45,7 +65,7 @@
                     </columns>
                 </TableView>
 
-                <!-- 🔥 NUEVA SECCIÓN: HISTORIAL DE CAMBIOS (Oculta por defecto) -->
+                <!-- SECCIÓN: HISTORIAL DE CAMBIOS (Oculta por defecto) -->
                 <VBox spacing="5.0">
                     <children>
                         <Label fx:id="lblAvisoCambios" managed="false" text="⚠️ Esta venta tiene X cambio(s) registrado(s)" textFill="#d32f2f" visible="false">

@@ -301,19 +301,62 @@ public class CalculadoraController {
         }
     }
 
-    // 🔥 EL NUEVO MÉTODO UNIFICADO QUE ABRE EL MODAL
     @FXML
     public void guardarPresupuesto(ActionEvent event) {
+
         if (txtNombreProducto.getText() == null || txtNombreProducto.getText().isBlank()) {
             mostrarError("Debe ingresar el nombre del producto.");
             return;
         }
+
         if (tablaReceta.getItems().isEmpty()) {
             mostrarError("Debe agregar al menos un insumo.");
             return;
         }
+
+        // =========================================================================
+        // 🔥 NUEVA LÓGICA: Atajamos el Margen/Ganancia antes de que rompa nada
+        // =========================================================================
+        String textoMargen = txtMargen.getText();
+
+        if (textoMargen == null || textoMargen.trim().isEmpty()) {
+
+            javafx.scene.control.Alert confirmacion = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+            confirmacion.setTitle("Atención - Margen Vacío");
+            confirmacion.setHeaderText("No ingresaste ningún porcentaje de margen.");
+            confirmacion.setContentText("¿Estás seguro de que querés guardar este producto con 0% de ganancia (al costo)?");
+
+            // Si elige "Cancelar" o cierra con la X, abortamos el guardado
+            if (confirmacion.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL) != javafx.scene.control.ButtonType.OK) {
+                return;
+            }
+
+            // Si eligió "Aceptar", clavamos el 0 en la cajita
+            txtMargen.setText("0");
+
+            // ⚠️ ATENCIÓN ACÁ: Como forzamos el 0%, tenés que asegurarte de que la variable
+            // 'precioVenta' se actualice para que sea igual al 'costoTotalReceta'.
+            // Si tenés un método que calcula el precio al tocar una tecla, llamalo acá.
+            // Ejemplo: calcularPrecioFinal();
+            // Si no, podés forzarlo directo si tu lógica lo permite:
+            // precioVenta = costoTotalReceta;
+
+        } else {
+            // 🔥 Atajamos si puso comas en vez de puntos o si puso letras
+            try {
+                textoMargen = textoMargen.replace(",", ".");
+                txtMargen.setText(textoMargen); // Actualizamos la cajita visualmente
+                Double.parseDouble(textoMargen); // Solo para probar que no explote
+            } catch (NumberFormatException e) {
+                mostrarError("El margen debe ser un número válido (Ej: 50 o 50.5).");
+                return;
+            }
+        }
+        // =========================================================================
+
+        // Validamos que el precio de venta sea válido (acordate de lo que te puse en el comentario ⚠️ de arriba)
         if (precioVenta == null || precioVenta.compareTo(BigDecimal.ZERO) <= 0) {
-            mostrarError("El precio de venta es inválido. Verifique el margen.");
+            mostrarError("El precio de venta es inválido. Verifique el margen o los costos.");
             return;
         }
 

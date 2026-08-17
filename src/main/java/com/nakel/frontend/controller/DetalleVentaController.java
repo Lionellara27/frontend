@@ -38,6 +38,13 @@ public class DetalleVentaController {
     @FXML private TableColumn<com.nakel.frontend.model.Cambio, String> colResumenCambio;
     @FXML private TableColumn<com.nakel.frontend.model.Cambio, String> colDiferenciaCambio;
 
+
+    @FXML
+    private Label lblPagos;
+
+    @FXML
+    private Label lblAvisoVale;
+
     // 🔥 2. EL SERVICIO API
     private final com.nakel.frontend.service.CambioApiService cambioApi = new com.nakel.frontend.service.CambioApiService();
 
@@ -116,14 +123,53 @@ public class DetalleVentaController {
             lblFecha.setText("Fecha: " + venta.getFechaHora());
         }
 
-        // 2. Lógica del Indicador Visual (El Regalo 🎁)
-        /*if (venta.getEsTicketCambio() != null && venta.getEsTicketCambio()) {
-            lblRegalo.setVisible(true);
-            lblRegalo.setManaged(true);
+        // 🔥 NUEVO: Lógica de Pagos y Vales (Se inserta acá, antes del regalo)
+        if (venta.getPagos() != null && !venta.getPagos().isEmpty()) {
+            StringBuilder pagosInfo = new StringBuilder("Pagos: ");
+            boolean usoVale = false;
+
+            for (com.nakel.frontend.model.Pago pago : venta.getPagos()) {
+                pagosInfo.append(pago.getMetodoPago()).append(" ($").append(pago.getMonto()).append(") | ");
+                if (pago.getMetodoPago().toLowerCase().contains("vale")) {
+                    usoVale = true;
+                }
+            }
+
+            // Cortamos el último " | "
+            if (pagosInfo.length() > 3) {
+                String textoPagos = pagosInfo.substring(0, pagosInfo.length() - 3);
+                if (lblPagos != null) {
+                    lblPagos.setText(textoPagos);
+                }
+            }
+
+            // Mostramos u ocultamos el cartelito del Vale
+            if (lblAvisoVale != null) {
+                if (usoVale) {
+                    lblAvisoVale.setVisible(true);
+                    lblAvisoVale.setManaged(true);
+                } else {
+                    lblAvisoVale.setVisible(false);
+                    lblAvisoVale.setManaged(false);
+                }
+            }
         } else {
-            lblRegalo.setVisible(false);
-            lblRegalo.setManaged(false);
-        }*/
+            // Por si hay una venta vieja sin métodos de pago guardados
+            if (lblPagos != null) lblPagos.setText("Pagos: No registrados");
+            if (lblAvisoVale != null) {
+                lblAvisoVale.setVisible(false);
+                lblAvisoVale.setManaged(false);
+            }
+        }
+
+        // 2. Lógica del Indicador Visual (El Regalo 🎁)
+    /*if (venta.getEsTicketCambio() != null && venta.getEsTicketCambio()) {
+        lblRegalo.setVisible(true);
+        lblRegalo.setManaged(true);
+    } else {
+        lblRegalo.setVisible(false);
+        lblRegalo.setManaged(false);
+    }*/
 
         // 2. Lógica del Indicador Visual (El Regalo 🎁)
         if (venta.getEsParaRegalo() != null && venta.getEsParaRegalo()) {

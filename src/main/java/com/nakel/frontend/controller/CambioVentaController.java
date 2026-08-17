@@ -285,6 +285,7 @@ public class CambioVentaController {
 
     // 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
     // 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
+// 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
     private boolean abrirModalDePago(double montoAcobrar, Venta venta) {
         try {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/pago-mixto-modal.fxml"));
@@ -302,6 +303,17 @@ public class CambioVentaController {
 
             // 🛑 ACÁ SE CONGELA HASTA QUE EL MODAL SE CIERRE
             stage.showAndWait();
+
+            // 🔥 LA MAGIA CON TUS MÉTODOS REALES: Si pagó, vemos si dejó un vale aplicado
+            if (controller.isPagoCompleto()) {
+                com.nakel.frontend.model.Vale valeUsado = controller.getValeAplicado();
+
+                // Si el cliente usó un vale, lo mandamos a quemar a la base de datos
+                if (valeUsado != null && valeUsado.getCodigo() != null && !valeUsado.getCodigo().isBlank()) {
+                    valeApi.consumirVale(valeUsado.getCodigo());
+                    System.out.println("🔥 Vale " + valeUsado.getCodigo() + " consumido exitosamente en el cambio.");
+                }
+            }
 
             // Retorna TRUE si pagó todo, FALSE si cerró de la X
             return controller.isPagoCompleto();

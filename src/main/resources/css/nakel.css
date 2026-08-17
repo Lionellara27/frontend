@@ -232,24 +232,46 @@
 /* =====================================================
    TABLAS
 ===================================================== */
-
+/* =====================================================
+   TABLAS MAESTRAS (Aplica a todo el sistema)
+===================================================== */
 .table-view {
-
     -fx-background-color: white;
-
-    -fx-border-color: #E5E7EB;
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-color: #E9ECEF;
+    -fx-font-size: 14px;
 }
 
 .table-view .column-header {
-
-    -fx-background-color: #07352D;
+    -fx-background-color: #155643; /* Verde Nakel unificado */
+    -fx-pref-height: 35px;
+    -fx-border-color: #114230;
 }
 
 .table-view .column-header .label {
-
     -fx-text-fill: white;
-
     -fx-font-weight: bold;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #333333;
+    -fx-padding: 10px;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* Filas alternas (Zebra striping) */
+.table-view .table-row-cell:odd {
+    -fx-background-color: #F8F9FA;
+}
+
+/* Fila seleccionada */
+.table-view .table-row-cell:filled:selected {
+    -fx-background-color: #D49A54; /* Dorado Nakel unificado */
+}
+
+.table-view .table-row-cell:filled:selected .label {
+    -fx-text-fill: white;
 }
 
 
@@ -280,9 +302,35 @@
    SCROLL
 ===================================================== */
 
-.scroll-bar {
-
+/* =====================================================
+   SCROLL (TUNEO PARA EL MENÚ LATERAL RESPONSIVE)
+===================================================== */
+.scroll-pane {
     -fx-background-color: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical, .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+/* La pista por donde corre la barra */
+.scroll-bar:vertical .track, .scroll-bar:horizontal .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* La barrita que agarras con el mouse */
+.scroll-bar:vertical .thumb, .scroll-bar:horizontal .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.2); /* Blanco semitransparente elegante */
+    -fx-background-radius: 10px;
+}
+
+.scroll-bar:vertical .thumb:hover, .scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.4);
 }
 
 /* --- ESTILOS DEL MOSTRADOR (VENTAS) --- */

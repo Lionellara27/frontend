@@ -1,3 +1,4 @@
+/*
 package com.nakel.frontend.service;
 
 import com.nakel.frontend.model.DetalleVenta;
@@ -36,45 +37,45 @@ public class ImpresoraService {
         }
     }
 
-    // 🎨 EL DISEÑO DEL TICKET (Formato 80mm - 48 caracteres de ancho)
+    // 🎨 EL DISEÑO DEL TICKET (Formato 58mm/80mm)
     private String armarDisenoTicket(Venta venta) {
         StringBuilder sb = new StringBuilder();
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         String fecha = (venta.getFechaHora() != null) ? sdf.format(venta.getFechaHora()) : sdf.format(new Date());
 
-        sb.append("================================================\n");
-        sb.append("                 NAKEL SOFTWARE                 \n"); // Cambialo por el nombre del local
-        sb.append("================================================\n");
+        sb.append("================================\n");
+        sb.append("         NAKEL SOFTWARE         \n"); // Cambialo por el nombre del local
+        sb.append("================================\n");
         sb.append("Fecha: ").append(fecha).append("\n");
 
         String cliente = (venta.getCliente() != null && venta.getCliente().getNombre() != null)
                 ? venta.getCliente().getNombre()
                 : "Consumidor Final";
         sb.append("Cliente: ").append(cliente).append("\n");
-        sb.append("------------------------------------------------\n");
-        sb.append("CANT DESCRIPCION                        SUBTOTAL\n");
-        sb.append("------------------------------------------------\n");
+        sb.append("--------------------------------\n");
+        sb.append("CANT  DESCRIPCION      SUBTOTAL \n");
+        sb.append("--------------------------------\n");
 
         // Recorremos los productos
         if (venta.getDetalles() != null) {
             for (DetalleVenta det : venta.getDetalles()) {
                 String nombre = det.getArticulo().getNombre();
-                // Ahora tenemos 80mm, dejamos que la descripción ocupe hasta 30 letras
-                if (nombre.length() > 30) {
-                    nombre = nombre.substring(0, 30);
+                // Si el nombre es muy largo, lo cortamos para que no descontrole el ticket
+                if (nombre.length() > 14) {
+                    nombre = nombre.substring(0, 14);
                 }
-                // Formato: 4 espacios para cantidad, 30 para nombre, 12 para la plata
-                sb.append(String.format("%-4d %-30s $%11.2f\n", det.getCantidad(), nombre, det.getSubtotal()));
+                // Formato: 2 espacios para cantidad, 14 para nombre, 7 para plata
+                sb.append(String.format("%-4d %-14s $%7.2f\n", det.getCantidad(), nombre, det.getSubtotal()));
             }
         }
 
-        sb.append("------------------------------------------------\n");
-        sb.append(String.format("TOTAL:                              $%11.2f\n", venta.getTotal()));
-        sb.append("================================================\n");
-        sb.append("            ¡Gracias por tu compra!             \n");
+        sb.append("--------------------------------\n");
+        sb.append(String.format("TOTAL:                 $%7.2f\n", venta.getTotal()));
+        sb.append("================================\n");
+        sb.append("    ¡Gracias por tu compra!     \n");
 
         // ✂️ Estos saltos de línea son clave para que la impresora saque el papel
-        // y el CORTADOR AUTOMÁTICO actúe correctamente sin morder las letras
+        // lo suficiente para que la clienta lo pueda cortar
         sb.append("\n\n\n\n\n");
 
         return sb.toString();
@@ -108,3 +109,4 @@ public class ImpresoraService {
         }
     }
 }
+ */

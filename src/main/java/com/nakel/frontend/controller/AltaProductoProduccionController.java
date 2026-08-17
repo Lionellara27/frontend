@@ -5,7 +5,7 @@ import com.nakel.frontend.model.DetalleCalculadora;
 import com.nakel.frontend.model.Insumo;
 import com.nakel.frontend.model.Receta;
 import com.nakel.frontend.service.ProduccionApiService;
-import com.nakel.frontend.service.ParametrosApiService; // Importamos tu servicio de categorías
+import com.nakel.frontend.service.ParametrosApiService;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -156,6 +156,19 @@ public class AltaProductoProduccionController {
 
             this.guardadoExitoso = true;
             cerrarModal(event);
+
+        } catch (RuntimeException e) {
+            // 🔥 EL ESCUDO ANTI-DUPLICADOS 🔥
+            String mensajeError = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+
+            // Si SQLite nos grita que falló el "unique constraint" del código
+            if (mensajeError.contains("unique constraint failed") && mensajeError.contains("articulos.codigo")) {
+                String codigoIngresado = txtCodigoSKU.getText().trim();
+                mostrarError("¡Cuidado! Ya tenés un producto registrado con el código SKU '" + codigoIngresado + "'.\nPor favor, intentá cambiar el código.");
+            } else {
+                // Si rompió por otro motivo del backend
+                mostrarError("Ocurrió un error al fabricar el producto: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             e.printStackTrace();

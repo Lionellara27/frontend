@@ -3,13 +3,12 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.VBox?>
-
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
-
 <?import javafx.scene.layout.StackPane?>
 
 <BorderPane
@@ -20,168 +19,84 @@
         fx:controller="com.nakel.frontend.controller.MainController">
 
     <left>
-
+        <!-- CONTENEDOR PRINCIPAL DEL MENÚ LATERAL -->
         <VBox prefWidth="260.0"
-              spacing="10"
               styleClass="sidebar"
               BorderPane.alignment="CENTER">
 
-            <padding>
-                <Insets top="25" right="15" bottom="20" left="15"/>
-            </padding>
+            <!-- 1. BLOQUE FIJO SUPERIOR (LOGO) -->
+            <HBox alignment="CENTER_LEFT" spacing="12">
+                <padding>
+                    <Insets top="25" right="15" bottom="15" left="15"/>
+                </padding>
 
-            <!-- LOGO -->
-
-            <HBox alignment="CENTER_LEFT"
-                  spacing="12">
-
-                <Label text="NAKEL"
-                       styleClass="logo"/>
-
-                <Label text="|"
-                       styleClass="logo-separator"/>
-
+                <Label text="NAKEL" styleClass="logo"/>
+                <Label text="|" styleClass="logo-separator"/>
                 <ImageView fitHeight="60" preserveRatio="true">
                     <image>
                         <Image url="@../../../../images/Logoo.png"/>
                     </image>
                 </ImageView>
-
-                <VBox.margin>
-                    <Insets bottom="25"/>
-                </VBox.margin>
-
             </HBox>
 
-            <!-- MOSTRADOR -->
+            <!-- 2. BLOQUE CENTRAL (MENÚ CON SCROLL PARA PANTALLAS CHICAS) -->
+            <!-- VBox.vgrow="ALWAYS" hace que el scroll ocupe todo el espacio sobrante -->
+            <ScrollPane fitToWidth="true"
+                        VBox.vgrow="ALWAYS"
+                        style="-fx-background-color: transparent; -fx-background: transparent; -fx-border-color: transparent;">
 
-            <Button fx:id="btnMostrador"
-                    text="Mostrador (Nueva Venta)"
-                    maxWidth="999"
-                    styleClass="primary-button"
-                    onAction="#mostrarPuntoDeVenta"/>
+                <VBox spacing="10" styleClass="sidebar">
+                    <padding>
+                        <Insets top="0" right="15" bottom="10" left="15"/>
+                    </padding>
 
-            <!-- GESTION -->
+                    <!-- MOSTRADOR -->
+                    <Button fx:id="btnMostrador" text="Mostrador/Vender" maxWidth="999" styleClass="primary-button" onAction="#mostrarPuntoDeVenta"/>
 
-            <Label text="GESTIÓN"
-                   styleClass="section-title">
+                    <!-- GESTIÓN -->
+                    <Label text="GESTIÓN" styleClass="section-title">
+                        <VBox.margin><Insets top="15" bottom="0"/></VBox.margin>
+                    </Label>
+                    <Button fx:id="btnCatalogo" text="Catálogo (Artículos)" maxWidth="999" styleClass="menu-button" onAction="#mostrarCatalogo"/>
+                    <Button fx:id="btnClientes" text="Clientes" maxWidth="999" styleClass="menu-button" onAction="#mostrarClientes"/>
+                    <Button fx:id="btnProveedores" text="Proveedores" maxWidth="999" styleClass="menu-button" onAction="#mostrarProveedores"/>
 
-                <VBox.margin>
-                    <Insets top="25" bottom="5"/>
-                </VBox.margin>
+                    <!-- VENTAS -->
+                    <Label text="VENTAS" styleClass="section-title">
+                        <VBox.margin><Insets top="15" bottom="0"/></VBox.margin>
+                    </Label>
+                    <Button fx:id="btnHistorialVentas" text="Historial de Ventas" maxWidth="999" styleClass="menu-button" onAction="#mostrarHistorialVentas"/>
+                    <Button fx:id="btnHistorialCajas" text="Historial de Cajas" maxWidth="999" styleClass="menu-button" onAction="#mostrarHistorialCajas"/>
 
-            </Label>
+                    <!-- HERRAMIENTAS -->
+                    <Label text="HERRAMIENTAS" styleClass="section-title">
+                        <VBox.margin><Insets top="15" bottom="0"/></VBox.margin>
+                    </Label>
+                    <Button fx:id="btnInsumos" text="Gestión de Insumos" maxWidth="999" styleClass="menu-button" onAction="#mostrarInsumos"/>
+                    <Button fx:id="btnCalculadora" text="Calcular Producción" maxWidth="999" styleClass="menu-button" onAction="#mostrarCalculadora"/>
 
-            <Button fx:id="btnCatalogo"
-                    text="Catálogo (Artículos)"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarCatalogo"/>
+                    <!-- REPORTES -->
+                    <Label text="REPORTES" styleClass="section-title">
+                        <VBox.margin><Insets top="15" bottom="0"/></VBox.margin>
+                    </Label>
+                    <Button fx:id="btnEstadisticas" text="Estadísticas" onAction="#mostrarEstadisticas" maxWidth="999" styleClass="menu-button"/>
+                </VBox>
+            </ScrollPane>
 
-            <Button fx:id="btnClientes"
-                    text="Clientes"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarClientes"/>
-
-            <Button fx:id="btnProveedores"
-                    text="Proveedores"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarProveedores"/>
-
-            <!-- VENTAS -->
-
-            <Label text="VENTAS"
-                   styleClass="section-title">
-
-                <VBox.margin>
-                    <Insets top="20" bottom="5"/>
-                </VBox.margin>
-
-            </Label>
-
-            <!--<Button text="🛍 Ventas"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarPuntoDeVenta"/> -->
-
-            <Button fx:id="btnHistorialVentas"
-                    text="Historial de Ventas"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarHistorialVentas"/>
-
-            <Button fx:id="btnHistorialCajas"
-                    text="Historial de Cajas"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarHistorialCajas"/>
-
-            <!-- HERRAMIENTAS -->
-
-            <Label text="HERRAMIENTAS"
-                   styleClass="section-title">
-
-                <VBox.margin>
-                    <Insets top="20" bottom="5"/>
-                </VBox.margin>
-
-            </Label>
-
-            <Button fx:id="btnInsumos"
-                    text="Gestión de Insumos"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarInsumos"/>
-
-            <Button fx:id="btnCalculadora"
-                    text="Calcular Producción"
-                    maxWidth="999"
-                    styleClass="menu-button"
-                    onAction="#mostrarCalculadora"/>
-
-            <!-- REPORTES -->
-
-            <Label text="REPORTES"
-                   styleClass="section-title">
-
-                <VBox.margin>
-                    <Insets top="20" bottom="5"/>
-                </VBox.margin>
-
-            </Label>
-
-            <Button fx:id="btnEstadisticas"
-                    text="Estadísticas"
-                    onAction="#mostrarEstadisticas"
-                    maxWidth="999"
-                    styleClass="menu-button"/>
-
-            <VBox VBox.vgrow="ALWAYS"/>
-
-            <!-- CONFIGURACION -->
-
-            <Button fx:id="btnConfiguracion"
-                    text="Configuración"
-                    maxWidth="999"
-                    styleClass="config-button"
-                    onAction="#mostrarConfiguracion"/>
-
-            <!-- CERRAR CAJA -->
-
-            <Button fx:id="btnCerrarCaja"
-                    text="Cerrar Caja"
-                    maxWidth="999"
-                    styleClass="danger-button"
-                    onAction="#cerrarCaja"/>
+            <!-- 3. BLOQUE FIJO INFERIOR (CONFIGURACIÓN Y CERRAR CAJA) -->
+            <!-- Esto siempre va a estar pegado al fondo, sin importar la resolución -->
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="15" bottom="20" left="15"/>
+                </padding>
+                <Button fx:id="btnConfiguracion" text="Configuración" maxWidth="999" styleClass="config-button" onAction="#mostrarConfiguracion"/>
+                <Button fx:id="btnCerrarCaja" text="Cerrar Caja" maxWidth="999" styleClass="danger-button" onAction="#cerrarCaja"/>
+            </VBox>
 
         </VBox>
-
     </left>
 
     <center>
-        <!-- Este StackPane vacío es donde vamos a meter todas las otras vistas -->
         <StackPane fx:id="areaContenido" styleClass="content-area"/>
     </center>
 
