@@ -28,9 +28,9 @@
         <!-- 2. Filtrar por Unidad (Acá volvió el look gris clásico) -->
         <ComboBox fx:id="cmbFiltroUnidad" prefWidth="180" styleClass="text-field"/>
 
-        <Button text="Limpiar Filtros" styleClass="btn-secundario" onAction="#limpiarFiltros"/>
+        <Button text="Limpiar Filtros" styleClass="btn-azul" onAction="#limpiarFiltros"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button text="➕ Nuevo Insumo" styleClass="btn-primario" onAction="#abrirModalNuevoInsumo"/>
+        <Button text="Nuevo Insumo" styleClass="btn-primario" onAction="#abrirModalNuevoInsumo"/>
     </HBox>
 
     <TableView fx:id="tablaInsumos" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
@@ -39,12 +39,18 @@
             <TableColumn fx:id="colDescripcion" text="Descripción (Ej: Cuero Negro, Cierre YKK)" prefWidth="300"/>
             <TableColumn fx:id="colCategoria" text="Categoría" prefWidth="120"/>
             <TableColumn fx:id="colUnidad" text="Unidad" prefWidth="100"/>
-            <TableColumn fx:id="colCosto" text="Costo Unitario" prefWidth="120"/>
+            <TableColumn fx:id="colCosto" minWidth="115" text="Costo Unitario" prefWidth="120"/>
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="100"/>
         </columns>
     </TableView>
 
     <!-- 🔥 EL NUEVO PAGINADOR NATIVO DE JAVAFX -->
     <Pagination fx:id="paginadorInsumos" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
+
+    <!-- Contador, igual que el del Catálogo, Clientes y Proveedores -->
+    <HBox alignment="CENTER_RIGHT" spacing="15">
+        <Label fx:id="lblTituloTotalInsumos" text="Total de insumos:" style="-fx-font-size: 14px;"/>
+        <Label fx:id="lblTotalInsumos" text="0" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+    </HBox>
 
 </VBox>

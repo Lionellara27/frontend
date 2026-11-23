@@ -17,7 +17,7 @@
     <HBox alignment="CENTER_LEFT" spacing="20">
         <Label text="Directorio de Proveedores" styleClass="titulo-modulo"/>
         <Pane HBox.hgrow="ALWAYS"/>
-        <Button text="➕ NUEVO PROVEEDOR" styleClass="btn-primario" onAction="#abrirModalNuevoProveedor"/>
+        <Button text="NUEVO PROVEEDOR" styleClass="btn-primario" onAction="#abrirModalNuevoProveedor"/>
     </HBox>
 
     <HBox spacing="15"
@@ -36,11 +36,12 @@
                    prefWidth="300"
                    styleClass="input-busqueda"/>
 
-        <Button text="🔍 Buscar"
+        <Button text="Buscar (F3)"
                 styleClass="btn-secundario"
                 onAction="#buscarProveedor"/>
 
         <Button text="Limpiar"
+                styleClass="btn-azul"
                 onAction="#limpiarBusqueda"/>
     </HBox>
 
@@ -49,6 +50,11 @@
                styleClass="tabla-estandar">
 
         <columns>
+
+            <!-- Código del proveedor, igual que en Clientes -->
+            <TableColumn fx:id="colCod"
+                         text="Cód."
+                         prefWidth="50"/>
 
             <TableColumn fx:id="colRazonSocial"
                          text="Razón Social / Empresa"
@@ -79,5 +85,11 @@
     </TableView>
 
     <Pagination VBox.vgrow="NEVER" currentPageIndex="0" fx:id="paginadorProveedores" pageCount="1" styleClass="paginador-estandar"/>
+
+    <!-- Contador, igual que el del Catálogo -->
+    <HBox alignment="CENTER_RIGHT" spacing="15">
+        <Label fx:id="lblTituloTotalProveedores" text="Total de proveedores:" style="-fx-font-size: 14px;"/>
+        <Label fx:id="lblTotalProveedores" text="0" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+    </HBox>
 
 </VBox>

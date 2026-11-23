@@ -34,6 +34,15 @@ public class NuevoClienteController {
     public void initialize() {
         cmbTipoCliente.getItems().addAll("Consumidor Final", "Mayorista / Revendedor", "Empresa");
         cmbTipoCliente.setValue("Consumidor Final");
+
+        // La deuda se formatea sola mientras se escribe: 34000 -> 34.000
+        com.nakel.frontend.util.FormatoMoneda.aplicar(txtSaldoPendiente);
+
+        // El saldo a favor es solo de lectura: sale de los vales vigentes del cliente
+        if (txtSaldoAFavor != null) {
+            com.nakel.frontend.util.Acciones.ayuda(txtSaldoAFavor,
+                    "Se calcula solo con los vales vigentes. Para darle saldo, emitile un vale en Configuración > Vales.");
+        }
     }
 
     public void cargarDatosParaEditar(com.nakel.frontend.model.Cliente cliente) {
@@ -54,10 +63,10 @@ public class NuevoClienteController {
         // 🔥 CARGAMOS LOS SALDOS AL ABRIR EL LAPICITO
         // Convertimos el double a texto para que entre en el TextField
         if (txtSaldoAFavor != null) {
-            txtSaldoAFavor.setText(String.valueOf(cliente.getSaldoAFavor()));
+            txtSaldoAFavor.setText(com.nakel.frontend.util.FormatoMoneda.pesos(cliente.getSaldoAFavor()));
         }
         if (txtSaldoPendiente != null) {
-            txtSaldoPendiente.setText(String.valueOf(cliente.getSaldoPendiente()));
+            com.nakel.frontend.util.FormatoMoneda.poner(txtSaldoPendiente, cliente.getSaldoPendiente());
         }
     }
 
@@ -75,12 +84,10 @@ public class NuevoClienteController {
             double saldoAFavor = 0.0;
             double saldoPendiente = 0.0;
 
-            // Reemplazamos coma por punto por si el usuario escribe "10,50" en vez de "10.50"
-            if (txtSaldoAFavor != null && !txtSaldoAFavor.getText().isBlank()) {
-                saldoAFavor = Double.parseDouble(txtSaldoAFavor.getText().replace(",", "."));
-            }
+            // El saldo a favor ya no se lee de la pantalla: el backend lo calcula con los vales del cliente
+            // (se sigue enviando en 0 solo para no cambiar la forma del pedido; el servidor lo ignora).
             if (txtSaldoPendiente != null && !txtSaldoPendiente.getText().isBlank()) {
-                saldoPendiente = Double.parseDouble(txtSaldoPendiente.getText().replace(",", "."));
+                saldoPendiente = com.nakel.frontend.util.FormatoMoneda.leer(txtSaldoPendiente);
             }
 
             // 🔀 SEPARAMOS LOS CAMINOS: ¿Es Nuevo o es Edición?

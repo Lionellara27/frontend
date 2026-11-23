@@ -23,6 +23,7 @@ public class HistorialVentasController {
     @FXML private ComboBox<String> cmbMes;
     @FXML private TextField txtBuscarVenta;
     @FXML private Label lblTotalFacturado;
+    @FXML private Label lblCantidadVentas;
 //
     // La tabla y sus columnas (conectadas al FXML)
     @FXML private TableView<Venta> tablaVentas;
@@ -46,6 +47,9 @@ public class HistorialVentasController {
 //        System.out.println("🚀 Inicializando módulo de Historial de Ventas...");
         tablaVentas.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarColumnas();
+
+        // F3 = ir al buscador (acá se filtra solo mientras se escribe)
+        com.nakel.frontend.util.Atajos.buscarConF3(txtBuscarVenta, null);
 
         // 🔥 1. Llenamos el ComboBox de Meses
         cmbMes.getItems().addAll("Todos", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -106,6 +110,11 @@ public class HistorialVentasController {
         cargarVentas(0);
     }
 
+    // true si la fila es un presupuesto y no una venta real
+    private static boolean esPresupuesto(Venta venta) {
+        return venta != null && "Presupuesto".equalsIgnoreCase(venta.getTipoComprobante());
+    }
+
     private void configurarColumnas() {
         // 1. Datos directos
 // 1. Datos directos
@@ -118,7 +127,7 @@ public class HistorialVentasController {
                     setText(null);
                 } else {
                     // Magia: Formatea el número a $ 2.338.000
-                    setText(java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "AR")).format(item));
+                    setText(com.nakel.frontend.util.FormatoMoneda.pesos(item));
                 }
             }
         });
@@ -126,16 +135,20 @@ public class HistorialVentasController {
         // 🔥 ACÁ VOLVEMOS A AGREGAR LA COLUMNA DEL CLIENTE QUE SE HABÍA BORRADO
         colCliente.setCellValueFactory(cell -> {
             Venta venta = cell.getValue();
+            String nombreCliente = null;
 
-            if (venta != null && venta.getCliente() != null) {
-                String nombreCliente = venta.getCliente().getNombre();
-
-                if (nombreCliente != null && !nombreCliente.trim().isEmpty()) {
-                    return new javafx.beans.property.SimpleStringProperty(nombreCliente);
-                }
+            if (venta != null && venta.getCliente() != null && venta.getCliente().getNombre() != null
+                    && !venta.getCliente().getNombre().trim().isEmpty()) {
+                nombreCliente = venta.getCliente().getNombre();
             }
 
-            return new javafx.beans.property.SimpleStringProperty("Consumidor Final");
+            // Los presupuestos se distinguen a simple vista de las ventas reales
+            if (esPresupuesto(venta)) {
+                return new javafx.beans.property.SimpleStringProperty(
+                        nombreCliente != null ? "PRESUPUESTO · " + nombreCliente : "PRESUPUESTO");
+            }
+
+            return new javafx.beans.property.SimpleStringProperty(nombreCliente != null ? nombreCliente : "Consumidor Final");
         });
 
         // Simulamos un número de comprobante con el ID de la base de datos
@@ -143,6 +156,10 @@ public class HistorialVentasController {
 
         // Lógica de AFIP (Si esFiscal es true, mostramos que hay que facturar)
         colEstado.setCellValueFactory(cell -> {
+            // Un presupuesto no es una venta: no tiene nada que declarar
+            if (esPresupuesto(cell.getValue())) {
+                return new SimpleStringProperty("No corresponde");
+            }
             boolean esFiscal = cell.getValue().getEsFiscal() != null && cell.getValue().getEsFiscal();
             return new SimpleStringProperty(esFiscal ? "A Facturar (AFIP)" : "No Declarado");
         });
@@ -173,8 +190,16 @@ public class HistorialVentasController {
 
                         private final javafx.scene.layout.HBox panelAcciones = new javafx.scene.layout.HBox(10, btnVer, btnOpciones, btnCambio);
 
+                        // Cartelitos de ayuda: al dejar el mouse arriba dice qué hace cada botón.
+                        // El del cambio se guarda porque su texto cambia según la venta.
+                        private final Tooltip ayudaCambio =
+                                com.nakel.frontend.util.Acciones.ayuda(btnCambio, "Hacer un cambio o devolución");
+
                         {
                             panelAcciones.setAlignment(javafx.geometry.Pos.CENTER);
+
+                            com.nakel.frontend.util.Acciones.ayuda(btnVer, "Ver el detalle");
+                            com.nakel.frontend.util.Acciones.ayuda(btnOpciones, "Imprimir ticket o guardar PDF");
 
                             btnVer.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #2196F3; -fx-font-size: 14px;");
                             btnOpciones.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #607D8B; -fx-font-size: 14px;");
@@ -182,7 +207,12 @@ public class HistorialVentasController {
 
                             btnVer.setOnAction(e -> verDetalleVenta(getTableView().getItems().get(getIndex())));
                             btnOpciones.setOnAction(e -> abrirOpcionesImpresionEnvio(getTableView().getItems().get(getIndex())));
-                            btnCambio.setOnAction(e -> iniciarProcesoCambio(getTableView().getItems().get(getIndex())));
+                            btnCambio.setOnAction(e -> {
+                                // Si el cambio está bloqueado (presupuesto o límite de cambios) el botón no hace nada.
+                                // No se usa setDisable porque un botón deshabilitado no muestra su cartelito de ayuda.
+                                if (btnCambio.getUserData() != null) return;
+                                iniciarProcesoCambio(getTableView().getItems().get(getIndex()));
+                            });
                         }
 
                         @Override
@@ -197,25 +227,38 @@ public class HistorialVentasController {
                                 // 1. RESETEO VITAL: Como JavaFX recicla celdas al scrollear,
                                 // siempre arrancamos asumiendo que el botón está habilitado
                                 btnCambio.setDisable(false);
+                                btnCambio.setUserData(null); // null = se puede cambiar; con texto = bloqueado
+                                btnCambio.setOpacity(1.0);   // color pleno; los bloqueados se ven apagados
 
                                 // 2. VERIFICACIÓN DE CAMBIO: ¿Esta venta ya fue cambiada antes?
                                 // (Usamos Boolean.TRUE.equals para evitar NullPointerExceptions si el campo viene nulo)
                                 // 2. VERIFICACIÓN DE CAMBIOS Y LÍMITES
                                 int cantidadCambios = (ventaFila.getHistorialCambios() != null) ? ventaFila.getHistorialCambios().size() : 0;
 
-                                if (cantidadCambios >= 2) {
+                                if (esPresupuesto(ventaFila)) {
+                                    // 📝 PRESUPUESTO: no salió mercadería, así que no hay nada que cambiar
+                                    btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: default; -fx-text-fill: #E0E0E0; -fx-font-size: 14px;");
+                                    btnCambio.setUserData("bloqueado");
+                                    btnCambio.setOpacity(0.35);
+                                    ayudaCambio.setText("Un presupuesto no admite cambios");
+
+                                } else if (cantidadCambios >= 2) {
                                     // 🛑 ESTADO 2: Bloqueo total (Llegó al límite máximo)
                                     btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: default; -fx-text-fill: #E0E0E0; -fx-font-size: 14px;");
-                                    btnCambio.setDisable(true); // Bloqueado, no se puede hacer más nada
+                                    btnCambio.setUserData("bloqueado"); // Bloqueado, no se puede hacer más nada
+                                    btnCambio.setOpacity(0.35);         // Gris apagado, igual que un botón deshabilitado
+                                    ayudaCambio.setText("Esta venta ya tuvo sus 2 cambios permitidos");
 
                                 } else if (cantidadCambios == 1) {
                                     // ⚠️ ESTADO 1: Ya tiene un cambio. Se permite un segundo forzado (Botón gris pero HABILITADO)
                                     btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #9e9e9e; -fx-font-size: 14px;");
                                     btnCambio.setDisable(false);
+                                    ayudaCambio.setText("Hacer un segundo cambio (ya tiene uno)");
 
                                 } else {
                                     // ✅ ESTADO 0: Cero cambios. Evaluamos la regla de los 30 días
                                     btnCambio.setDisable(false);
+                                    ayudaCambio.setText("Hacer un cambio o devolución");
                                     try {
                                         java.time.LocalDateTime fechaVenta = java.time.LocalDateTime.parse(ventaFila.getFechaHora());
                                         java.time.LocalDateTime fechaLimite = fechaVenta.plusDays(30);
@@ -223,6 +266,7 @@ public class HistorialVentasController {
                                         if (java.time.LocalDateTime.now().isAfter(fechaLimite)) {
                                             // Vencido -> Naranja
                                             btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #FF9800; -fx-font-size: 14px;");
+                                            ayudaCambio.setText("Hacer un cambio (pasaron más de 30 días de la venta)");
                                         } else {
                                             // En regla -> Verde
                                             btnCambio.setStyle("-fx-background-color: transparent; -fx-cursor: hand; -fx-text-fill: #4CAF50; -fx-font-size: 14px;");
@@ -277,6 +321,8 @@ public class HistorialVentasController {
                     // 🔥 CHISMOSO CLAVE: ¿Cuántos registros dice el Backend que existen EN TOTAL?
                     if (respuestaServidor.has("totalElements")) {
                         long totalElementos = respuestaServidor.get("totalElements").getAsLong();
+                        // Cantidad de comprobantes que cumplen el filtro (en todas las páginas)
+                        if (lblCantidadVentas != null) lblCantidadVentas.setText("Cantidad de comprobantes: " + totalElementos);
 
 //                        System.out.println("📊 [DEBUG HISTORIAL] TOTAL DE VENTAS SEGÚN BACKEND: " + totalElementos);
                     } else {
@@ -315,8 +361,9 @@ public class HistorialVentasController {
                 tablaVentas.setItems(datosObservable);
 
                 double totalGlobal = apiService.obtenerTotalGlobal(busqueda, criterio, mesNumero);
-                String totalFormateado = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("es", "AR")).format(totalGlobal);
-                lblTotalFacturado.setText("TOTAL: " + totalFormateado + " 💰");
+                String totalFormateado = com.nakel.frontend.util.FormatoMoneda.pesos(totalGlobal);
+                // Solo el monto: la etiqueta de al lado ya explica qué total es
+                lblTotalFacturado.setText(totalFormateado);
 
             } catch (Exception e) {
 //                System.out.println("❌ Error al cargar historial paginado: " + e.getMessage());
@@ -325,7 +372,8 @@ public class HistorialVentasController {
         } else {
 //            System.out.println("⚠️ [DEBUG HISTORIAL] La respuesta del servidor vino vacía o nula.");
             tablaVentas.getItems().clear();
-            if (lblTotalFacturado != null) lblTotalFacturado.setText("TOTAL: $ 0,00 💰");
+            if (lblTotalFacturado != null) lblTotalFacturado.setText(com.nakel.frontend.util.FormatoMoneda.pesos(0));
+            if (lblCantidadVentas != null) lblCantidadVentas.setText("Cantidad de comprobantes: 0");
         }
     }
 
@@ -357,7 +405,7 @@ public class HistorialVentasController {
 
     private void calcularTotalPantalla(List<Venta> ventas) {
         double suma = ventas.stream().mapToDouble(Venta::getTotal).sum();
-        lblTotalFacturado.setText("$ " + String.format("%.2f", suma));
+        lblTotalFacturado.setText(com.nakel.frontend.util.FormatoMoneda.pesos(suma));
     }
 
     @FXML
@@ -553,6 +601,11 @@ public class HistorialVentasController {
             javafx.stage.Stage modalStage = new javafx.stage.Stage();
             modalStage.setTitle("Gestión de Cambios y Devoluciones");
             modalStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            // Le decimos de qué ventana "cuelga": sin dueño, al cerrarse Windows no sabe a cuál
+            // volver y la pantalla parpadea.
+            if (cmbMes != null && cmbMes.getScene() != null) {
+                modalStage.initOwner(cmbMes.getScene().getWindow());
+            }
             modalStage.setScene(new javafx.scene.Scene(root));
             modalStage.setResizable(false);
             modalStage.showAndWait();

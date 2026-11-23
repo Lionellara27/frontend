@@ -102,8 +102,8 @@ public class AltaProductoProduccionController {
         this.itemsReceta = insumos;
 
         txtNombre.setText(nombre);
-        txtCosto.setText(String.format("%.2f", costo));
-        txtPrecio.setText(String.format("%.2f", precio));
+        txtCosto.setText(com.nakel.frontend.util.FormatoMoneda.pesos(costo));
+        txtPrecio.setText(com.nakel.frontend.util.FormatoMoneda.pesos(precio));
 
         // 🔥 EXTRAE EL NOMBRE DEL MATERIAL PARA MOSTRAR EN PANTALLA
         if (materialGanador != null && materialGanador.getMaterial() != null) {
@@ -172,7 +172,7 @@ public class AltaProductoProduccionController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            mostrarError("❌ Error de producción: " + e.getMessage());
+            mostrarError("Error de producción: " + e.getMessage());
         }
     }
 

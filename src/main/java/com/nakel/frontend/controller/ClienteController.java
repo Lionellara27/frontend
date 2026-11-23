@@ -34,6 +34,10 @@ public class ClienteController {
     @FXML private TableColumn<Cliente, String> colTelefono;
     @FXML private TableColumn<Cliente, String> colEmail;
 
+    // Estaban en el diseño pero nunca se habían conectado: quedaban siempre vacías
+    @FXML private TableColumn<Cliente, String> colSaldoAFavor;
+    @FXML private TableColumn<Cliente, String> colSaldoPendiente;
+
     // 1. ACTIVAMOS LA COLUMNA DE ACCIONES (Tipo Void porque no lee texto, dibuja botones)
     @FXML private TableColumn<Cliente, Void> colAcciones;
 
@@ -48,6 +52,9 @@ public class ClienteController {
     @FXML
     public void initialize() {
         System.out.println("¡Módulo de Clientes cargado con éxito!");
+
+        // F3 = ir al buscador y buscar
+        com.nakel.frontend.util.Atajos.buscarConF3(txtBuscarCliente, () -> buscarCliente(null));
 
         tablaClientes.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -85,6 +92,18 @@ public class ClienteController {
         colTelefono.setCellValueFactory(new PropertyValueFactory<>("telefono"));
         colEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
 
+        // Saldo a favor = suma de los vales vigentes del cliente (lo calcula el backend). Sin saldo se muestra un guion.
+        if (colSaldoAFavor != null) {
+            colSaldoAFavor.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(
+                    cell.getValue().getSaldoAFavor() > 0.009
+                            ? com.nakel.frontend.util.FormatoMoneda.pesos(cell.getValue().getSaldoAFavor()) : "-"));
+        }
+        if (colSaldoPendiente != null) {
+            colSaldoPendiente.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(
+                    cell.getValue().getSaldoPendiente() > 0.009
+                            ? com.nakel.frontend.util.FormatoMoneda.pesos(cell.getValue().getSaldoPendiente()) : "-"));
+        }
+
         //colAcciones.setPrefWidth(150);
 
         // 2. LA FÁBRICA DE BOTONES CON IKONLI (REALES)
@@ -104,9 +123,10 @@ public class ClienteController {
                         panelAcciones.setAlignment(javafx.geometry.Pos.CENTER);
 
                         // Estilo opcional para que parezcan íconos flotantes sin borde de botón
-                        btnVer.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                        btnEditar.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                        btnEliminar.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+                        // Mismo aspecto, tachito rojo y cartelitos de ayuda que en el resto de las tablas
+                        com.nakel.frontend.util.Acciones.ver(btnVer, "Ver el detalle");
+                        com.nakel.frontend.util.Acciones.editar(btnEditar, "Editar el cliente");
+                        com.nakel.frontend.util.Acciones.eliminar(btnEliminar, "Eliminar el cliente");
 
                         btnVer.setOnAction(e -> mostrarDetalle(getTableView().getItems().get(getIndex())));
                         btnEditar.setOnAction(e -> editarCliente(getTableView().getItems().get(getIndex())));
@@ -188,10 +208,16 @@ public class ClienteController {
                     masterData.clear();
                 }
 
+                // El total lo informa el backend (cuenta todas las páginas, no solo la que se ve)
+                long total = respuestaServidor.has("totalElements")
+                        ? respuestaServidor.get("totalElements").getAsLong()
+                        : masterData.size();
+                mostrarTotal(total, !textoBusqueda.isEmpty());
+
             } catch (Exception e) {
 
                 System.out.println(
-                        "❌ Error al cargar clientes: "
+                        "Error al cargar clientes: "
                                 + e.getMessage()
                 );
 
@@ -201,11 +227,21 @@ public class ClienteController {
         } else {
 
             masterData.clear();
+            mostrarTotal(0, !textoBusqueda.isEmpty());
 
             if (paginadorClientes != null) {
                 paginadorClientes.setPageCount(1);
             }
         }
+    }
+
+    @FXML private Label lblTituloTotalClientes;
+    @FXML private Label lblTotalClientes;
+
+    /** Contador de abajo: total de clientes, o cuántos encontró la búsqueda. */
+    private void mostrarTotal(long cantidad, boolean esBusqueda) {
+        lblTituloTotalClientes.setText(esBusqueda ? "Clientes encontrados:" : "Total de clientes:");
+        lblTotalClientes.setText(String.valueOf(cantidad));
     }
 
     @FXML
@@ -243,6 +279,16 @@ public class ClienteController {
 
 // --- 3. LOS MÉTODOS DE ACCIÓN (POSTA) ---
 
+    // "2026-08-11T10:08:16" -> "11/08/2026"
+    private static String fechaCorta(String fechaIso) {
+        if (fechaIso == null || fechaIso.isBlank()) return "-";
+        try {
+            return java.time.LocalDateTime.parse(fechaIso).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        } catch (Exception e) {
+            return fechaIso;
+        }
+    }
+
     private void mostrarDetalle(Cliente cliente) {
         Alert alerta = new Alert(Alert.AlertType.INFORMATION);
         alerta.setTitle("Detalle del Cliente");
@@ -250,26 +296,38 @@ public class ClienteController {
 
         // Usamos StringBuilder que es más prolijo para armar textos largos
         StringBuilder info = new StringBuilder();
-        info.append("Teléfono: ").append(cliente.getTelefono().isEmpty() ? "N/A" : cliente.getTelefono()).append("\n");
-        info.append("Email: ").append(cliente.getEmail().isEmpty() ? "N/A" : cliente.getEmail()).append("\n");
+        String telefono = cliente.getTelefono() == null || cliente.getTelefono().isBlank() ? "N/A" : cliente.getTelefono();
+        String email = cliente.getEmail() == null || cliente.getEmail().isBlank() ? "N/A" : cliente.getEmail();
+        info.append("Teléfono: ").append(telefono).append("\n");
+        info.append("Email: ").append(email).append("\n");
         info.append("Condición IVA: ").append(cliente.getCondicionIva()).append("\n\n");
 
-        // --- ACÁ AGREGAMOS LA BILLETERA / CUENTA CORRIENTE ---
         info.append("--- ESTADO DE CUENTA ---\n");
 
-        // 1. Evaluamos si tiene plata a favor
-        if (cliente.getSaldoAFavor() > 0) {
-            info.append("✅ SALDO A FAVOR: $").append(String.format("%.2f", cliente.getSaldoAFavor())).append("\n");
-        } else {
-            info.append("SALDO A FAVOR: $0.00\n");
+        // 1. Saldo a favor CON SU DETALLE: es la suma de los vales vigentes, y acá se ve cuáles son.
+        //    (Un total sin detalle confunde: puede incluir vales viejos que el cliente todavía no usó.)
+        java.util.List<com.nakel.frontend.model.Vale> vales =
+                new com.nakel.frontend.service.ValeApiService().valesVigentesDeCliente(cliente.getId());
+
+        info.append("SALDO A FAVOR: ").append(com.nakel.frontend.util.FormatoMoneda.pesos(cliente.getSaldoAFavor())).append("\n");
+        if (vales != null && !vales.isEmpty()) {
+            info.append(vales.size() == 1 ? "Sale de 1 vale vigente:\n" : "Sale de " + vales.size() + " vales vigentes:\n");
+            for (com.nakel.frontend.model.Vale vale : vales) {
+                info.append("   • ").append(vale.getCodigo())
+                        .append("   ").append(com.nakel.frontend.util.FormatoMoneda.pesos(vale.getMonto()))
+                        .append("   emitido el ").append(fechaCorta(vale.getFechaEmision()))
+                        .append(", vence el ").append(fechaCorta(vale.getFechaVencimiento()));
+                if (vale.getMotivo() != null && !vale.getMotivo().isBlank()) {
+                    info.append("\n       ").append(vale.getMotivo());
+                }
+                info.append("\n");
+            }
+        } else if (vales != null) {
+            info.append("No tiene vales vigentes.\n");
         }
 
-        // 2. Evaluamos si debe plata
-        if (cliente.getSaldoPendiente() > 0) {
-            info.append("❌ SALDO PENDIENTE: $").append(String.format("%.2f", cliente.getSaldoPendiente())).append("\n");
-        } else {
-            info.append("SALDO PENDIENTE: $0.00\n");
-        }
+        // 2. Deuda
+        info.append("\nSALDO PENDIENTE: ").append(com.nakel.frontend.util.FormatoMoneda.pesos(cliente.getSaldoPendiente())).append("\n");
 
         info.append("\n--- ESTADÍSTICAS ---\n");
         info.append("Compras: Próximamente...\n");

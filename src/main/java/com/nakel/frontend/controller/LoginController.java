@@ -65,8 +65,14 @@ public class LoginController {
                 stage.setTitle("Nakel Software - Mostrador Principal");
                 stage.setResizable(true);
 
-                // 🔥 CAMBIO 2 y 3: Maximizamos para que ocupe todo el monitor de la clienta (y borramos el centerOnScreen)
+                // 1) PRIMERO maximizar: la pantalla principal arranca ocupando todo el monitor.
                 stage.setMaximized(true);
+
+                // 2) DESPUÉS el tamaño mínimo (para cuando la usuaria la achique a mano).
+                //    El orden importa: si el mínimo se pone antes de maximizar, la ventana queda
+                //    en ese tamaño mínimo aunque figure como maximizada.
+                stage.setMinWidth(1100);
+                stage.setMinHeight(650);
 
             } catch (IOException e) {
                 mostrarAlerta("Error", "No se pudo abrir la pantalla principal: " + e.getMessage());

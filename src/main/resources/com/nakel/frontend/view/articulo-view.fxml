@@ -22,7 +22,7 @@
 
         <Pane HBox.hgrow="ALWAYS" />
 
-        <Button text="➕ NUEVO ARTÍCULO" styleClass="btn-primario" onAction="#abrirModalNuevoArticulo"/>
+        <Button text="NUEVO ARTÍCULO" styleClass="btn-primario" onAction="#abrirModalNuevoArticulo"/>
     </HBox>
 
     <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;">
@@ -32,10 +32,8 @@
         <ComboBox fx:id="cmbMaterial" promptText="Material" prefWidth="150" styleClass="text-field"/>
         <ComboBox fx:id="cmbOrigen" promptText="Origen (Propio/Reventa)" prefWidth="170" styleClass="text-field"/>
 
-        <Button text="🔍Buscar" styleClass="btn-secundario" onAction="#buscarArticulos"/>
-        <Button text="Limpiar"
-                prefWidth="70"
-                onAction="#limpiarFiltros"/>
+        <Button text="Buscar (F3)" styleClass="btn-secundario" onAction="#buscarArticulos"/>
+        <Button text="Limpiar" styleClass="btn-azul" onAction="#limpiarFiltros"/>
     </HBox>
 
     <TableView fx:id="tablaArticulos" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
@@ -47,7 +45,7 @@
             <TableColumn fx:id="colMaterial" text="Material" prefWidth="100"/>
             <TableColumn fx:id="colOrigen" text="Origen" prefWidth="120"/>
             <TableColumn fx:id="colStock" text="Stock" prefWidth="70"/>
-            <TableColumn fx:id="colPrecio" text="Precio Venta" prefWidth="100"/>
+            <TableColumn fx:id="colPrecio" minWidth="115" text="Precio Venta" prefWidth="100"/>
 
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="120"/>
         </columns>

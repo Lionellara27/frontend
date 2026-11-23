@@ -27,6 +27,22 @@ public class TabParametrosController {
     public void initialize() {
         System.out.println("Pestaña Parámetros Iniciada. Conectando a SQLite...");
         apiService = new ParametrosApiService();
+
+        // Cada categoría se muestra con su prefijo, que es con lo que arrancan sus códigos
+        listCategorias.setCellFactory(lista -> new javafx.scene.control.ListCell<>() {
+            @Override
+            protected void updateItem(Categoria categoria, boolean empty) {
+                super.updateItem(categoria, empty);
+                if (empty || categoria == null) {
+                    setText(null);
+                } else {
+                    String prefijo = categoria.getPrefijoSku();
+                    setText(categoria.getNombre() + (prefijo != null && !prefijo.isBlank() ? "   ·   prefijo " + prefijo : ""));
+                }
+            }
+        });
+        listCategorias.setStyle("-fx-font-size: 14px;");
+        listMateriales.setStyle("-fx-font-size: 14px;");
         cargarDatosDesdeBD();
     }
 
@@ -57,6 +73,9 @@ public class TabParametrosController {
 
         if (nombre.isEmpty() || prefijo.isEmpty()) {
             System.out.println("⚠️ Faltan datos. Cancelando guardado.");
+            // Antes no avisaba nada: se tocaba "Agregar" y parecía que el botón no andaba
+            avisar(javafx.scene.control.Alert.AlertType.INFORMATION, "Faltan datos",
+                    "Escribí el nombre de la categoría y su prefijo (por ejemplo: Billetera y 1004).");
             return;
         }
 
@@ -118,7 +137,10 @@ public class TabParametrosController {
     @FXML
     public void agregarMaterial(ActionEvent event) {
         String nuevo = txtNuevoMaterial.getText().trim();
-        if (nuevo.isEmpty()) return;
+        if (nuevo.isEmpty()) {
+            avisar(javafx.scene.control.Alert.AlertType.INFORMATION, "Falta el nombre", "Escribí el nombre del material (por ejemplo: Cuero).");
+            return;
+        }
 
         Material nuevoMat = new Material();
         nuevoMat.setNombre(nuevo);

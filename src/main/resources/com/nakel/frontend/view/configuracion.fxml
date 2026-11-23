@@ -1,46 +1,61 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
-<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<AnchorPane prefHeight="550.0" prefWidth="750.0"
-            styleClass="mostrador-container"
-            xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.nakel.frontend.controller.ConfiguracionController">
+<!-- Configuración: título como el resto de las pantallas y las pestañas ocupando todo el alto -->
+<VBox spacing="10" styleClass="modulo-container"
+      stylesheets="@../../../../css/nakel.css"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.nakel.frontend.controller.ConfiguracionController">
+    <padding>
+        <Insets top="20" right="20" bottom="14" left="20"/>
+    </padding>
 
-    <children>
-        <TabPane fx:id="tabPaneConfig" prefHeight="522.0" prefWidth="722.0" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="14.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="14.0">
-            <tabs>
-                <Tab text="Precios y Divisas">
-                    <graphic>
-                        <FontIcon iconLiteral="fas-dollar-sign" />
-                    </graphic>
-                    <content>
-                        <fx:include source="tab_divisas.fxml" />
-                    </content>
-                </Tab>
+    <Label text="Configuración" styleClass="titulo-modulo"/>
 
-                <Tab text="Seguridad">
-                    <graphic>
-                        <FontIcon iconLiteral="fas-lock" />
-                    </graphic>
-                    <content>
-                        <fx:include source="tab_seguridad.fxml" />
-                    </content>
-                </Tab>
+    <TabPane fx:id="tabPaneConfig" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS" styleClass="pestanas-configuracion">
+        <tabs>
+            <Tab text="Precios y Dólar">
+                <graphic>
+                    <FontIcon iconLiteral="fas-dollar-sign" />
+                </graphic>
+                <content>
+                    <fx:include source="tab_divisas.fxml" />
+                </content>
+            </Tab>
 
-                <Tab text="Categorías y Parámetros">
-                    <graphic>
-                        <FontIcon iconLiteral="fas-boxes" />
-                    </graphic>
-                    <content>
-                        <fx:include source="tab_parametros.fxml" />
-                    </content>
-                </Tab>
-            </tabs>
-        </TabPane>
-    </children>
-</AnchorPane>
+            <Tab text="Categorías y Materiales">
+                <graphic>
+                    <FontIcon iconLiteral="fas-boxes" />
+                </graphic>
+                <content>
+                    <fx:include source="tab_parametros.fxml" />
+                </content>
+            </Tab>
+
+            <Tab text="Vales">
+                <graphic>
+                    <FontIcon iconLiteral="fas-ticket-alt" />
+                </graphic>
+                <content>
+                    <fx:include source="tab_vales.fxml" />
+                </content>
+            </Tab>
+
+            <Tab text="Usuario y Contraseña">
+                <graphic>
+                    <FontIcon iconLiteral="fas-lock" />
+                </graphic>
+                <content>
+                    <fx:include source="tab_seguridad.fxml" />
+                </content>
+            </Tab>
+        </tabs>
+    </TabPane>
+</VBox>

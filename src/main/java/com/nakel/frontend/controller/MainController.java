@@ -134,6 +134,9 @@ public class MainController {
             if (cssUrl != null) scene.getStylesheets().add(cssUrl.toExternalForm());
 
             Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
+            // El login es una ventana chica: le quitamos el tamaño mínimo que usa la pantalla principal
+            stage.setMinWidth(0);
+            stage.setMinHeight(0);
             stage.setScene(scene);
             stage.setTitle("Nakel Software - Iniciar Sesión");
             stage.centerOnScreen();

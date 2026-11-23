@@ -35,7 +35,7 @@
                     </children>
                 </HBox>
 
-                <Button mnemonicParsing="false" onAction="#onOkClick" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 12 50; -fx-cursor: hand; -fx-background-radius: 5;" text="✅ OK (Cerrar)" />
+                <Button mnemonicParsing="false" onAction="#onOkClick" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-background-color: #007bff; -fx-text-fill: white; -fx-padding: 12 50; -fx-cursor: hand; -fx-background-radius: 5;" text="OK (Cerrar)" />
             </children>
         </VBox>
     </children>

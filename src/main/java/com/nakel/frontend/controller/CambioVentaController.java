@@ -96,12 +96,22 @@ public class CambioVentaController {
         tablaDevolucion.setPlaceholder(new Label("No hay artículos para devolver."));
         tablaNuevos.setPlaceholder(new Label("Cargando inventario..."));
         configurarColumnaCantidadDevolucion();
-        colDevDesc.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
-        colDevPrecio.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty("$ " + cell.getValue().getPrecioUnitario()));
+        // Un artículo en 0 sigue en la lista, pero se ve apagado y aclara que no se devuelve
+        colDevDesc.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(
+                cell.getValue().getArticulo().getNombre()
+                        + (cell.getValue().getCantidad() == 0 ? "  (no lo devuelve)" : "")));
+        tablaDevolucion.setRowFactory(tabla -> new TableRow<>() {
+            @Override
+            protected void updateItem(DetalleVenta item, boolean vacio) {
+                super.updateItem(item, vacio);
+                setStyle(!vacio && item != null && item.getCantidad() == 0 ? "-fx-opacity: 0.55;" : "");
+            }
+        });
+        colDevPrecio.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(com.nakel.frontend.util.FormatoMoneda.pesos(cell.getValue().getPrecioUnitario())));
 
         configurarColumnaCantidadNuevos();
         colNueDesc.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
-        colNuePrecio.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty("$ " + cell.getValue().getPrecioUnitario()));
+        colNuePrecio.setCellValueFactory(cell -> new javafx.beans.property.SimpleStringProperty(com.nakel.frontend.util.FormatoMoneda.pesos(cell.getValue().getPrecioUnitario())));
 
         cargarCatalogoCompleto();
 
@@ -187,7 +197,7 @@ public class CambioVentaController {
 
                 tablaNuevos.getItems().add(nuevoItem);
                 costoNuevosProductos += nuevoItem.getSubtotal();
-                lblCostoNuevos.setText(String.format("$ %.2f", costoNuevosProductos));
+                lblCostoNuevos.setText(com.nakel.frontend.util.FormatoMoneda.pesos(costoNuevosProductos));
                 calcularDiferencias();
                 txtBuscarNuevo.clear();
             } else {
@@ -204,8 +214,15 @@ public class CambioVentaController {
         // Validación: no se puede confirmar un cambio vacío (ni devuelve ni se lleva nada)
         boolean hayDevueltos = tablaDevolucion.getItems().stream().anyMatch(d -> d.getCantidad() > 0);
         boolean hayNuevos = seleccionNuevos.values().stream().anyMatch(d -> d.getCantidad() > 0);
-        if (!hayDevueltos && !hayNuevos) {
-            mostrarError("Cambio Inválido", "Debe seleccionar al menos un artículo para cambiar o devolver.");
+        // Un cambio SIEMPRE devuelve algo. Si no devuelve nada y solo se lleva artículos nuevos,
+        // eso no es un cambio: es una venta, y las ventas se hacen en el Mostrador.
+        if (!hayDevueltos) {
+            mostrarError("Falta lo que devuelve",
+                    hayNuevos
+                            ? "El cliente no está devolviendo ningún artículo (todos están en 0).\n\n"
+                              + "Si solo quiere comprar algo, abrí el Mostrador de ventas.\n"
+                              + "Si es un cambio, subí con \"+\" la cantidad del artículo que devuelve."
+                            : "Indicá con \"+\" qué artículo devuelve el cliente.");
             return;
         }
 
@@ -218,9 +235,9 @@ public class CambioVentaController {
         confirmar.setTitle("Confirmar cambio");
         confirmar.setHeaderText("¿Registrar este cambio?");
         String textoDiferencia = diferencia > 0.009
-                ? "El cliente paga la diferencia: $ " + String.format("%.2f", diferencia)
+                ? "El cliente paga la diferencia: " + com.nakel.frontend.util.FormatoMoneda.pesos(diferencia)
                 : (diferencia < -0.009
-                    ? "Se le entrega un vale por: $ " + String.format("%.2f", Math.abs(diferencia))
+                    ? "Se le entrega un vale por: " + com.nakel.frontend.util.FormatoMoneda.pesos(Math.abs(diferencia))
                     : "Cambio directo, sin diferencia.");
         confirmar.setContentText(resumen.replace(" | ", "\n") + "\n\n" + textoDiferencia);
         if (confirmar.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
@@ -270,7 +287,7 @@ public class CambioVentaController {
                 aviso.setTitle("Vuelto");
                 aviso.setHeaderText(null);
                 aviso.setContentText(valeVuelto != null
-                        ? "Se generó un vale por el vuelto de $ " + String.format("%.2f", controladorPago.getVueltoPendiente())
+                        ? "Se generó un vale por el vuelto de " + com.nakel.frontend.util.FormatoMoneda.pesos(controladorPago.getVueltoPendiente())
                             + "\n\nCÓDIGO: " + valeVuelto.getCodigo()
                         : "No se pudo generar el vale por el vuelto. Entregá el vuelto en mano.");
                 aviso.showAndWait();
@@ -279,12 +296,20 @@ public class CambioVentaController {
 
         // 4. Éxito: si sobró plata, el vale lo emitió el backend y viene en la respuesta
         double montoVoucher = (guardado.getCodigoValeGenerado() != null) ? Math.abs(diferencia) : 0.0;
-        abrirModalExitoCambio(nombreCliente, montoVoucher, guardado.getCodigoValeGenerado());
-        cerrarModal(event);
+
+        // Primero cerramos esta ventana de cambios y DESPUÉS mostramos el cartel de éxito, colgado
+        // de la ventana principal. Antes quedaban las dos abiertas y al tocar OK se cerraban una
+        // atrás de la otra: eso era el parpadeo.
+        Stage ventanaCambio = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        javafx.stage.Window ventanaPrincipal = ventanaCambio.getOwner();
+        ventanaCambio.close();
+
+        abrirModalExitoCambio(nombreCliente, montoVoucher, guardado.getCodigoValeGenerado(), ventanaPrincipal);
     }
 
     // 🔥 EL DISPARADOR DEL MODAL PREMIUM
-    private void abrirModalExitoCambio(String nombreCliente, double saldoAFavor, String codigoVale) {
+    private void abrirModalExitoCambio(String nombreCliente, double saldoAFavor, String codigoVale,
+                                       javafx.stage.Window duenio) {
         try {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/modal-exito-cambio.fxml"));
             javafx.scene.Parent root = loader.load();
@@ -296,6 +321,7 @@ public class CambioVentaController {
             javafx.stage.Stage modalStage = new javafx.stage.Stage();
             modalStage.setTitle("¡Cambio Procesado!");
             modalStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            if (duenio != null) modalStage.initOwner(duenio);
             modalStage.setScene(new javafx.scene.Scene(root));
             modalStage.setResizable(false);
 
@@ -313,12 +339,12 @@ public class CambioVentaController {
         if (diferencia > 0) {
             lblDiferenciaTexto.setText("EL CLIENTE DEBE ABONAR:");
             lblDiferenciaTexto.setStyle("-fx-text-fill: #d32f2f;");
-            lblDiferenciaMonto.setText(String.format("$ %.2f", diferencia));
+            lblDiferenciaMonto.setText(com.nakel.frontend.util.FormatoMoneda.pesos(diferencia));
             lblMensajeVoucher.setVisible(false);
         } else if (diferencia < 0) {
             lblDiferenciaTexto.setText("SALDO A FAVOR DEL CLIENTE:");
             lblDiferenciaTexto.setStyle("-fx-text-fill: #388e3c;");
-            lblDiferenciaMonto.setText(String.format("$ %.2f", Math.abs(diferencia)));
+            lblDiferenciaMonto.setText(com.nakel.frontend.util.FormatoMoneda.pesos(Math.abs(diferencia)));
             lblMensajeVoucher.setVisible(true);
         } else {
             lblDiferenciaTexto.setText("CAMBIO DIRECTO (Sin costo):");
@@ -460,11 +486,12 @@ public class CambioVentaController {
 
                 btnMenos.setOnAction(e -> {
                     DetalleVenta item = getTableView().getItems().get(getIndex());
-                    if (item.getCantidad() > 1) {
+                    // El "-" baja hasta 0 y el renglón SE QUEDA: 0 significa "este no lo devuelve".
+                    // Antes, al llegar a 1 y tocar "-", el artículo desaparecía de la lista y no
+                    // había forma de volver a traerlo sin cerrar la ventana.
+                    if (item.getCantidad() > 0) {
                         item.setCantidad(item.getCantidad() - 1);
                         item.setSubtotal(item.getCantidad() * item.getPrecioUnitario());
-                    } else {
-                        getTableView().getItems().remove(item);
                     }
                     getTableView().refresh();
                     recalcularSaldoFavor();
@@ -500,7 +527,7 @@ public class CambioVentaController {
         for (DetalleVenta det : tablaDevolucion.getItems()) {
             saldoAFavorCliente += det.getSubtotal();
         }
-        lblSaldoFavor.setText(String.format("$ %.2f", saldoAFavorCliente));
+        lblSaldoFavor.setText(com.nakel.frontend.util.FormatoMoneda.pesos(saldoAFavorCliente));
         calcularDiferencias();
     }
 
@@ -570,7 +597,7 @@ public class CambioVentaController {
         for (DetalleVenta det : seleccionNuevos.values()) {
             costoNuevosProductos += det.getSubtotal();
         }
-        lblCostoNuevos.setText(String.format("$ %.2f", costoNuevosProductos));
+        lblCostoNuevos.setText(com.nakel.frontend.util.FormatoMoneda.pesos(costoNuevosProductos));
         calcularDiferencias();
     }
 

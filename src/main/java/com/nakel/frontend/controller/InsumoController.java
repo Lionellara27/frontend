@@ -52,11 +52,24 @@ public class InsumoController {
 
 
     @FXML private Pagination paginadorInsumos;
+    @FXML private Label lblTituloTotalInsumos;
+    @FXML private Label lblTotalInsumos;
+
+    /** Contador de abajo: total de insumos, o cuántos encontró el filtro. */
+    private void mostrarTotal(long cantidad) {
+        boolean filtrando = (txtBuscarInsumo.getText() != null && !txtBuscarInsumo.getText().isBlank())
+                || cmbFiltroUnidad.getValue() != null || cmbFiltroMaterial.getValue() != null;
+        lblTituloTotalInsumos.setText(filtrando ? "Insumos encontrados:" : "Total de insumos:");
+        lblTotalInsumos.setText(String.valueOf(cantidad));
+    }
 
 
     @FXML
     public void initialize() {
         System.out.println("¡Módulo de Gestión de Insumos cargado con éxito!");
+
+        // F3 = ir al buscador (acá se filtra solo mientras se escribe)
+        com.nakel.frontend.util.Atajos.buscarConF3(txtBuscarInsumo, null);
 
         tablaInsumos.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         configurarColumnasTabla();
@@ -73,45 +86,27 @@ public class InsumoController {
             System.out.println("⚠️ Aviso: No se pudieron cargar los materiales desde la base de datos.");
         }
 
-        // 3. Envolvemos la lista original en una lista filtrable
-        javafx.collections.transformation.FilteredList<Insumo> datosFiltrados = new javafx.collections.transformation.FilteredList<>(listaInsumos, b -> true);
-
-        // 4. CREAMOS EL MOTOR MULTI-FILTRO
+        // 3. Los filtros los resuelve el BACKEND sobre todos los insumos.
+        //    Antes se filtraban acá los 20 de la página cargada: "Horas" no encontraba nada porque
+        //    la mano de obra estaba en la última página.
+        // 4. Al cambiar un filtro se vuelve a la página 1 y se le pide al backend la lista filtrada
         Runnable aplicarFiltros = () -> {
-            datosFiltrados.setPredicate(insumo -> {
-                String texto = txtBuscarInsumo.getText() != null ? txtBuscarInsumo.getText().toLowerCase().trim() : "";
-                String unidadSeleccionada = cmbFiltroUnidad.getValue();
-                Material matSeleccionado = cmbFiltroMaterial.getValue();
-
-                // Regla 1: Texto (Solo busca en el nombre)
-                boolean coincideTexto = texto.isEmpty() || (insumo.getNombre() != null && insumo.getNombre().toLowerCase().contains(texto));
-
-                // Regla 2: Unidad (Transforma la regla del backend a la palabra del frontend)
-                boolean coincideUnidad = true;
-                if (unidadSeleccionada != null && insumo.getCategoria() != null) {
-                    String regla = insumo.getCategoria().getTipoMedicion();
-                    if ("SUPERFICIE".equals(regla) && !unidadSeleccionada.equals("Metros")) coincideUnidad = false;
-                    if ("UNIDAD".equals(regla) && !unidadSeleccionada.equals("Unidades")) coincideUnidad = false;
-                    if ("TIEMPO".equals(regla) && !unidadSeleccionada.equals("Horas")) coincideUnidad = false;
-                } else if (unidadSeleccionada != null) {
-                    coincideUnidad = false;
-                }
-
-                // Regla 3: Material
-                boolean coincideMaterial = matSeleccionado == null ||
-                        (insumo.getMaterial() != null && insumo.getMaterial().getId().equals(matSeleccionado.getId()));
-
-                return coincideTexto && coincideUnidad && coincideMaterial;
-            });
+            if (paginadorInsumos.getCurrentPageIndex() != 0) {
+                paginadorInsumos.setCurrentPageIndex(0); // esto ya dispara la carga
+            } else {
+                cargarInsumosDesdeBackend(0);
+            }
         };
 
-        // 5. Le decimos a los 3 controles que disparen el motor
-        txtBuscarInsumo.textProperty().addListener((obs, oldV, newV) -> aplicarFiltros.run());
+        // 5. El texto espera un instante a que se termine de escribir; los combos filtran al toque
+        javafx.animation.PauseTransition esperaTexto = new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
+        esperaTexto.setOnFinished(e -> aplicarFiltros.run());
+        txtBuscarInsumo.textProperty().addListener((obs, oldV, newV) -> esperaTexto.playFromStart());
         cmbFiltroUnidad.valueProperty().addListener((obs, oldV, newV) -> aplicarFiltros.run());
         cmbFiltroMaterial.valueProperty().addListener((obs, oldV, newV) -> aplicarFiltros.run());
 
         // 6. Conectamos la tabla
-        javafx.collections.transformation.SortedList<Insumo> datosOrdenados = new javafx.collections.transformation.SortedList<>(datosFiltrados);
+        javafx.collections.transformation.SortedList<Insumo> datosOrdenados = new javafx.collections.transformation.SortedList<>(listaInsumos);
         datosOrdenados.comparatorProperty().bind(tablaInsumos.comparatorProperty());
         tablaInsumos.setItems(datosOrdenados);
 
@@ -149,7 +144,7 @@ public class InsumoController {
                     if (empty || item == null) {
                         setText(null);
                     } else {
-                        setText(String.format("$ %.2f", item));
+                        setText(com.nakel.frontend.util.FormatoMoneda.pesos(item));
                     }
                 }
             });
@@ -179,9 +174,10 @@ public class InsumoController {
 
                         {
                             panelAcciones.setAlignment(Pos.CENTER);
-                            btnVer.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                            btnEditar.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                            btnEliminar.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+                            // Mismo aspecto, tachito rojo y cartelitos de ayuda que en el resto de las tablas
+                            com.nakel.frontend.util.Acciones.ver(btnVer, "Ver el detalle");
+                            com.nakel.frontend.util.Acciones.editar(btnEditar, "Editar el insumo");
+                            com.nakel.frontend.util.Acciones.eliminar(btnEliminar, "Eliminar el insumo");
 
                             btnVer.setOnAction(e -> mostrarDetalle(getTableView().getItems().get(getIndex())));
                             btnEditar.setOnAction(e -> editarInsumo(getTableView().getItems().get(getIndex())));
@@ -208,8 +204,17 @@ public class InsumoController {
     private void cargarInsumosDesdeBackend(int numeroPagina) {
         listaInsumos.clear();
 
-        // Le pedimos al servicio la página exacta (de a 20 por página)
-        String json = apiService.obtenerInsumos(numeroPagina, 20);
+        // Le pedimos al servicio la página exacta (de a 20 por página), ya filtrada por el backend
+        String unidad = cmbFiltroUnidad.getValue();
+        String tipoMedicion = unidad == null ? null
+                : switch (unidad) {
+                    case "Metros" -> "SUPERFICIE";
+                    case "Horas" -> "TIEMPO";
+                    default -> "UNIDAD";
+                };
+        Material material = cmbFiltroMaterial.getValue();
+        String json = apiService.obtenerInsumosFiltrados(numeroPagina, 20, txtBuscarInsumo.getText(),
+                tipoMedicion, material != null ? material.getId() : null);
 
         if (json != null && !json.equals("[]") && !json.isEmpty()) {
             try {
@@ -232,6 +237,9 @@ public class InsumoController {
                 List<Insumo> deLaBaseDeDatos = gson.fromJson(arregloInsumos, tipoLista);
 
                 listaInsumos.setAll(deLaBaseDeDatos);
+                // El total lo informa el backend (cuenta todas las páginas, no solo la que se ve)
+                mostrarTotal(respuestaServidor.has("totalElements")
+                        ? respuestaServidor.get("totalElements").getAsLong() : deLaBaseDeDatos.size());
                 System.out.println("✅ Tabla cargada con " + deLaBaseDeDatos.size() + " insumos (Página " + (numeroPagina + 1) + ").");
             } catch (Exception e) {
                 System.err.println("❌ Error al convertir el JSON a la tabla.");
@@ -239,6 +247,7 @@ public class InsumoController {
             }
         } else {
             System.out.println("⚠️ La base de datos de insumos está vacía o el JSON vino nulo.");
+            mostrarTotal(0);
         }
     }
 
@@ -293,7 +302,7 @@ public class InsumoController {
         String tipoMedicion = insumo.getCategoria() != null ? insumo.getCategoria().getTipoMedicion() : "";
 
         String info = "Categoría: " + nombreCategoria + "\n"
-                + "Costo Total: $" + insumo.getCostoTotal() + "\n";
+                + "Costo Total: " + com.nakel.frontend.util.FormatoMoneda.pesos(insumo.getCostoTotal()) + "\n";
 
         if ("SUPERFICIE".equals(tipoMedicion)) {
             String nombreMaterial = insumo.getMaterial() != null ? insumo.getMaterial().getNombre() : "Sin asignar";
@@ -306,7 +315,7 @@ public class InsumoController {
             info += "\nCantidad Original (Lote): " + insumo.getCantidadLote() + " unidades\n";
             info += "Stock Actual: " + insumo.getCantidadActual() + " unidades\n";
         } else if ("SERVICIO".equals(tipoMedicion) || "TIEMPO".equals(tipoMedicion)) {
-            info += "\nCosto por Hora de Confección: $" + insumo.getCostoTotal() + "\n";
+            info += "\nCosto por Hora de Confección: " + com.nakel.frontend.util.FormatoMoneda.pesos(insumo.getCostoTotal()) + "\n";
         }
 
         alerta.setContentText(info);

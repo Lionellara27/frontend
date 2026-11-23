@@ -1,10 +1,14 @@
 package com.nakel.frontend.controller;
 
-import com.nakel.frontend.model.Articulo;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import com.nakel.frontend.model.DetalleCalculadora;
 import com.nakel.frontend.model.Insumo;
-import com.nakel.frontend.service.ArticuloApiService;
 import com.nakel.frontend.service.InsumoApiService;
+import com.nakel.frontend.util.FormatoMoneda;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -13,273 +17,404 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.List;
+import java.util.Locale;
 
+/**
+ * Calculadora de Producción.
+ *
+ * Bloque 2 (insumos): una tabla con buscador y páginas. La columna "Disponible" muestra el stock
+ * real MENOS lo que ya está cargado en la receta de esta pantalla. Ese descuento es solo visual
+ * (vive en memoria): la base no se toca hasta que se confirma "Crear producto y fabricar".
+ * Si se cierra la pantalla o el sistema sin fabricar, no se descontó nada.
+ */
 public class CalculadoraController {
 
+    private static final int INSUMOS_POR_PAGINA = 20;
+
     private BigDecimal precioVenta = BigDecimal.ZERO;
-    private ArticuloApiService articuloService;
 
     @FXML private TextField txtNombreProducto;
-    @FXML private ComboBox<Insumo> cmbInsumo;
+
+    // --- Lista de insumos (buscador + tabla + páginas) ---
+    @FXML private TextField txtBuscarInsumo;
+    @FXML private Button btnPaginaAnterior;
+    @FXML private Button btnPaginaSiguiente;
+    @FXML private Label lblPaginaInsumos;
+    @FXML private TableView<Insumo> tablaInsumos;
+    @FXML private TableColumn<Insumo, String> colInsNombre;
+    @FXML private TableColumn<Insumo, String> colInsUnidad;
+    @FXML private TableColumn<Insumo, String> colInsDisponible;
+    @FXML private TableColumn<Insumo, String> colInsCosto;
+
+    // --- Medida o cantidad del insumo elegido ---
+    @FXML private Label lblAyudaMedida;
+    @FXML private Label lblInsumoElegido;
+    @FXML private Label lblStock;
+    @FXML private javafx.scene.layout.HBox boxSuperficie;
+    @FXML private javafx.scene.layout.VBox boxCantidad;
+    @FXML private Label lblCantidad;
     @FXML private TextField txtAncho;
     @FXML private TextField txtLargo;
     @FXML private TextField txtCantidad;
 
+    // --- Receta ---
     @FXML private TableView<DetalleCalculadora> tablaReceta;
     @FXML private TableColumn<DetalleCalculadora, String> colInsumo;
     @FXML private TableColumn<DetalleCalculadora, String> colUso;
     @FXML private TableColumn<DetalleCalculadora, String> colSubtotal;
+    @FXML private TableColumn<DetalleCalculadora, Void> colQuitar;
 
+    // --- Precio ---
     @FXML private Label lblTotalCosto;
     @FXML private TextField txtMargen;
+    @FXML private Label lblGanancia;
     @FXML private Label lblPrecioFinal;
 
-    private ObservableList<DetalleCalculadora> listaReceta = FXCollections.observableArrayList();
+    private final ObservableList<Insumo> listaInsumos = FXCollections.observableArrayList();
+    private final ObservableList<DetalleCalculadora> listaReceta = FXCollections.observableArrayList();
     private double costoTotalReceta = 0.0;
+
     private final InsumoApiService insumoApi = new InsumoApiService();
+    private final Gson gson = new Gson();
 
-    private final ObservableList<Insumo> insumosMaster = FXCollections.observableArrayList();
-    private javafx.collections.transformation.FilteredList<Insumo> insumosFiltrados;
-    private int paginaActualInsumos = 0;
+    private int paginaInsumos = 0;
+    private int totalPaginasInsumos = 1;
 
-    private boolean scrollListenerConfigurado = false;
-    private int secuenciaBusquedaInsumo = 0;
-    private boolean actualizandoInsumosProgramaticamente = false;
-
-    private static final int TAMANIO_PAGINA_INSUMOS = 50;
+    private final DecimalFormat formatoCantidad =
+            new DecimalFormat("#,##0.##", new DecimalFormatSymbols(new Locale("es", "AR")));
 
     @FXML
     public void initialize() {
-        this.articuloService = new ArticuloApiService();
+        configurarTablaReceta();
+        configurarTablaInsumos();
 
-        // 1. Configurar la tabla
+        // Buscador: espera un instante a que se termine de escribir y busca en TODOS los insumos
+        javafx.animation.PauseTransition espera = new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
+        espera.setOnFinished(e -> cargarInsumos(0));
+        txtBuscarInsumo.textProperty().addListener((obs, viejo, nuevo) -> espera.playFromStart());
+        com.nakel.frontend.util.Atajos.buscarConF3(txtBuscarInsumo, null);
+
+        txtMargen.textProperty().addListener((obs, viejo, nuevo) -> calcularPrecioSugerido());
+
+        cargarInsumos(0);
+    }
+
+    // =====================================================================
+    //  LISTA DE INSUMOS
+    // =====================================================================
+
+    private void configurarTablaInsumos() {
+        colInsNombre.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getNombre()));
+        colInsUnidad.setCellValueFactory(c -> new SimpleStringProperty(unidadDe(c.getValue())));
+        colInsDisponible.setCellValueFactory(c -> new SimpleStringProperty(textoDisponible(c.getValue())));
+        colInsCosto.setCellValueFactory(c -> new SimpleStringProperty(textoCosto(c.getValue())));
+
+        tablaInsumos.setItems(listaInsumos);
+        tablaInsumos.setFixedCellSize(32); // renglones bajos: entran más insumos a la vista
+        tablaInsumos.setPlaceholder(new Label("No hay insumos que coincidan con la búsqueda."));
+
+        // Lo que ya no tiene disponible se ve apagado
+        tablaInsumos.setRowFactory(tabla -> new TableRow<>() {
+            @Override
+            protected void updateItem(Insumo insumo, boolean empty) {
+                super.updateItem(insumo, empty);
+                boolean agotado = !empty && insumo != null && tieneStock(insumo) && disponible(insumo) <= 0;
+                setOpacity(agotado ? 0.45 : 1);
+            }
+        });
+
+        tablaInsumos.getSelectionModel().selectedItemProperty()
+                .addListener((obs, viejo, nuevo) -> prepararCampos(nuevo));
+    }
+
+    /** Pide al backend una página de insumos (horas primero, después unidades, después metros). */
+    private void cargarInsumos(int pagina) {
+        String json = insumoApi.obtenerInsumosCalculadora(pagina, INSUMOS_POR_PAGINA, txtBuscarInsumo.getText());
+        try {
+            if (json == null) throw new IllegalStateException("el servidor no respondió");
+            JsonObject respuesta = JsonParser.parseString(json).getAsJsonObject();
+            List<Insumo> insumos = gson.fromJson(respuesta.getAsJsonArray("content"),
+                    new TypeToken<List<Insumo>>() {}.getType());
+
+            totalPaginasInsumos = Math.max(1, respuesta.get("totalPages").getAsInt());
+            paginaInsumos = Math.min(pagina, totalPaginasInsumos - 1);
+            listaInsumos.setAll(insumos != null ? insumos : List.of());
+        } catch (Exception e) {
+            listaInsumos.clear();
+            totalPaginasInsumos = 1;
+            paginaInsumos = 0;
+            tablaInsumos.setPlaceholder(new Label("No se pudieron cargar los insumos. Revisá que el sistema esté iniciado."));
+            System.err.println("Error al cargar insumos para la calculadora: " + e.getMessage());
+        }
+
+        lblPaginaInsumos.setText("Página " + (paginaInsumos + 1) + " de " + totalPaginasInsumos);
+        btnPaginaAnterior.setDisable(paginaInsumos <= 0);
+        btnPaginaSiguiente.setDisable(paginaInsumos >= totalPaginasInsumos - 1);
+        prepararCampos(null); // al cambiar la lista no queda ningún insumo elegido
+    }
+
+    @FXML
+    public void paginaAnterior(ActionEvent event) {
+        if (paginaInsumos > 0) cargarInsumos(paginaInsumos - 1);
+    }
+
+    @FXML
+    public void paginaSiguiente(ActionEvent event) {
+        if (paginaInsumos < totalPaginasInsumos - 1) cargarInsumos(paginaInsumos + 1);
+    }
+
+    // =====================================================================
+    //  STOCK DISPONIBLE (real menos lo cargado en la receta, solo en pantalla)
+    // =====================================================================
+
+    /** SUPERFICIE, UNIDAD o TIEMPO (los servicios se tratan como tiempo). */
+    private String tipoDe(Insumo insumo) {
+        if (insumo == null || insumo.getCategoria() == null || insumo.getCategoria().getTipoMedicion() == null) return "";
+        String tipo = insumo.getCategoria().getTipoMedicion().trim().toUpperCase();
+        return "SERVICIO".equals(tipo) ? "TIEMPO" : tipo;
+    }
+
+    /** La mano de obra no tiene stock: se puede cargar cualquier cantidad de horas. */
+    private boolean tieneStock(Insumo insumo) {
+        String tipo = tipoDe(insumo);
+        return "SUPERFICIE".equals(tipo) || "UNIDAD".equals(tipo);
+    }
+
+    /** Cuánto de este insumo ya está puesto en la receta (cm² o unidades). */
+    private double reservado(Insumo insumo) {
+        double total = 0;
+        for (DetalleCalculadora det : listaReceta) {
+            if (det.getInsumo() != null && det.getInsumo().getId() != null
+                    && det.getInsumo().getId().equals(insumo.getId())) {
+                total += det.getCantidadUsada();
+            }
+        }
+        return total;
+    }
+
+    /** Stock real menos lo reservado en esta receta. No se guarda en ningún lado. */
+    private double disponible(Insumo insumo) {
+        double stock = 0;
+        if ("SUPERFICIE".equals(tipoDe(insumo))) {
+            stock = insumo.getAreaActualCm2() != null ? insumo.getAreaActualCm2() : 0;
+        } else if ("UNIDAD".equals(tipoDe(insumo))) {
+            stock = insumo.getCantidadActual() != null ? insumo.getCantidadActual() : 0;
+        }
+        return stock - reservado(insumo);
+    }
+
+    private String unidadDe(Insumo insumo) {
+        return switch (tipoDe(insumo)) {
+            case "SUPERFICIE" -> "Metros";
+            case "TIEMPO" -> "Horas";
+            default -> "Unidades";
+        };
+    }
+
+    private String textoDisponible(Insumo insumo) {
+        return switch (tipoDe(insumo)) {
+            case "SUPERFICIE" -> formatoCantidad.format(disponible(insumo)) + " cm²";
+            case "UNIDAD" -> formatoCantidad.format(disponible(insumo)) + " unidades";
+            default -> "Sin límite";
+        };
+    }
+
+    private String textoCosto(Insumo insumo) {
+        String costo = FormatoMoneda.pesos(insumo.getCostoCalculado());
+        return switch (tipoDe(insumo)) {
+            case "SUPERFICIE" -> costo + " / cm²";
+            case "TIEMPO" -> costo + " / hora";
+            default -> costo + " c/u";
+        };
+    }
+
+    // =====================================================================
+    //  MEDIDA / CANTIDAD DEL INSUMO ELEGIDO
+    // =====================================================================
+
+    private void prepararCampos(Insumo insumo) {
+        txtAncho.clear();
+        txtLargo.clear();
+        txtCantidad.clear();
+
+        if (insumo == null) {
+            mostrar(lblAyudaMedida, true);
+            mostrar(lblInsumoElegido, false);
+            mostrar(lblStock, false);
+            mostrar(boxSuperficie, false);
+            mostrar(boxCantidad, false);
+            return;
+        }
+
+        boolean esSuperficie = "SUPERFICIE".equals(tipoDe(insumo));
+        mostrar(lblAyudaMedida, false);
+        mostrar(lblInsumoElegido, true);
+        mostrar(lblStock, true);
+        mostrar(boxSuperficie, esSuperficie);
+        mostrar(boxCantidad, !esSuperficie);
+
+        lblInsumoElegido.setText(insumo.getNombre());
+        lblCantidad.setText("TIEMPO".equals(tipoDe(insumo)) ? "Horas" : "Cantidad (unidades)");
+        actualizarTextoStock(insumo);
+
+        // El cursor queda listo para escribir la medida
+        javafx.application.Platform.runLater(() -> (esSuperficie ? txtAncho : txtCantidad).requestFocus());
+    }
+
+    private void actualizarTextoStock(Insumo insumo) {
+        lblStock.setText(tieneStock(insumo) ? "Disponible: " + textoDisponible(insumo) : "Mano de obra: sin límite de horas");
+    }
+
+    private void mostrar(javafx.scene.Node nodo, boolean visible) {
+        nodo.setVisible(visible);
+        nodo.setManaged(visible);
+    }
+
+    // =====================================================================
+    //  RECETA
+    // =====================================================================
+
+    private void configurarTablaReceta() {
         colInsumo.setCellValueFactory(new PropertyValueFactory<>("nombreInsumo"));
         colUso.setCellValueFactory(new PropertyValueFactory<>("descripcionUso"));
         colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotalFormateado"));
         tablaReceta.setItems(listaReceta);
-        tablaReceta.setPlaceholder(new Label("Agregue telas, avíos o mano de obra a la receta."));
+        tablaReceta.setFixedCellSize(32);
+        tablaReceta.setPlaceholder(new Label("Elegí insumos de la lista de arriba y agregalos a la receta."));
 
-        // 2. Cargar insumos
-        cargarInsumosDesdeBD();
-        configurarBusquedaInsumo();
-        //configurarScrollInfinito();
-
-        // 3. Escuchar la selección del ComboBox
-        cmbInsumo.getSelectionModel().selectedItemProperty().addListener((obs, viejo, nuevo) -> prepararCampos(nuevo));
-
-        // 4. Escuchar el Margen de Ganancia
-        txtMargen.textProperty().addListener((obs, viejo, nuevo) -> calcularPrecioSugerido());
-    }
-
-    private void cargarInsumosDesdeBD() {
-        try {
-            paginaActualInsumos = 0;
-            actualizandoInsumosProgramaticamente = true; // 🔒 cerramos el candado
-
-            insumosMaster.clear();
-            insumosMaster.addAll(insumoApi.obtenerInsumosPaginadosComoLista(paginaActualInsumos, TAMANIO_PAGINA_INSUMOS));
-
-            insumosFiltrados = new javafx.collections.transformation.FilteredList<>(insumosMaster, p -> true);
-            cmbInsumo.setItems(insumosFiltrados);
-
-            configurarConverterInsumo();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            mostrarError("No se pudieron cargar los insumos.");
-        } finally {
-            actualizandoInsumosProgramaticamente = false; // 🔓 abrimos el candado de nuevo
-        }
-    }
-
-    // 🔥 Para que el ComboBox editable muestre "Telar Negro" en vez del objeto Java entero
-    private void configurarConverterInsumo() {
-        cmbInsumo.setConverter(new javafx.util.StringConverter<Insumo>() {
-            @Override
-            public String toString(Insumo insumo) {
-                return insumo != null ? insumo.getNombre() : "";
+        // Tachito rojo en cada fila: al quitar, lo reservado vuelve a estar disponible
+        colQuitar.setCellFactory(col -> new TableCell<>() {
+            private final Button btnQuitar = new Button();
+            {
+                com.nakel.frontend.util.Acciones.eliminar(btnQuitar, "Quitar de la receta");
+                btnQuitar.setOnAction(e -> {
+                    listaReceta.remove(getTableView().getItems().get(getIndex()));
+                    recalcularCostoTotal();
+                    refrescarDisponibles();
+                });
+                setAlignment(javafx.geometry.Pos.CENTER);
             }
 
             @Override
-            public Insumo fromString(String texto) {
-                return cmbInsumo.getSelectionModel().getSelectedItem();
+            protected void updateItem(Void item, boolean empty) {
+                super.updateItem(item, empty);
+                setGraphic(empty ? null : btnQuitar);
             }
         });
     }
 
-    // 🔥 Botón "Cargar más": trae los siguientes 20 y los suma a los ya cargados
-    // 🔥 Trae la siguiente tanda de insumos (llamado por el scroll, no por un botón)
-    private void cargarMasInsumos() {
-        try {
-            paginaActualInsumos++;
-            java.util.List<Insumo> siguientePagina = insumoApi.obtenerInsumosPaginadosComoLista(paginaActualInsumos, TAMANIO_PAGINA_INSUMOS);
-
-            if (siguientePagina == null || siguientePagina.isEmpty()) {
-                paginaActualInsumos--; // no había más, nos quedamos donde estábamos
-                return;
-            }
-
-            insumosMaster.addAll(siguientePagina);
-            System.out.println("✅ Scroll llegó al final: cargados " + siguientePagina.size() + " insumos más (página " + paginaActualInsumos + ")");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            paginaActualInsumos--;
-        }
+    /** Vuelve a dibujar la columna "Disponible" y el texto del insumo elegido. */
+    private void refrescarDisponibles() {
+        tablaInsumos.refresh();
+        Insumo elegido = tablaInsumos.getSelectionModel().getSelectedItem();
+        if (elegido != null) actualizarTextoStock(elegido);
     }
 
-    // 🔥 Búsqueda: filtra en RAM al escribir, y busca en TODO el backend al presionar Enter
-    private javafx.animation.PauseTransition debounceBusqueda;
-
-    private void configurarBusquedaInsumo() {
-        debounceBusqueda = new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
-
-        cmbInsumo.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
-            // 🔒 Si el cambio lo hizo el sistema (al seleccionar un ítem), ignoramos para no reventar la RAM
-            if (actualizandoInsumosProgramaticamente) return;
-
-            if (newVal == null || newVal.trim().isEmpty()) {
-                cmbInsumo.hide();
-                return;
-            }
-
-            debounceBusqueda.stop();
-            debounceBusqueda.setOnFinished(e -> buscarEnBackend(newVal.trim()));
-            debounceBusqueda.playFromStart();
-        });
-    }
-
-    private void buscarEnBackend(String texto) {
-        final int miSecuencia = ++secuenciaBusquedaInsumo;
-
-        // 📡 Viajamos al Backend: Buscamos en TODOS los insumos, trayendo los mejores 50
-        java.util.List<Insumo> resultados = insumoApi.buscarInsumosComoLista(texto);
-
-        if (miSecuencia != secuenciaBusquedaInsumo) return;
-
-        actualizandoInsumosProgramaticamente = true; // 🔒 CERRAMOS EL CANDADO
-        try {
-            insumosMaster.setAll(resultados != null ? resultados : java.util.Collections.emptyList());
-            insumosFiltrados.setPredicate(p -> true);
-
-            if (resultados != null && !resultados.isEmpty()) {
-                cmbInsumo.show(); // Despliega la lista si hay resultados
-            } else {
-                cmbInsumo.hide();
-            }
-
-            // Mantenemos el texto que tipeó la clienta y el cursor al final
-            cmbInsumo.getEditor().setText(texto);
-            cmbInsumo.getEditor().positionCaret(texto.length());
-
-        } finally {
-            actualizandoInsumosProgramaticamente = false; // 🔓 ABRIMOS EL CANDADO
-        }
-    }
-
-    // 🔥 Búsqueda real contra el backend, entre TODOS los insumos (no solo los cargados)
-
-    private void prepararCampos(Insumo insumo) {
-        if (insumo == null || insumo.getCategoria() == null) return;
-
-        txtAncho.clear(); txtLargo.clear(); txtCantidad.clear();
-
-        if ("SUPERFICIE".equals(insumo.getCategoria().getTipoMedicion())) {
-            txtAncho.setDisable(false);
-            txtLargo.setDisable(false);
-            txtCantidad.setDisable(true);
-        } else {
-            txtAncho.setDisable(true);
-            txtLargo.setDisable(true);
-            txtCantidad.setDisable(false);
-        }
-    }
-
-    // 🔥 ACÁ ESTÁ EL MÉTODO QUE FALTABA CON EL PATOVICA DE STOCK
     @FXML
     public void agregarInsumoAReceta(ActionEvent event) {
-        Insumo insumo = cmbInsumo.getValue();
+        Insumo insumo = tablaInsumos.getSelectionModel().getSelectedItem();
         if (insumo == null) {
-            mostrarError("Seleccione un insumo primero.");
+            mostrarError("Elegí primero un insumo de la lista.");
             return;
         }
 
+        String tipo = tipoDe(insumo);
         try {
-            double subtotal = 0.0;
-            DetalleCalculadora detalle = null;
-
-            if (insumo.getCategoria() == null || insumo.getCategoria().getTipoMedicion() == null) {
-                mostrarError("El insumo tiene la categoría rota.");
-                return;
-            }
-
-            String tipo = insumo.getCategoria().getTipoMedicion().trim().toUpperCase();
+            DetalleCalculadora detalle;
 
             if ("SUPERFICIE".equals(tipo)) {
-                int ancho = Integer.parseInt(txtAncho.getText());
-                int largo = Integer.parseInt(txtLargo.getText());
-                int cm2Usados = ancho * largo;
-
-                // 🛑 EL PATOVICA (Superficie)
-                double areaActual = insumo.getAreaActualCm2() != null ? insumo.getAreaActualCm2() : 0;
-                if (cm2Usados > areaActual) {
-                    mostrarError("❌ Stock Insuficiente. Solo te quedan: " + areaActual + " cm² de " + insumo.getNombre());
+                int ancho = Integer.parseInt(txtAncho.getText().trim());
+                int largo = Integer.parseInt(txtLargo.getText().trim());
+                if (ancho <= 0 || largo <= 0) {
+                    mostrarError("El ancho y el largo tienen que ser mayores a 0.");
                     return;
                 }
 
-                subtotal = insumo.getCostoCalculado().doubleValue() * cm2Usados;
+                // Un corte más largo que la pieza original no puede salir de ella, aunque los cm² alcancen
+                int ladoMayorPieza = Math.max(valor(insumo.getAnchoLoteCm()), valor(insumo.getLargoLoteCm()));
+                int ladoMenorPieza = Math.min(valor(insumo.getAnchoLoteCm()), valor(insumo.getLargoLoteCm()));
+                if (ladoMayorPieza > 0 && (Math.max(ancho, largo) > ladoMayorPieza || Math.min(ancho, largo) > ladoMenorPieza)) {
+                    mostrarError("Ese corte no entra en la pieza.\n\nLa pieza de " + insumo.getNombre() + " mide "
+                            + insumo.getAnchoLoteCm() + " x " + insumo.getLargoLoteCm() + " cm y el corte pedido es de "
+                            + ancho + " x " + largo + " cm.");
+                    return;
+                }
+
+                int cm2Usados = ancho * largo;
+                if (cm2Usados > disponible(insumo)) {
+                    mostrarError("No alcanza el material.\n\nEl corte de " + ancho + " x " + largo + " cm usa "
+                            + formatoCantidad.format(cm2Usados) + " cm² y de " + insumo.getNombre()
+                            + " quedan disponibles " + textoDisponible(insumo) + ".");
+                    return;
+                }
+
+                double subtotal = insumo.getCostoCalculado().doubleValue() * cm2Usados;
                 detalle = new DetalleCalculadora(insumo, cm2Usados, "Superficie", subtotal, ancho, largo);
 
             } else if ("UNIDAD".equals(tipo)) {
-                double cantidad = Double.parseDouble(txtCantidad.getText());
-
-                // 🛑 EL PATOVICA (Unidad)
-                int cantidadActual = insumo.getCantidadActual() != null ? insumo.getCantidadActual() : 0;
-                if (cantidad > cantidadActual) {
-                    mostrarError("❌ Stock Insuficiente. Solo te quedan: " + cantidadActual + " unidades de " + insumo.getNombre());
+                double cantidad = leerNumero(txtCantidad);
+                if (cantidad <= 0) {
+                    mostrarError("La cantidad tiene que ser mayor a 0.");
+                    return;
+                }
+                if (cantidad > disponible(insumo)) {
+                    mostrarError("No alcanza el stock.\n\nDe " + insumo.getNombre() + " quedan disponibles "
+                            + textoDisponible(insumo) + ".");
                     return;
                 }
 
-                subtotal = insumo.getCostoCalculado().doubleValue() * cantidad;
+                double subtotal = insumo.getCostoCalculado().doubleValue() * cantidad;
                 detalle = new DetalleCalculadora(insumo, cantidad, "Unidad", subtotal, null, null);
 
-            } else if ("SERVICIO".equals(tipo) || "TIEMPO".equals(tipo)) {
-                String horasTexto = txtCantidad.getText().replace(",", ".");
-                double horas = Double.parseDouble(horasTexto);
+            } else if ("TIEMPO".equals(tipo)) {
+                double horas = leerNumero(txtCantidad);
+                if (horas <= 0) {
+                    mostrarError("Las horas tienen que ser mayores a 0.");
+                    return;
+                }
 
-                subtotal = insumo.getCostoCalculado().doubleValue() * horas;
+                double subtotal = insumo.getCostoCalculado().doubleValue() * horas;
                 detalle = new DetalleCalculadora(insumo, horas, "Horas", subtotal, null, null);
+
             } else {
-                mostrarError("Error: Tipo de medición desconocido (" + tipo + ")");
+                mostrarError("Este insumo no tiene bien cargada la categoría (no se sabe cómo se mide).");
                 return;
             }
 
-            if (detalle != null) {
-                listaReceta.add(detalle);
-                recalcularCostoTotal();
-                txtAncho.clear(); txtLargo.clear(); txtCantidad.clear();
-            }
+            listaReceta.add(detalle);
+            recalcularCostoTotal();
+            txtAncho.clear();
+            txtLargo.clear();
+            txtCantidad.clear();
+            refrescarDisponibles();
 
         } catch (NumberFormatException e) {
             mostrarError("Por favor, ingrese solamente números válidos.");
         }
     }
 
-    @FXML
-    public void eliminarFila(ActionEvent event) {
-        DetalleCalculadora seleccionado = tablaReceta.getSelectionModel().getSelectedItem();
-        if (seleccionado != null) {
-            listaReceta.remove(seleccionado);
-            recalcularCostoTotal();
-        }
+    private int valor(Integer numero) {
+        return numero != null ? numero : 0;
     }
+
+    /** Acepta coma o punto como decimal ("1,5" o "1.5"). */
+    private double leerNumero(TextField campo) {
+        return Double.parseDouble(campo.getText().trim().replace(",", "."));
+    }
+
+    // =====================================================================
+    //  PRECIO
+    // =====================================================================
 
     private void recalcularCostoTotal() {
         costoTotalReceta = 0.0;
         for (DetalleCalculadora det : listaReceta) {
             costoTotalReceta += det.getSubtotal();
         }
-        lblTotalCosto.setText(String.format("$ %.2f", costoTotalReceta));
+        lblTotalCosto.setText(FormatoMoneda.pesos(costoTotalReceta));
         calcularPrecioSugerido();
     }
 
@@ -290,14 +425,17 @@ public class CalculadoraController {
                 double gananciaPlata = costoTotalReceta * (margen / 100);
                 double precioSugerido = costoTotalReceta + gananciaPlata;
                 this.precioVenta = BigDecimal.valueOf(precioSugerido);
-                lblPrecioFinal.setText(String.format("$ %.2f", precioSugerido));
+                lblPrecioFinal.setText(FormatoMoneda.pesos(precioSugerido));
+                lblGanancia.setText(FormatoMoneda.pesos(gananciaPlata));
             } else {
                 this.precioVenta = BigDecimal.valueOf(costoTotalReceta);
-                lblPrecioFinal.setText(String.format("$ %.2f", costoTotalReceta));
+                lblPrecioFinal.setText(FormatoMoneda.pesos(costoTotalReceta));
+                lblGanancia.setText(FormatoMoneda.pesos(0));
             }
         } catch (NumberFormatException e) {
             this.precioVenta = BigDecimal.ZERO;
             lblPrecioFinal.setText("$ ---");
+            lblGanancia.setText("$ ---");
         }
     }
 
@@ -314,35 +452,26 @@ public class CalculadoraController {
             return;
         }
 
-        // =========================================================================
-        // 🔥 NUEVA LÓGICA: Atajamos el Margen/Ganancia antes de que rompa nada
-        // =========================================================================
+        // Atajamos el margen antes de que rompa nada
         String textoMargen = txtMargen.getText();
 
         if (textoMargen == null || textoMargen.trim().isEmpty()) {
 
-            javafx.scene.control.Alert confirmacion = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION);
+            Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
             confirmacion.setTitle("Atención - Margen Vacío");
             confirmacion.setHeaderText("No ingresaste ningún porcentaje de margen.");
             confirmacion.setContentText("¿Estás seguro de que querés guardar este producto con 0% de ganancia (al costo)?");
 
             // Si elige "Cancelar" o cierra con la X, abortamos el guardado
-            if (confirmacion.showAndWait().orElse(javafx.scene.control.ButtonType.CANCEL) != javafx.scene.control.ButtonType.OK) {
+            if (confirmacion.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
                 return;
             }
 
-            // Si eligió "Aceptar", clavamos el 0 en la cajita
+            // Si eligió "Aceptar", clavamos el 0 en la cajita (el listener recalcula el precio)
             txtMargen.setText("0");
 
-            // ⚠️ ATENCIÓN ACÁ: Como forzamos el 0%, tenés que asegurarte de que la variable
-            // 'precioVenta' se actualice para que sea igual al 'costoTotalReceta'.
-            // Si tenés un método que calcula el precio al tocar una tecla, llamalo acá.
-            // Ejemplo: calcularPrecioFinal();
-            // Si no, podés forzarlo directo si tu lógica lo permite:
-            // precioVenta = costoTotalReceta;
-
         } else {
-            // 🔥 Atajamos si puso comas en vez de puntos o si puso letras
+            // Atajamos si puso comas en vez de puntos o si puso letras
             try {
                 textoMargen = textoMargen.replace(",", ".");
                 txtMargen.setText(textoMargen); // Actualizamos la cajita visualmente
@@ -352,9 +481,7 @@ public class CalculadoraController {
                 return;
             }
         }
-        // =========================================================================
 
-        // Validamos que el precio de venta sea válido (acordate de lo que te puse en el comentario ⚠️ de arriba)
         if (precioVenta == null || precioVenta.compareTo(BigDecimal.ZERO) <= 0) {
             mostrarError("El precio de venta es inválido. Verifique el margen o los costos.");
             return;
@@ -387,6 +514,8 @@ public class CalculadoraController {
                 txtMargen.clear();
                 listaReceta.clear();
                 recalcularCostoTotal();
+                // Recién ahora el stock se descontó de verdad: volvemos a pedirlo al backend
+                cargarInsumos(paginaInsumos);
                 mostrarExito("¡Producto creado y stock descontado!");
             }
 
@@ -396,22 +525,18 @@ public class CalculadoraController {
         }
     }
 
-    // 🧠 ALGORITMO: Busca el material de superficie más utilizado
+    // Busca el material de superficie más utilizado
     private Insumo determinarMaterialDestacado() {
         Insumo ganador = null;
         double maxSuperficie = 0.0;
 
         for (DetalleCalculadora det : listaReceta) {
             Insumo ins = det.getInsumo();
-            if (ins != null && ins.getCategoria() != null) {
-                String tipo = ins.getCategoria().getTipoMedicion().trim().toUpperCase();
-
-                if ("SUPERFICIE".equals(tipo)) {
-                    double cantidadUsada = det.getCantidadUsada();
-                    if (cantidadUsada > maxSuperficie) {
-                        maxSuperficie = cantidadUsada;
-                        ganador = ins;
-                    }
+            if ("SUPERFICIE".equals(tipoDe(ins))) {
+                double cantidadUsada = det.getCantidadUsada();
+                if (cantidadUsada > maxSuperficie) {
+                    maxSuperficie = cantidadUsada;
+                    ganador = ins;
                 }
             }
         }

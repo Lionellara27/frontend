@@ -4,62 +4,78 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="450.0" prefWidth="700.0"
+<!-- Seguridad: primero "quién sos" (lo actual), después "lo nuevo" -->
+<ScrollPane fitToWidth="true" hbarPolicy="NEVER"
+            style="-fx-background: #F8F9FA; -fx-background-color: transparent;"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.nakel.frontend.controller.TabSeguridadController">
-    <children>
-        <VBox alignment="CENTER" spacing="15.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="50.0" AnchorPane.rightAnchor="50.0" AnchorPane.topAnchor="20.0">
-            <children>
-                <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Cambiar Credenciales de Acceso" />
-                <GridPane alignment="CENTER" hgap="10.0" vgap="15.0">
-                    <columnConstraints>
-                        <ColumnConstraints halignment="RIGHT" hgrow="SOMETIMES" maxWidth="150.0" minWidth="10.0" prefWidth="150.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" maxWidth="250.0" minWidth="10.0" prefWidth="250.0" />
-                        <ColumnConstraints halignment="CENTER" hgrow="SOMETIMES" maxWidth="40.0" minWidth="40.0" prefWidth="40.0" />
-                    </columnConstraints>
-                    <rowConstraints>
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                    </rowConstraints>
-                    <children>
-                        <Label text="Usuario Actual:" />
-                        <TextField fx:id="txtUsuarioActual" GridPane.columnIndex="1" />
+    <HBox alignment="TOP_CENTER">
+        <padding>
+            <Insets top="14" right="20" bottom="14" left="20"/>
+        </padding>
 
-                        <Label text="Nuevo Usuario:" GridPane.rowIndex="1" />
-                        <TextField fx:id="txtNuevoUsuario" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+        <VBox spacing="9" styleClass="tarjeta" prefWidth="520" maxWidth="560">
+            <Label text="Usuario y contraseña" styleClass="titulo-tarjeta"/>
+            <Label text="Son los datos con los que se entra al sistema. Para cambiarlos, primero confirmá los que usás hoy."
+                   styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
 
-                        <Label text="Contraseña Actual:" GridPane.rowIndex="2" />
-                        <StackPane GridPane.columnIndex="1" GridPane.rowIndex="2">
-                            <TextField fx:id="txtPassActualVisible" visible="false" />
-                            <PasswordField fx:id="txtPassActual" />
-                        </StackPane>
-                        <ToggleButton fx:id="btnVerActual" text="👁" GridPane.columnIndex="2" GridPane.rowIndex="2" style="-fx-cursor: hand; -fx-background-color: transparent;" />
+            <!-- 1. Lo actual -->
+            <Label text="1. Tus datos de hoy" styleClass="etiqueta-formulario"/>
+            <GridPane hgap="10" vgap="7">
+                <columnConstraints>
+                    <ColumnConstraints minWidth="170" prefWidth="180"/>
+                    <ColumnConstraints hgrow="ALWAYS"/>
+                    <ColumnConstraints minWidth="40" prefWidth="40" halignment="CENTER"/>
+                </columnConstraints>
 
-                        <Label text="Nueva Contraseña:" GridPane.rowIndex="3" />
-                        <StackPane GridPane.columnIndex="1" GridPane.rowIndex="3">
-                            <TextField fx:id="txtPassNuevaVisible" visible="false" />
-                            <PasswordField fx:id="txtPassNueva" />
-                        </StackPane>
-                        <ToggleButton fx:id="btnVerNueva" text="👁" GridPane.columnIndex="2" GridPane.rowIndex="3" style="-fx-cursor: hand; -fx-background-color: transparent;" />
+                <Label text="Usuario actual" styleClass="etiqueta-campo"/>
+                <TextField fx:id="txtUsuarioActual" styleClass="text-field" GridPane.columnIndex="1"/>
 
-                        <Label text="Repetir Nueva:" GridPane.rowIndex="4" />
-                        <StackPane GridPane.columnIndex="1" GridPane.rowIndex="4">
-                            <TextField fx:id="txtPassRepetirVisible" visible="false" />
-                            <PasswordField fx:id="txtPassRepetir" />
-                        </StackPane>
-                        <ToggleButton fx:id="btnVerRepetir" text="👁" GridPane.columnIndex="2" GridPane.rowIndex="4" style="-fx-cursor: hand; -fx-background-color: transparent;" />
-                    </children>
-                </GridPane>
-                <Button mnemonicParsing="false" onAction="#cambiarContrasena" style="-fx-background-color: #27ae60;" text="💾 Guardar Cambios" textFill="WHITE">
-                    <VBox.margin>
-                        <Insets top="10.0" />
-                    </VBox.margin>
-                </Button>
-            </children>
+                <Label text="Contraseña actual" styleClass="etiqueta-campo" GridPane.rowIndex="1"/>
+                <StackPane GridPane.columnIndex="1" GridPane.rowIndex="1">
+                    <TextField fx:id="txtPassActualVisible" styleClass="text-field" visible="false"/>
+                    <PasswordField fx:id="txtPassActual" styleClass="text-field"/>
+                </StackPane>
+                <ToggleButton fx:id="btnVerActual" text="" GridPane.columnIndex="2" GridPane.rowIndex="1"
+                              style="-fx-cursor: hand; -fx-background-color: transparent;"/>
+            </GridPane>
+
+            <Separator/>
+
+            <!-- 2. Lo nuevo -->
+            <Label text="2. Cómo querés que queden" styleClass="etiqueta-formulario"/>
+            <GridPane hgap="10" vgap="7">
+                <columnConstraints>
+                    <ColumnConstraints minWidth="170" prefWidth="180"/>
+                    <ColumnConstraints hgrow="ALWAYS"/>
+                    <ColumnConstraints minWidth="40" prefWidth="40" halignment="CENTER"/>
+                </columnConstraints>
+
+                <Label text="Usuario" styleClass="etiqueta-campo"/>
+                <TextField fx:id="txtNuevoUsuario" styleClass="text-field" GridPane.columnIndex="1"/>
+
+                <Label text="Contraseña nueva" styleClass="etiqueta-campo" GridPane.rowIndex="1"/>
+                <StackPane GridPane.columnIndex="1" GridPane.rowIndex="1">
+                    <TextField fx:id="txtPassNuevaVisible" styleClass="text-field" visible="false"/>
+                    <PasswordField fx:id="txtPassNueva" styleClass="text-field"/>
+                </StackPane>
+                <ToggleButton fx:id="btnVerNueva" text="" GridPane.columnIndex="2" GridPane.rowIndex="1"
+                              style="-fx-cursor: hand; -fx-background-color: transparent;"/>
+
+                <Label text="Repetir contraseña nueva" styleClass="etiqueta-campo" GridPane.rowIndex="2"/>
+                <StackPane GridPane.columnIndex="1" GridPane.rowIndex="2">
+                    <TextField fx:id="txtPassRepetirVisible" styleClass="text-field" visible="false"/>
+                    <PasswordField fx:id="txtPassRepetir" styleClass="text-field"/>
+                </StackPane>
+                <ToggleButton fx:id="btnVerRepetir" text="" GridPane.columnIndex="2" GridPane.rowIndex="2"
+                              style="-fx-cursor: hand; -fx-background-color: transparent;"/>
+            </GridPane>
+            <Label text="Si solo querés cambiar la contraseña, dejá el usuario como está." styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+
+            <Region minHeight="2"/>
+            <Button mnemonicParsing="false" onAction="#cambiarContrasena" styleClass="btn-primario"
+                    text="Guardar cambios" maxWidth="Infinity" prefHeight="42"/>
         </VBox>
-    </children>
-</AnchorPane>
+    </HBox>
+</ScrollPane>

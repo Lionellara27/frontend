@@ -324,12 +324,31 @@
 }
 
 /* La barrita que agarras con el mouse */
+/* Gris por defecto: las tablas y listas tienen fondo blanco. Antes era blanco semitransparente
+   (pensado para el menú lateral oscuro) y sobre las tablas no se veía. */
 .scroll-bar:vertical .thumb, .scroll-bar:horizontal .thumb {
-    -fx-background-color: rgba(255, 255, 255, 0.2); /* Blanco semitransparente elegante */
+    -fx-background-color: #A9B1B8;
     -fx-background-radius: 10px;
 }
 
-.scroll-bar:vertical .thumb:hover, .scroll-bar:horizontal .thumb:hover {
+.scroll-bar:vertical .thumb:hover, .scroll-bar:horizontal .thumb:hover,
+.scroll-bar:vertical .thumb:pressed, .scroll-bar:horizontal .thumb:pressed {
+    -fx-background-color: #6E7780;
+}
+
+/* En tablas y listas la pista se marca apenas, para que se note que hay scroll */
+.table-view .scroll-bar .track, .list-view .scroll-bar .track {
+    -fx-background-color: #EEF0F2;
+    -fx-background-radius: 10px;
+}
+
+/* El menú lateral es oscuro: ahí la barrita sigue siendo blanca semitransparente */
+.sidebar .scroll-bar:vertical .thumb, .sidebar .scroll-bar:horizontal .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar .scroll-bar:vertical .thumb:hover, .sidebar .scroll-bar:horizontal .thumb:hover,
+.sidebar .scroll-bar:vertical .thumb:pressed, .sidebar .scroll-bar:horizontal .thumb:pressed {
     -fx-background-color: rgba(255, 255, 255, 0.4);
 }
 
@@ -508,4 +527,349 @@
 /* Texto de la fila seleccionada cambia a blanco para que contraste */
 .tabla-estandar .table-row-cell:filled:selected .label {
     -fx-text-fill: white;
+}
+
+
+/* =====================================================
+   COMBO DE CLIENTE DEL MOSTRADOR
+   "Consumidor Final - 00000000" queda de fondo en gris.
+   Se sigue viendo aunque se haga clic, hasta que se escribe algo.
+===================================================== */
+
+.combo-cliente .text-field {
+    -fx-prompt-text-fill: #8A9099;
+    -fx-font-size: 14px;
+}
+
+.combo-cliente .text-field:focused {
+    -fx-prompt-text-fill: #AEB4BB;
+}
+
+
+/* =====================================================
+   VENTANAS EMERGENTES (alertas, confirmaciones, diálogos)
+   Se aplican solas a TODAS: la clase util/Ventanas.java le agrega
+   esta hoja de estilos y el ícono a cada ventana que se abre.
+===================================================== */
+
+.dialog-pane {
+    -fx-background-color: #F8F9FA;
+    -fx-font-family: "Segoe UI";
+    -fx-font-size: 14px;
+}
+
+/* Encabezado: franja verde Nakel con texto dorado */
+.dialog-pane > .header-panel {
+    -fx-background-color: linear-gradient(to right, #07352D, #0F5C4E);
+    -fx-padding: 14px 18px;
+}
+
+.dialog-pane > .header-panel > .label {
+    -fx-text-fill: #D7A15D;
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+}
+
+/* Texto del mensaje */
+.dialog-pane > .content.label {
+    -fx-text-fill: #212529;
+    -fx-font-size: 14px;
+    -fx-padding: 18px 20px 12px 20px;
+}
+
+.dialog-pane > .content {
+    -fx-padding: 16px 20px 10px 20px;
+}
+
+/* Zona de botones */
+.dialog-pane > .button-bar > .container {
+    -fx-background-color: #EEF1F0;
+    -fx-padding: 12px 16px;
+}
+
+/* Botones: verde Nakel por defecto */
+.dialog-pane > .button-bar > .container > .button {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 20px;
+    -fx-min-width: 90px;
+    -fx-background-color: #155643;
+    -fx-text-fill: white;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.dialog-pane > .button-bar > .container > .button:hover {
+    -fx-background-color: #114230;
+}
+
+/* Botón principal (Aceptar / Guardar / Sí): dorado, igual que los botones primarios */
+.dialog-pane > .button-bar > .container > .button:default {
+    -fx-background-color: #D49A54;
+}
+
+.dialog-pane > .button-bar > .container > .button:default:hover {
+    -fx-background-color: #C28945;
+}
+
+/* Botón de cancelar: claro, para que no compita con el principal */
+.dialog-pane > .button-bar > .container > .button:cancel {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+    -fx-border-color: #CED4DA;
+    -fx-border-radius: 5px;
+}
+
+.dialog-pane > .button-bar > .container > .button:cancel:hover {
+    -fx-background-color: #E9ECEF;
+}
+
+/* =====================================================
+   BOTONES DE COLOR (complementan a btn-primario dorado y btn-secundario verde)
+===================================================== */
+
+/* Azul: acciones auxiliares (Limpiar filtros, Cliente nuevo) */
+.btn-azul {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 20px;
+    -fx-background-color: #1976D2;
+    -fx-text-fill: white;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.btn-azul:hover {
+    -fx-background-color: #125EA8;
+}
+
+/* Rojo: todo lo que elimina o quita (mismo rojo que los tachitos de las tablas) */
+.btn-eliminar {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 14px;
+    -fx-background-color: #E74C3C;
+    -fx-text-fill: white;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.btn-eliminar:hover {
+    -fx-background-color: #C0392B;
+}
+
+
+/* Formularios dentro de un diálogo (ej: alta rápida de cliente) */
+.formulario-dialogo {
+    -fx-background-color: transparent;
+}
+
+.etiqueta-formulario {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #155643;
+}
+
+
+/* Tarjetas: bloques blancos con borde suave para agrupar un paso de una pantalla
+   (ej: Calculadora de Producción) */
+.tarjeta {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-border-color: #E5E7EB;
+    -fx-border-radius: 10;
+    -fx-padding: 16;
+}
+
+.titulo-tarjeta {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #155643;
+}
+
+/* Tabla de renglones bajos, para listas dentro de una tarjeta (ej: insumos de la Calculadora).
+   Va junto con setFixedCellSize(...) en el controlador. */
+.tabla-compacta .table-cell {
+    -fx-padding: 0 12 0 12;
+    -fx-alignment: center-left;
+}
+
+/* Campo de texto principal de una pantalla: más alto, fondo gris y sombra para que se vea enseguida
+   (ej: nombre del producto en la Calculadora) */
+.campo-destacado {
+    -fx-pref-height: 48px;
+    -fx-min-height: 48px;
+    -fx-font-size: 16px;
+    -fx-background-color: #EEF1F3;
+    -fx-border-color: #B5BEC6;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 6, 0, 0, 2);
+}
+
+.campo-destacado:focused {
+    -fx-background-color: white;
+    -fx-border-color: #155643;
+}
+
+/* ===== Pestañas de Configuración: grandes, y la elegida en verde ===== */
+.pestanas-configuracion > .tab-header-area > .tab-header-background {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #155643 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.pestanas-configuracion .tab {
+    -fx-background-color: #E9ECEF;
+    -fx-background-insets: 0 3 0 0;
+    -fx-background-radius: 8 8 0 0;
+    -fx-padding: 9 18 9 18;
+}
+
+.pestanas-configuracion .tab:hover {
+    -fx-background-color: #DDE2E6;
+}
+
+.pestanas-configuracion .tab .tab-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #5F6B76;
+}
+
+.pestanas-configuracion .tab .ikonli-font-icon {
+    -fx-icon-color: #5F6B76;
+}
+
+.pestanas-configuracion .tab:selected {
+    -fx-background-color: #155643;
+}
+
+.pestanas-configuracion .tab:selected .tab-label {
+    -fx-text-fill: white;
+}
+
+.pestanas-configuracion .tab:selected .ikonli-font-icon {
+    -fx-icon-color: white;
+}
+
+.pestanas-configuracion .tab .focus-indicator {
+    -fx-border-color: transparent;
+}
+
+.pestanas-configuracion .tab-content-area {
+    -fx-background-color: transparent;
+}
+
+/* Renglón que explica para qué sirve una pestaña de Configuración */
+.descripcion-pestana {
+    -fx-font-size: 14px;
+    -fx-text-fill: #45525E;
+}
+
+/* La (i) de ayuda al lado del título de cada módulo */
+.boton-info {
+    -fx-background-color: transparent;
+    -fx-padding: 2 4 2 4;
+    -fx-cursor: hand;
+    -fx-background-radius: 20;
+}
+
+.boton-info:hover {
+    -fx-background-color: #E3EEFA;
+}
+
+/* ===== Estadísticas ===== */
+.titulo-seccion {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
+    -fx-padding: 8 0 0 0;
+}
+
+/* Tarjeta con un número grande (indicador) */
+.tarjeta-kpi {
+    -fx-alignment: center;
+    -fx-spacing: 2;
+    -fx-min-height: 120;
+    -fx-min-width: 180;
+}
+
+.kpi-titulo {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #5F6B76;
+}
+
+.kpi-valor {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #155643;
+}
+
+.kpi-detalle {
+    -fx-font-size: 13px;
+    -fx-text-fill: #7A8690;
+    -fx-text-alignment: center;
+}
+
+/* Gráficos con los colores del sistema (verde y dorado primero) */
+.grafico-nakel {
+    CHART_COLOR_1: #155643;
+    CHART_COLOR_2: #D49A54;
+    CHART_COLOR_3: #1976D2;
+    CHART_COLOR_4: #8E6BBF;
+    CHART_COLOR_5: #C0563F;
+    CHART_COLOR_6: #6E7780;
+    CHART_COLOR_7: #2E9E6B;
+    CHART_COLOR_8: #B58A2E;
+    -fx-padding: 0;
+}
+
+.grafico-nakel .chart-plot-background {
+    -fx-background-color: transparent;
+}
+
+.grafico-nakel .chart-vertical-grid-lines,
+.grafico-nakel .chart-alternative-row-fill,
+.grafico-nakel .chart-alternative-column-fill {
+    -fx-stroke: transparent;
+    -fx-fill: transparent;
+}
+
+.grafico-nakel .chart-horizontal-grid-lines {
+    -fx-stroke: #E5E7EB;
+    -fx-stroke-dash-array: none;
+}
+
+.grafico-nakel .axis {
+    -fx-tick-label-fill: #5F6B76;
+    -fx-tick-label-font-size: 12px;
+}
+
+.grafico-nakel .chart-bar {
+    -fx-background-radius: 4 4 0 0;
+}
+
+.grafico-nakel .chart-legend {
+    -fx-background-color: transparent;
+    -fx-font-size: 13px;
+}
+
+/* Etiqueta chica que va arriba de un campo o de un importe */
+.etiqueta-campo {
+    -fx-font-size: 13px;
+    -fx-text-fill: #5F6B76;
+}
+
+/* Texto de ayuda en gris (stock disponible, sugerencias) */
+.dato-ayuda {
+    -fx-font-size: 13px;
+    -fx-text-fill: #7A8690;
+}
+
+.dato-importe {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333333;
 }

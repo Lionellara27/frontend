@@ -27,7 +27,9 @@ public class ModalExitoCambioController {
 
         lblTitulo.setText("¡Cambio Registrado con Éxito!");
         if (codigoVale != null && !codigoVale.isEmpty()) {
-            lblMensajePrincipal.setText("Saldo a favor del cliente: $" + String.format("%.2f", saldoAFavor));
+            // "Vale por este cambio", no "saldo a favor": el saldo a favor del cliente puede ser mayor
+            // si ya tenía otros vales sin usar.
+            lblMensajePrincipal.setText("Vale por este cambio: " + com.nakel.frontend.util.FormatoMoneda.pesos(saldoAFavor));
             lblSubtitulo.setText("Código de Vale generado:");
             lblDetalleVale.setText(codigoVale);
         } else {
@@ -48,7 +50,7 @@ public class ModalExitoCambioController {
         texto.append("   COMPROBANTE DE CAMBIO\n");
         texto.append("----------------------------\n");
         texto.append("Cliente: ").append(clienteActual).append("\n");
-        texto.append("Saldo a Favor: $").append(String.format("%.2f", saldoActual)).append("\n");
+        texto.append("Saldo a Favor: ").append(com.nakel.frontend.util.FormatoMoneda.pesos(saldoActual)).append("\n");
 
         if(codigoValeActual != null && !codigoValeActual.isEmpty()) {
             texto.append("----------------------------\n");

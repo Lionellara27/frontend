@@ -4,59 +4,107 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="450.0" prefWidth="700.0"
+<!-- Precios y Dólar: arriba las dos formas de cambiar precios (por porcentaje / según el dólar),
+     abajo el historial de cambios con la opción de deshacer durante 7 días. -->
+<ScrollPane fitToWidth="true" hbarPolicy="NEVER"
+            style="-fx-background: #F8F9FA; -fx-background-color: transparent;"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.nakel.frontend.controller.TabDivisasController">
-    <children>
-        <VBox spacing="20.0" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
-            <children>
-                <VBox spacing="10.0" style="-fx-border-color: #cccccc; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 15 0;">
-                    <children>
-                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Cotización de Referencia (USD)" />
-                        <CheckBox fx:id="chkActualizacionAutomatica" mnemonicParsing="false" onAction="#toggleModoAutomatico" text="🔄 Actualizar automáticamente" />
-                        <HBox alignment="CENTER_LEFT" spacing="15.0">
-                            <children>
-                                <Label text="Cotización Actual ARS:" />
-                                <TextField fx:id="txtCotizacionDolar" prefWidth="120.0" promptText="Ej: 1250" />
-                                <Button fx:id="btnGuardarCotizacion" mnemonicParsing="false" onAction="#guardarCotizacion" text="💾 Guardar Cambios" />
-                            </children>
-                        </HBox>
-                        <Label style="-fx-text-fill: gray; -fx-font-size: 11px;" text="* Esta cotización se usará para alertar desfasajes y para el botón de conversión a USD en el mostrador." />
-                    </children>
+    <VBox spacing="16">
+        <padding>
+            <Insets top="16" right="20" bottom="20" left="20"/>
+        </padding>
+
+        <Label text="Acá se actualizan los precios de todo el catálogo de una sola vez: por un porcentaje o siguiendo al dólar. Cualquier cambio se puede deshacer durante 7 días."
+               styleClass="descripcion-pestana" wrapText="true" minHeight="-Infinity"/>
+
+        <HBox spacing="20" alignment="TOP_LEFT">
+
+            <!-- ============ AUMENTO POR PORCENTAJE ============ -->
+            <VBox spacing="12" styleClass="tarjeta" HBox.hgrow="ALWAYS" minWidth="360" prefWidth="440">
+                <Label text="Aumentar precios por porcentaje" styleClass="titulo-tarjeta"/>
+                <Label text="Sube el precio de todos los artículos de una categoría. Ejemplo: si las mochilas quedaron baratas, elegís Mochila, ponés 20 y todas suben un 20 %."
+                       styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+
+                <VBox spacing="4">
+                    <Label text="Categoría" styleClass="etiqueta-campo"/>
+                    <ComboBox fx:id="cmbCategoriaAumento" promptText="Elegí una categoría" maxWidth="Infinity" styleClass="text-field"/>
                 </VBox>
 
-                <VBox spacing="10.0">
-                    <children>
-                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="⚡ Actualización Masiva de Precios" />
-                        <GridPane hgap="10.0" vgap="10.0">
-                            <columnConstraints>
-                                <ColumnConstraints hgrow="SOMETIMES" maxWidth="180.0" minWidth="10.0" prefWidth="120.0" />
-                                <ColumnConstraints hgrow="SOMETIMES" maxWidth="250.0" minWidth="10.0" prefWidth="200.0" />
-                            </columnConstraints>
-                            <rowConstraints>
-                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                            </rowConstraints>
-                            <children>
-                                <Label text="Categoría:" />
-                                <ComboBox fx:id="cmbCategoriaAumento" prefWidth="200.0" promptText="Todas las categorías" GridPane.columnIndex="1" />
-                                <Label text="Porcentaje (%):" GridPane.rowIndex="1" />
-                                <TextField fx:id="txtPorcentajeAumento" maxWidth="100.0" promptText="Ej: 15" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                            </children>
-                        </GridPane>
-                        <HBox alignment="CENTER_LEFT" spacing="15.0">
-                            <children>
-                                <Button fx:id="btnAplicarAumento" mnemonicParsing="false" onAction="#aplicarAumentoMasivo" styleClass="btn-eliminar" style="-fx-background-color: #e67e22;" text="🚀 Aplicar Aumento Masivo" textFill="WHITE" />
-                                <Button fx:id="btnSincronizarDolar" mnemonicParsing="false" onAction="#sincronizarPreciosConDolar" text="🔄 Sincronizar ARS según Dólar" />
-                            </children>
-                            <VBox.margin>
-                                <Insets top="10.0" />
-                            </VBox.margin>
-                        </HBox>
-                    </children>
+                <VBox spacing="4">
+                    <Label text="Porcentaje de aumento (%)" styleClass="etiqueta-campo"/>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <TextField fx:id="txtPorcentajeAumento" promptText="Ej: 15" prefWidth="110" minWidth="110" styleClass="text-field"/>
+                        <!-- Se actualiza solo con lo que se escribe -->
+                        <Label fx:id="lblEjemploAumento" text="Ej: con 15, un artículo de $ 10.000 pasa a $ 11.500"
+                               styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+                    </HBox>
                 </VBox>
-            </children>
+
+                <Region minHeight="4" VBox.vgrow="ALWAYS"/>
+                <Button fx:id="btnAplicarAumento" mnemonicParsing="false" onAction="#aplicarAumentoMasivo"
+                        styleClass="btn-primario" text="Aplicar aumento" maxWidth="Infinity" prefHeight="42"/>
+            </VBox>
+
+            <!-- ============ DÓLAR ============ -->
+            <VBox spacing="12" styleClass="tarjeta" HBox.hgrow="ALWAYS" minWidth="380" prefWidth="460">
+                <Label text="Seguir al dólar" styleClass="titulo-tarjeta"/>
+                <Label text="Los precios se guardan en pesos. El sistema recuerda con qué dólar los calculaste; si el dólar sube, te avisa cuánto se atrasaron y podés ponerlos al día con un botón."
+                       styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+
+                <HBox spacing="12" alignment="BOTTOM_LEFT">
+                    <VBox spacing="4">
+                        <Label text="Qué dólar seguís" styleClass="etiqueta-campo"/>
+                        <ComboBox fx:id="cmbTipoDolar" prefWidth="235" styleClass="text-field"/>
+                    </VBox>
+                    <VBox spacing="4" HBox.hgrow="ALWAYS">
+                        <Label text="1 dólar hoy vale (en pesos)" styleClass="etiqueta-campo"/>
+                        <TextField fx:id="txtCotizacionDolar" promptText="Ej: 1.250" styleClass="text-field"/>
+                    </VBox>
+                </HBox>
+
+                <HBox spacing="10">
+                    <Button fx:id="btnBuscarCotizacion" mnemonicParsing="false" onAction="#buscarCotizacionEnInternet"
+                            styleClass="btn-azul" text="Ver cotización en internet" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Button fx:id="btnGuardarCotizacion" mnemonicParsing="false" onAction="#guardarCotizacion"
+                            styleClass="btn-secundario" text="Guardar cotización" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                </HBox>
+
+                <Separator/>
+
+                <!-- Cuánto se atrasaron los precios respecto del dólar -->
+                <Label fx:id="lblEstadoDolar" wrapText="true" minHeight="-Infinity" style="-fx-font-size: 14px;"/>
+                <Button fx:id="btnSincronizarDolar" mnemonicParsing="false" onAction="#sincronizarPreciosConDolar"
+                        styleClass="btn-primario" text="Poner los precios al día con el dólar" maxWidth="Infinity" prefHeight="42"/>
+            </VBox>
+        </HBox>
+
+        <!-- ============ HISTORIAL ============ -->
+        <VBox spacing="8" styleClass="tarjeta">
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <VBox spacing="2" HBox.hgrow="ALWAYS">
+                    <Label text="Historial de cambios de precios" styleClass="titulo-tarjeta"/>
+                    <Label text="Si te equivocaste, tocá «Volver atrás» y los precios quedan como estaban. Se puede hasta 7 días después; pasado ese tiempo el cambio queda firme."
+                           styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+                </VBox>
+                <Button fx:id="btnHistorialAnterior" text="‹" onAction="#historialAnterior" styleClass="btn-secundario" minWidth="40" style="-fx-padding: 6 12;"/>
+                <Label fx:id="lblPaginaHistorial" text="Página 1 de 1" styleClass="dato-ayuda" minWidth="-Infinity"/>
+                <Button fx:id="btnHistorialSiguiente" text="›" onAction="#historialSiguiente" styleClass="btn-secundario" minWidth="40" style="-fx-padding: 6 12;"/>
+            </HBox>
+
+            <TableView fx:id="tablaHistorial" styleClass="tabla-compacta" minHeight="150" prefHeight="300">
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                </columnResizePolicy>
+                <columns>
+                    <TableColumn fx:id="colHistFecha" text="Fecha" prefWidth="135" sortable="false"/>
+                    <TableColumn fx:id="colHistQue" text="Qué se hizo" prefWidth="300" sortable="false"/>
+                    <TableColumn fx:id="colHistArticulos" text="Artículos" prefWidth="80" sortable="false"/>
+                    <TableColumn fx:id="colHistEstado" text="Estado" prefWidth="200" sortable="false"/>
+                    <TableColumn fx:id="colHistAccion" text="Volver atrás" prefWidth="150" minWidth="150" sortable="false"/>
+                </columns>
+            </TableView>
         </VBox>
-    </children>
-</AnchorPane>
+    </VBox>
+</ScrollPane>

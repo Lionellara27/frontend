@@ -99,7 +99,7 @@ public class Insumo {
                 return nombre + " (Quedan: " + (cantidadActual != null ? cantidadActual : 0) + " u.)";
             } else if ("SERVICIO".equals(categoria.getTipoMedicion())) {
                 // 🔥 MAGIA: Si es servicio/tiempo, no mostramos stock, mostramos el precio x hora.
-                return nombre + " (Valor: $" + getCostoTotal() + "/hr)";
+                return nombre + " (Valor: " + com.nakel.frontend.util.FormatoMoneda.pesos(getCostoTotal()) + "/hr)";
             }
         }
         return nombre;

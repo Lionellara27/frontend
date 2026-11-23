@@ -46,13 +46,17 @@ public class NuevoProveedorController {
                 "Maquinaria y Taller",
                 "Varios"
         );
+
+        // Los saldos se formatean solos mientras se escriben: 34000 -> 34.000
+        com.nakel.frontend.util.FormatoMoneda.aplicar(txtSaldoFavor);
+        com.nakel.frontend.util.FormatoMoneda.aplicar(txtSaldoContra);
     }
 
     public void cargarDatosParaEditar(Proveedor proveedor) {
         this.proveedorAEditar = proveedor;
 
         if (this.lblTitulo != null) {
-            this.lblTitulo.setText("✏️ Editar Proveedor");
+            this.lblTitulo.setText("Editar Proveedor");
         }
 
         this.txtEmpresa.setText(proveedor.getRazonSocial());
@@ -76,13 +80,13 @@ public class NuevoProveedorController {
 
         // Llenamos los campos nuevos (si existen)
         if (proveedor.getSaldoFavor() != null) {
-            this.txtSaldoFavor.setText(proveedor.getSaldoFavor().toString());
+            com.nakel.frontend.util.FormatoMoneda.poner(this.txtSaldoFavor, proveedor.getSaldoFavor());
         } else {
             this.txtSaldoFavor.clear();
         }
 
         if (proveedor.getSaldoContra() != null) {
-            this.txtSaldoContra.setText(proveedor.getSaldoContra().toString());
+            com.nakel.frontend.util.FormatoMoneda.poner(this.txtSaldoContra, proveedor.getSaldoContra());
         } else {
             this.txtSaldoContra.clear();
         }
@@ -114,8 +118,7 @@ public class NuevoProveedorController {
 
         if (txtSaldoFavor.getText() != null && !txtSaldoFavor.getText().trim().isEmpty()) {
             try {
-                String saldoLimpiado = txtSaldoFavor.getText().trim().replace(",", ".");
-                saldoFavor = new BigDecimal(saldoLimpiado);
+                saldoFavor = BigDecimal.valueOf(com.nakel.frontend.util.FormatoMoneda.leer(txtSaldoFavor));
             } catch (NumberFormatException e) {
                 mostrarAlerta(
                         "Error de formato",
@@ -131,8 +134,7 @@ public class NuevoProveedorController {
 
         if (txtSaldoContra.getText() != null && !txtSaldoContra.getText().trim().isEmpty()) {
             try {
-                String saldoLimpiado = txtSaldoContra.getText().trim().replace(",", ".");
-                saldoContra = new BigDecimal(saldoLimpiado);
+                saldoContra = BigDecimal.valueOf(com.nakel.frontend.util.FormatoMoneda.leer(txtSaldoContra));
             } catch (NumberFormatException e) {
                 mostrarAlerta(
                         "Error de formato",

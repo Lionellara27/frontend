@@ -14,6 +14,9 @@ public class MainApp extends Application {
     @Override
     public void start(Stage stage) throws IOException {
 
+        // Ícono y estética de Nakel para TODAS las ventanas emergentes (alertas, diálogos, modales)
+        com.nakel.frontend.util.Ventanas.instalar();
+
         // 1. Cargamos el FXML usando la ruta exacta y segura
         URL fxmlUrl = MainApp.class.getResource("/com/nakel/frontend/view/login-view.fxml");
         if (fxmlUrl == null) {

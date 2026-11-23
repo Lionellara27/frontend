@@ -28,7 +28,7 @@ public class DetalleCalculadora {
     }
 
     public String getSubtotalFormateado() {
-        return String.format("$ %.2f", subtotal);
+        return com.nakel.frontend.util.FormatoMoneda.pesos(subtotal);
     }
 
     public double getSubtotal() { return subtotal; }

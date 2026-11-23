@@ -1,7 +1,6 @@
 package com.nakel.frontend.util;
 
 import javafx.fxml.FXMLLoader;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 
 import java.net.URL;
@@ -23,7 +22,14 @@ public class Navegador {
                 return;
             }
 
-            Pane nuevaVista = FXMLLoader.load(archivoUrl);
+            // Parent y no Pane: una pantalla puede tener de raíz un ScrollPane (ej: Estadísticas, que es larga)
+            javafx.scene.Parent nuevaVista = FXMLLoader.load(archivoUrl);
+
+            // Íconos vectoriales en los botones de la pantalla (reemplazan a los emojis)
+            Iconos.decorar(nuevaVista);
+
+            // La (i) al lado del título, que explica para qué sirve la pantalla
+            AyudaModulos.agregar(rutaFxml, nuevaVista);
 
             if (panelCentral != null) {
                 // Borra lo viejo y pone lo nuevo (La magia del StackPane)

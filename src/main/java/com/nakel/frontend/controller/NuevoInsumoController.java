@@ -47,12 +47,22 @@ public class NuevoInsumoController {
     @FXML private HBox boxMedidas;
     @FXML private TextField txtAnchoPlancha;
     @FXML private TextField txtLargoPlancha;
-    @FXML private ComboBox<String> cmbUnidad;
     @FXML private TextField txtCosto;
+    // Textos que explican qué se está cargando según la categoría elegida
+    @FXML private Label lblSeMide;
+    @FXML private Label lblCosto;
+    @FXML private Label lblAyudaCosto;
+    @FXML private javafx.scene.control.Button btnNuevaCategoria;
+    @FXML private javafx.scene.control.Button btnNuevoMaterial;
 
     @FXML
     public void initialize() {
-        cmbUnidad.getItems().addAll("Metros", "Unidades", "Horas");
+        // Cartelito al pasar el mouse por los botones "+"
+        com.nakel.frontend.util.Acciones.ayuda(btnNuevaCategoria, "Click acá para crear nueva categoría");
+        com.nakel.frontend.util.Acciones.ayuda(btnNuevoMaterial, "Click acá para crear nuevo material");
+
+        // El costo se formatea solo mientras se escribe: 34000 -> 34.000
+        com.nakel.frontend.util.FormatoMoneda.aplicar(txtCosto);
 
         // 1. Convertidor para Categorías
         cmbCategoria.setConverter(new StringConverter<Categoria>() {
@@ -133,7 +143,9 @@ public class NuevoInsumoController {
         if ("SUPERFICIE".equals(regla)) {
             lblMedidas.setVisible(true); lblMedidas.setManaged(true);
             boxMedidas.setVisible(true); boxMedidas.setManaged(true);
-            cmbUnidad.setValue("Metros");
+            lblSeMide.setText("Se mide por superficie (ancho x largo, en cm).");
+            lblCosto.setText("Costo de la pieza ($):");
+            lblAyudaCosto.setText("Lo que pagaste por la pieza entera. El sistema calcula solo cuánto cuesta cada cm².");
 
             if (lblMaterial != null) { lblMaterial.setVisible(true); lblMaterial.setManaged(true); }
             if (boxMaterial != null) { boxMaterial.setVisible(true); boxMaterial.setManaged(true); }
@@ -142,12 +154,16 @@ public class NuevoInsumoController {
         } else if ("TIEMPO".equals(regla)) {
             txtDescripcion.setText("Valor Hora Taller / Confección");
             txtDescripcion.setDisable(true);
-            cmbUnidad.setValue("Horas");
+            lblSeMide.setText("Se mide por horas de trabajo.");
+            lblCosto.setText("Costo por hora ($):");
+            lblAyudaCosto.setText("Lo que cuesta 1 hora de trabajo. En la calculadora, si cargás 5 horas se cobra 5 veces este valor.");
 
         } else if ("UNIDAD".equals(regla)) {
             lblCantidad.setVisible(true); lblCantidad.setManaged(true);
             txtCantidad.setVisible(true); txtCantidad.setManaged(true);
-            cmbUnidad.setValue("Unidades");
+            lblSeMide.setText("Se mide por unidades.");
+            lblCosto.setText("Costo del total ($):");
+            lblAyudaCosto.setText("Lo que pagaste por todas las unidades juntas. El sistema calcula solo cuánto cuesta cada una.");
         }
     }
 
@@ -259,7 +275,7 @@ public class NuevoInsumoController {
         this.insumoEnEdicion = insumo;
         txtDescripcion.setText(insumo.getNombre());
 
-        if (insumo.getCostoTotal() != null) txtCosto.setText(insumo.getCostoTotal().toString());
+        if (insumo.getCostoTotal() != null) com.nakel.frontend.util.FormatoMoneda.poner(txtCosto, insumo.getCostoTotal());
 
         if (insumo.getCategoria() != null) {
             for (Categoria cat : cmbCategoria.getItems()) {

@@ -50,6 +50,28 @@ public class VentaController {
     @FXML private Label lblTotal;
     @FXML private ComboBox<String> cmbMedioPago;
     @FXML private javafx.scene.control.CheckBox chkRegalo;
+    @FXML private Button btnCobrar;
+
+    // Sin emojis: el ícono lo pone util/Iconos según el texto (caja registradora / presupuesto)
+    private static final String TEXTO_COBRAR = "COBRAR (F12)";
+    private static final String TEXTO_PRESUPUESTAR = "PRESUPUESTAR (F12)";
+
+    private boolean esModoPresupuesto() {
+        return cmbTipoFactura != null && "Presupuesto".equals(cmbTipoFactura.getValue());
+    }
+
+    // Un presupuesto no se cobra: se apagan el medio de pago y "es para regalo",
+    // y el botón pasa a decir PRESUPUESTAR. Al volver a "Ticket de Venta" todo se restablece.
+    private void actualizarModoComprobante() {
+        boolean presupuesto = esModoPresupuesto();
+
+        if (cmbMedioPago != null) cmbMedioPago.setDisable(presupuesto);
+        if (chkRegalo != null) {
+            if (presupuesto) chkRegalo.setSelected(false);
+            chkRegalo.setDisable(presupuesto);
+        }
+        if (btnCobrar != null) btnCobrar.setText(presupuesto ? TEXTO_PRESUPUESTAR : TEXTO_COBRAR);
+    }
 
     // Segunda tabla
     @FXML private TableColumn<Articulo, String> colInvCodigo;
@@ -149,16 +171,11 @@ public class VentaController {
             }
         });
 
-        // 5. ESC → limpiar
-        Platform.runLater(() -> {
-            if (txtCodigoBarras.getScene() != null) {
-                txtCodigoBarras.getScene().setOnKeyPressed(event -> {
-                    if (event.getCode() == KeyCode.ESCAPE) {
-                        limpiarBusquedaInventario(null);
-                    }
-                });
-            }
-        });
+        // 5. Atajos de teclado del mostrador. Valen solo mientras esta pantalla está a la vista
+        //    (antes el ESC quedaba enganchado a la ventana y seguía actuando desde otras pantallas).
+        com.nakel.frontend.util.Atajos.registrar(txtCodigoBarras, KeyCode.ESCAPE, () -> limpiarBusquedaInventario(null));
+        com.nakel.frontend.util.Atajos.buscarConF3(txtCodigoBarras, () -> buscarProducto(null));   // F3 = Buscar
+        com.nakel.frontend.util.Atajos.registrar(txtCodigoBarras, KeyCode.F12, () -> cobrarVenta(null)); // F12 = Cobrar / Presupuestar
     }
 
     private void procesarBusquedaInventario() {
@@ -242,6 +259,9 @@ public class VentaController {
 
         colPrecio.setCellValueFactory(cell ->
                 new SimpleDoubleProperty(cell.getValue().getArticulo().getPrecio()).asObject());
+        // Precio y subtotal del ticket se muestran como plata: $ 10.000,00
+        colPrecio.setCellFactory(com.nakel.frontend.util.FormatoMoneda.celdaPesos());
+        colSubtotal.setCellFactory(com.nakel.frontend.util.FormatoMoneda.celdaPesos());
 
         colCantidad.setCellValueFactory(new PropertyValueFactory<>("cantidad"));
 
@@ -295,10 +315,16 @@ public class VentaController {
         colSubtotal.setCellValueFactory(new PropertyValueFactory<>("subtotal"));
 
         colAccion.setCellFactory(param -> new TableCell<LineaTicket, Void>() {
-            private final Button btnEliminar = new Button("❌");
+            private final Button btnEliminar = new Button("");
 
             {
                 btnEliminar.getStyleClass().add("btn-eliminar");
+                // Cruz vectorial blanca (antes era un emoji)
+                org.kordamp.ikonli.javafx.FontIcon cruz = new org.kordamp.ikonli.javafx.FontIcon("fas-times");
+                cruz.setIconColor(javafx.scene.paint.Color.WHITE);
+                btnEliminar.setGraphic(cruz);
+                btnEliminar.setStyle("-fx-padding: 4px 10px;");
+                com.nakel.frontend.util.Acciones.ayuda(btnEliminar, "Quitar del ticket");
 
                 btnEliminar.setOnAction(e -> {
                     LineaTicket linea = getTableView().getItems().get(getIndex());
@@ -342,6 +368,7 @@ public class VentaController {
 
         colInvPrecio.setCellValueFactory(cell ->
                 new SimpleDoubleProperty(cell.getValue().getPrecio()).asObject());
+        colInvPrecio.setCellFactory(com.nakel.frontend.util.FormatoMoneda.celdaPesos());
     }
 
     private void cargarDatosIniciales() {
@@ -352,23 +379,90 @@ public class VentaController {
         cmbMedioPago.getItems().addAll("Efectivo", "Transferencia", "MercadoPago", "Tarjeta de Crédito", "Tarjeta de Débito", "Pago Mixto");
         cmbMedioPago.setValue("Efectivo");
 
+        // Según el comprobante elegido cambia qué se puede tocar (Presupuesto no se cobra)
+        cmbTipoFactura.valueProperty().addListener((obs, antes, ahora) -> actualizarModoComprobante());
+        actualizarModoComprobante();
+
         // 2. Encendemos el buscador inteligente de Clientes
         configurarBuscadorCliente();
+    }
+
+    // Texto gris de fondo del combo de cliente cuando no hay nadie elegido
+    private static final String TEXTO_CONSUMIDOR_FINAL = "Consumidor Final - 00000000";
+
+    // Cómo se muestra un cliente en el combo: "Juan Pérez - 20334455"
+    private String textoDeCliente(com.nakel.frontend.model.Cliente c) {
+        if (c == null) return "";
+        return c.getNombre() + (c.getCuit() != null && !c.getCuit().isBlank() ? " - " + c.getCuit() : "");
+    }
+
+    /**
+     * Cliente realmente elegido para la venta.
+     * Devuelve null cuando el combo está vacío (se ve "Consumidor Final" en gris):
+     * en ese caso la venta sale a Consumidor Final.
+     */
+    private com.nakel.frontend.model.Cliente clienteElegido() {
+        String texto = cmbCliente.getEditor().getText() == null ? "" : cmbCliente.getEditor().getText().trim();
+        if (texto.isEmpty()) return null;
+
+        com.nakel.frontend.model.Cliente seleccionado = cmbCliente.getValue();
+        if (seleccionado == null) seleccionado = cmbCliente.getSelectionModel().getSelectedItem();
+
+        boolean coincide = seleccionado != null && textoDeCliente(seleccionado).equals(texto);
+        boolean esReal = coincide && seleccionado.getId() != null && seleccionado.getId() > 0;
+        return esReal ? seleccionado : null;
+    }
+
+    // true si hay texto escrito en el combo que NO corresponde a un cliente elegido de la lista
+    private boolean clienteEscritoSinElegir() {
+        String texto = cmbCliente.getEditor().getText() == null ? "" : cmbCliente.getEditor().getText().trim();
+        if (texto.isEmpty()) return false;
+
+        com.nakel.frontend.model.Cliente seleccionado = cmbCliente.getValue();
+        if (seleccionado == null) seleccionado = cmbCliente.getSelectionModel().getSelectedItem();
+        return seleccionado == null || !textoDeCliente(seleccionado).equals(texto);
+    }
+
+    // Deja el combo vacío (se ve "Consumidor Final" en gris) y recarga la lista completa sin desplegarla
+    private void volverAConsumidorFinal() {
+        actualizandoCliente = true;
+        try {
+            cmbCliente.getSelectionModel().clearSelection();
+            cmbCliente.setValue(null);
+            cmbCliente.getEditor().clear();
+            cmbCliente.getItems().clear();
+        } finally {
+            actualizandoCliente = false;
+        }
+        cmbCliente.hide();
+        busquedaActualCliente = "";
+        paginaActualCliente = 0;
+        buscarYMostrarCliente("", 0, false);
     }
 
     private void configurarBuscadorCliente() {
         cmbCliente.setEditable(true);
         cmbCliente.setVisibleRowCount(10);
 
+        // "Consumidor Final" ya no se escribe como texto real: queda de fondo en gris.
+        // Si no se elige a nadie, la venta sale a Consumidor Final; para buscar un cliente
+        // alcanza con hacer clic y escribir, sin tener que borrar nada antes.
+        cmbCliente.setPromptText(TEXTO_CONSUMIDOR_FINAL);
+        if (!cmbCliente.getStyleClass().contains("combo-cliente")) {
+            cmbCliente.getStyleClass().add("combo-cliente");
+        }
+
         // 1. Convertidor visual: Para que en pantalla diga "Juan - 20334455" (SIN FANTASMAS)
         cmbCliente.setConverter(new javafx.util.StringConverter<com.nakel.frontend.model.Cliente>() {
             @Override
             public String toString(com.nakel.frontend.model.Cliente c) {
-                if (c == null) return "";
-                return c.getNombre() + (c.getCuit() != null && !c.getCuit().isBlank() ? " - " + c.getCuit() : "");
+                return textoDeCliente(c);
             }
             @Override
             public com.nakel.frontend.model.Cliente fromString(String string) {
+                // Campo vacío = nadie elegido (Consumidor Final). Antes devolvía el último cliente
+                // seleccionado aunque se hubiera borrado el texto.
+                if (string == null || string.isBlank()) return null;
                 return cmbCliente.getSelectionModel().getSelectedItem();
             }
         });
@@ -404,8 +498,11 @@ public class VentaController {
 
             // 🔥 FIX: Si el campo está vacío, traemos los primeros 20 por defecto en vez de ocultar
             if (newVal == null || newVal.trim().isEmpty()) {
+                debounceCliente.stop();
                 paginaActualCliente = 0;
                 actualizandoCliente = true;
+                // Borró el texto: ya no hay cliente elegido (vuelve a Consumidor Final)
+                cmbCliente.getSelectionModel().clearSelection();
                 cmbCliente.getItems().clear();
                 actualizandoCliente = false;
 
@@ -437,6 +534,13 @@ public class VentaController {
                     cmbCliente.getSelectionModel().getSelectedItem();
 
             if (seleccionado != null) {
+                // Eligió "Consumidor Final" de la lista: en vez de escribirlo, vaciamos el combo
+                // (queda el texto gris). Se hace con runLater para no pisar al combo mientras selecciona.
+                if (seleccionado.getId() != null && seleccionado.getId() == 0L) {
+                    Platform.runLater(this::volverAConsumidorFinal);
+                    return;
+                }
+
                 actualizandoCliente = true;
                 cmbCliente.setValue(seleccionado);
                 actualizandoCliente = false;
@@ -444,16 +548,18 @@ public class VentaController {
         });
 
 
-        // 4. Disparo inicial: Traemos la primera página apenas abre la pantalla (Incluye Consumidor Final inyectado en buscarYMostrarCliente)
-        buscarYMostrarCliente("", 0);
-
-        // Seleccionamos al primer cliente de la lista por defecto
-        if (!cmbCliente.getItems().isEmpty()) {
-            cmbCliente.setValue(cmbCliente.getItems().get(0));
-        }
+        // 4. Disparo inicial: traemos la primera página apenas abre la pantalla, SIN elegir a nadie:
+        //    el combo arranca vacío mostrando "Consumidor Final" en gris.
+        buscarYMostrarCliente("", 0, false);
     }
 
     private void buscarYMostrarCliente(String texto, int pagina) {
+        // Solo desplegamos la lista si la usuaria está parada en el combo (escribiendo o buscando)
+        boolean enFoco = cmbCliente.isFocused() || cmbCliente.getEditor().isFocused();
+        buscarYMostrarCliente(texto, pagina, enFoco);
+    }
+
+    private void buscarYMostrarCliente(String texto, int pagina, boolean desplegar) {
 
         // 📡 Viajamos al Backend
         com.nakel.frontend.service.ClienteApiService clienteApi =
@@ -497,7 +603,7 @@ public class VentaController {
 
                     }
                 }
-                cmbCliente.show();
+                if (desplegar) cmbCliente.show();
 
             } else if (pagina == 0 && cmbCliente.getItems().isEmpty()) {
                 cmbCliente.hide();
@@ -567,8 +673,8 @@ public class VentaController {
                     linea.getArticulo()
             ));
         }
-        // 2. Atrapar el Cliente directo del ComboBox (¡100% Seguro!)
-        com.nakel.frontend.model.Cliente clienteSeleccionado = cmbCliente.getValue();
+        // 2. Cliente elegido en el combo (null = combo vacío = Consumidor Final)
+        com.nakel.frontend.model.Cliente clienteSeleccionado = clienteElegido();
         com.nakel.frontend.model.Cliente clienteParaBackend;
 
         // Si es un cliente real (ID mayor a 0)
@@ -617,7 +723,7 @@ public class VentaController {
             if (valeUsado != null && !esPresupuesto) {
                 boolean consumido = valeApi.consumirVale(valeUsado.getCodigo(), montoValeUsado);
                 if (!consumido) {
-                    avisos.append("\n\n⚠ ATENCIÓN: no se pudo descontar el vale ").append(valeUsado.getCodigo())
+                    avisos.append("\n\nATENCIÓN: no se pudo descontar el vale ").append(valeUsado.getCodigo())
                             .append(". Anotalo para que no se use dos veces.");
                 }
             }
@@ -626,18 +732,19 @@ public class VentaController {
             if (vueltoEnVale > 0.009 && !esPresupuesto) {
                 com.nakel.frontend.model.Vale valeVuelto = valeApi.generarVale(vueltoEnVale, idClienteVale);
                 if (valeVuelto != null) {
-                    avisos.append("\n\nVALE POR EL VUELTO: $ ").append(String.format("%.2f", vueltoEnVale))
+                    avisos.append("\n\nVALE POR EL VUELTO: ").append(com.nakel.frontend.util.FormatoMoneda.pesos(vueltoEnVale))
                             .append("\nCÓDIGO: ").append(valeVuelto.getCodigo());
                 } else {
-                    avisos.append("\n\n⚠ ATENCIÓN: no se pudo generar el vale por el vuelto de $ ")
-                            .append(String.format("%.2f", vueltoEnVale)).append(". Entregá el vuelto en mano.");
+                    avisos.append("\n\nATENCIÓN: no se pudo generar el vale por el vuelto de ")
+                            .append(com.nakel.frontend.util.FormatoMoneda.pesos(vueltoEnVale)).append(". Entregá el vuelto en mano.");
                 }
             }
 
             mostrarAlerta(Alert.AlertType.INFORMATION,
                     esPresupuesto ? "Presupuesto guardado" : "¡Venta Exitosa!",
                     (esPresupuesto
-                            ? "El presupuesto se guardó. No se descontó stock ni se sumó a la caja."
+                            ? "El presupuesto se guardó. No se descontó stock ni se sumó a la caja.\n\n"
+                                + "Lo encontrás en el Historial de Ventas para imprimirlo o guardarlo en PDF."
                             : "La transacción se registró correctamente.") + avisos);
 
             // 6. Limpiar mostrador para la siguiente venta
@@ -651,16 +758,8 @@ public class VentaController {
             txtCodigoBarras.clear();
             cargarInventarioParaVenta("", 0);
 
-            // 🔥 Magia: Reseteamos el combo y volvemos a clavar a "Consumidor Final" para el próximo cliente
-            cmbCliente.getSelectionModel().clearSelection();
-            cmbCliente.getEditor().clear();
-            buscarYMostrarCliente("", 0);
-            if (!cmbCliente.getItems().isEmpty()) {
-                cmbCliente.setValue(cmbCliente.getItems().get(0));
-
-                if (cmbCliente.getValue() != null) { System.out.println(" ├─ ID: " + cmbCliente.getValue().getId()); System.out.println(" ├─ Nombre: " + cmbCliente.getValue().getNombre()); System.out.println(" └─ CUIT: " + cmbCliente.getValue().getCuit()); }
-
-            }
+            // El combo vuelve a quedar vacío: se ve "Consumidor Final" en gris para el próximo cliente
+            volverAConsumidorFinal();
 
             txtCodigoBarras.requestFocus();
         } else {
@@ -685,13 +784,27 @@ public class VentaController {
     @FXML
     public void cobrarVenta(ActionEvent event) {
         String medioPago = cmbMedioPago.getValue();
+        boolean presupuesto = esModoPresupuesto();
 
-        if (medioPago == null || medioPago.isBlank()) {
+        if (!presupuesto && (medioPago == null || medioPago.isBlank())) {
             mostrarAlerta(Alert.AlertType.WARNING, "Falta el medio de pago", "Elegí con qué paga el cliente antes de cobrar.");
             return;
         }
 
-        if ("Pago Mixto".equals(medioPago)) {
+        // Si escribió un nombre pero no eligió a nadie de la lista, frenamos: así la venta
+        // no queda a nombre de un cliente equivocado ni de Consumidor Final por error.
+        if (clienteEscritoSinElegir()) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Falta elegir el cliente",
+                    "Escribiste \"" + cmbCliente.getEditor().getText().trim() + "\" pero no elegiste ningún cliente de la lista.\n\n"
+                            + "Elegí uno de la lista, o borrá el texto para vender a Consumidor Final.");
+            cmbCliente.requestFocus();
+            return;
+        }
+
+        if (presupuesto) {
+            // Un presupuesto no lleva pagos ni abre la ventana de cobro: se guarda directo
+            ejecutarProcesoDeCierreDeVenta(new ArrayList<>(), null);
+        } else if ("Pago Mixto".equals(medioPago)) {
             abrirVentanaPagoMixto();
         } else {
             List<Pago> pagos = new ArrayList<>();
@@ -709,10 +822,11 @@ public class VentaController {
 
             // 🔥 CAMBIO 1: El Dialog ahora maneja y espera un OBJETO Cliente, no un simple String
             javafx.scene.control.Dialog<com.nakel.frontend.model.Cliente> dialog = new javafx.scene.control.Dialog<>();
-            dialog.setTitle("Alta Exprés");
+            dialog.setTitle("Cliente nuevo");
+            dialog.setHeaderText("Alta rápida de cliente");
             dialog.getDialogPane().setContent(root);
 
-            javafx.scene.control.ButtonType btnGuardar = new javafx.scene.control.ButtonType("💾 Guardar", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+            javafx.scene.control.ButtonType btnGuardar = new javafx.scene.control.ButtonType("Guardar", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
             dialog.getDialogPane().getButtonTypes().addAll(btnGuardar, javafx.scene.control.ButtonType.CANCEL);
             dialog.getDialogPane().lookupButton(btnGuardar).getStyleClass().add("btn-primario");
 
@@ -751,7 +865,7 @@ public class VentaController {
             javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
             dialog.setTitle("Cobro Dividido / Mixto");
 
-            javafx.scene.control.ButtonType btnFacturar = new javafx.scene.control.ButtonType("✅ Emitir Factura", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
+            javafx.scene.control.ButtonType btnFacturar = new javafx.scene.control.ButtonType("Emitir Factura", javafx.scene.control.ButtonBar.ButtonData.OK_DONE);
             dialog.getDialogPane().getButtonTypes().addAll(btnFacturar, javafx.scene.control.ButtonType.CANCEL);
 
             javafx.scene.Node botonFacturarNode = dialog.getDialogPane().lookupButton(btnFacturar);
@@ -761,7 +875,7 @@ public class VentaController {
             PagoMixtoController controladorModal = loader.getController();
 
             // 🔥 NUEVO: Atrapamos el ID directo desde el objeto Cliente (¡Chau split y chau For!)
-            com.nakel.frontend.model.Cliente clienteSeleccionado = cmbCliente.getValue();
+            com.nakel.frontend.model.Cliente clienteSeleccionado = clienteElegido();
             Long idClienteParaVale = null;
 
             if (clienteSeleccionado != null && clienteSeleccionado.getId() != null && clienteSeleccionado.getId() > 0) {
@@ -797,7 +911,8 @@ public class VentaController {
         for (LineaTicket item : tablaTicket.getItems()) {
             total += item.getSubtotal();
         }
-        lblTotal.setText("Total: $" + String.format("%.2f", total));
+        // Solo el monto: la palabra "TOTAL:" ya la pone la etiqueta de al lado (antes se leía "TOTAL: Total: $0.00")
+        lblTotal.setText(com.nakel.frontend.util.FormatoMoneda.pesos(total));
     }
 
     private void agregarAlTicket(Articulo articulo) {

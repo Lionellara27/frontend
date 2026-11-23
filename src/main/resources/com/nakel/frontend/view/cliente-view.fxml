@@ -23,9 +23,9 @@
     <HBox spacing="15" alignment="CENTER_LEFT">
         <TextField fx:id="txtBuscarCliente" promptText="Buscar por Nombre o DNI..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
 
-        <Button text="🔍 Buscar" styleClass="btn-secundario" onAction="#buscarCliente"/>
+        <Button text="Buscar (F3)" styleClass="btn-secundario" onAction="#buscarCliente"/>
 
-        <Button text="➕ Nuevo Cliente" styleClass="btn-primario" onAction="#abrirModalNuevoCliente"/>
+        <Button text="Nuevo Cliente" styleClass="btn-primario" onAction="#abrirModalNuevoCliente"/>
     </HBox>
 
     <!-- TABLA DE CLIENTES -->
@@ -38,8 +38,8 @@
             <TableColumn fx:id="colEmail" text="Email" prefWidth="150"/>
 
             <!-- 🔥 NUEVAS COLUMNAS PARA VER LA PLATA -->
-            <TableColumn fx:id="colSaldoAFavor" text="A Favor ($)" prefWidth="100"/>
-            <TableColumn fx:id="colSaldoPendiente" text="Deuda ($)" prefWidth="100"/>
+            <TableColumn fx:id="colSaldoAFavor" text="Saldo a favor" prefWidth="110" minWidth="115"/>
+            <TableColumn fx:id="colSaldoPendiente" text="Deuda" prefWidth="110" minWidth="115"/>
 
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="150"/>
         </columns>
@@ -47,5 +47,11 @@
 
     <!-- 🔥 EL NUEVO PAGINADOR NATIVO DE JAVAFX -->
     <Pagination fx:id="paginadorClientes" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
+
+    <!-- Contador, igual que el del Catálogo -->
+    <HBox alignment="CENTER_RIGHT" spacing="15">
+        <Label fx:id="lblTituloTotalClientes" text="Total de clientes:" style="-fx-font-size: 14px;"/>
+        <Label fx:id="lblTotalClientes" text="0" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+    </HBox>
 
 </VBox>

@@ -15,7 +15,7 @@
         <Insets top="20" right="25" bottom="20" left="25"/>
     </padding>
 
-    <Label text="➕ Alta / Edición de Cliente" styleClass="titulo-modulo"/>
+    <Label text="Alta / Edición de Cliente" styleClass="titulo-modulo"/>
 
     <GridPane vgap="15" hgap="10">
 
@@ -40,8 +40,11 @@
                    GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="text-field"/>
 
         <!-- 🔥 ACÁ ESTÁN LOS DOS CAMPOS NUEVOS PARA LOS SALDOS -->
-        <Label text="Saldo a Favor ($):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <TextField fx:id="txtSaldoAFavor" promptText="0.00"
+        <!-- El saldo a favor NO se escribe: es la suma de los vales vigentes del cliente.
+             Para darle saldo a un cliente se le emite un vale en Configuración > Vales. -->
+        <Label text="Saldo a favor (vales):" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtSaldoAFavor" promptText="Sin vales vigentes" editable="false" focusTraversable="false"
+                   style="-fx-background-color: #EEF1F0; -fx-text-fill: #155643; -fx-font-weight: bold;"
                    GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="text-field"/>
 
         <Label text="Deuda Pendiente ($):" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
@@ -52,7 +55,7 @@
 
     <HBox spacing="15" alignment="CENTER_RIGHT">
         <Button text="Cancelar" styleClass="btn-secundario" onAction="#cerrarModal"/>
-        <Button text="💾 Guardar Cliente" styleClass="btn-primario" onAction="#guardarCliente"/>
+        <Button text="Guardar Cliente" styleClass="btn-primario" onAction="#guardarCliente"/>
     </HBox>
 
 </VBox>

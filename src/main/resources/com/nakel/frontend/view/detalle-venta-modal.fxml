@@ -38,7 +38,7 @@
                         <!-- Contenedor para los Cartelitos (Regalo / Vales) -->
                         <VBox alignment="TOP_RIGHT" spacing="10.0">
                             <children>
-                                <Label fx:id="lblRegalo" alignment="CENTER" managed="false" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 5 10;" text="🎁 ES PARA REGALO" visible="false">
+                                <Label fx:id="lblRegalo" alignment="CENTER" managed="false" style="-fx-background-color: #ff9800; -fx-text-fill: white; -fx-background-radius: 5; -fx-padding: 5 10;" text="ES PARA REGALO" visible="false">
                                     <font>
                                         <Font name="System Bold" size="14.0" />
                                     </font>
@@ -60,15 +60,15 @@
                     <columns>
                         <TableColumn fx:id="colCantidad" prefWidth="70.0" text="Cant." />
                         <TableColumn fx:id="colDescripcion" prefWidth="240.0" text="Descripción" />
-                        <TableColumn fx:id="colPrecioUni" prefWidth="100.0" text="Precio Unit." />
-                        <TableColumn fx:id="colSubtotal" prefWidth="100.0" text="Subtotal" />
+                        <TableColumn fx:id="colPrecioUni" minWidth="115" prefWidth="100.0" text="Precio Unit." />
+                        <TableColumn fx:id="colSubtotal" minWidth="115" prefWidth="100.0" text="Subtotal" />
                     </columns>
                 </TableView>
 
                 <!-- SECCIÓN: HISTORIAL DE CAMBIOS (Oculta por defecto) -->
                 <VBox spacing="5.0">
                     <children>
-                        <Label fx:id="lblAvisoCambios" managed="false" text="⚠️ Esta venta tiene X cambio(s) registrado(s)" textFill="#d32f2f" visible="false">
+                        <Label fx:id="lblAvisoCambios" managed="false" text="Esta venta tiene X cambio(s) registrado(s)" textFill="#d32f2f" visible="false">
                             <font>
                                 <Font name="System Bold" size="14.0" />
                             </font>
@@ -77,7 +77,7 @@
                             <columns>
                                 <TableColumn fx:id="colFechaCambio" prefWidth="120.0" text="Fecha" />
                                 <TableColumn fx:id="colResumenCambio" prefWidth="280.0" text="Resumen de Artículos" />
-                                <TableColumn fx:id="colDiferenciaCambio" prefWidth="100.0" text="Diferencia" />
+                                <TableColumn fx:id="colDiferenciaCambio" minWidth="115" prefWidth="100.0" text="Diferencia" />
                             </columns>
                         </TableView>
                     </children>

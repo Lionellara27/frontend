@@ -4,44 +4,66 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="450.0" prefWidth="700.0"
-            xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.nakel.frontend.controller.TabParametrosController">
-    <children>
-        <HBox spacing="30.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="20.0" AnchorPane.rightAnchor="20.0" AnchorPane.topAnchor="20.0">
-            <children>
-                <VBox spacing="10.0" HBox.hgrow="ALWAYS">
-                    <children>
-                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Categorías de Artículos" />
-                        <ListView fx:id="listCategorias" prefHeight="300.0" VBox.vgrow="ALWAYS" />
-                        <HBox spacing="10.0">
-                            <children>
-                                <TextField fx:id="txtNuevaCategoria" promptText="Nueva categoría..." HBox.hgrow="ALWAYS" />
+<!-- Categorías y Materiales: dos tarjetas iguales. Arriba se agrega, en el medio la lista, abajo se elimina. -->
+<VBox spacing="12"
+      xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.nakel.frontend.controller.TabParametrosController">
+    <padding>
+        <Insets top="16" right="20" bottom="20" left="20"/>
+    </padding>
 
-                                <TextField fx:id="txtNuevoPrefijo" promptText="Prefijo (Ej: 1111)" prefWidth="120.0" />
+    <Label text="Acá armás las listas que después elegís al cargar un artículo o un insumo: a qué rubro pertenece y de qué material es."
+           styleClass="descripcion-pestana" wrapText="true" minHeight="-Infinity"/>
 
-                                <Button mnemonicParsing="false" onAction="#agregarCategoria" text="➕" />
-                                <Button mnemonicParsing="false" onAction="#eliminarCategoria" styleClass="btn-eliminar" text="🗑️" textFill="WHITE" />
-                            </children>
-                        </HBox>
-                    </children>
-                </VBox>
+    <HBox spacing="20" VBox.vgrow="ALWAYS">
 
-                <VBox spacing="10.0" HBox.hgrow="ALWAYS">
-                    <children>
-                        <Label style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Materiales / Telas" />
-                        <ListView fx:id="listMateriales" prefHeight="300.0" VBox.vgrow="ALWAYS" />
-                        <HBox spacing="10.0">
-                            <children>
-                                <TextField fx:id="txtNuevoMaterial" promptText="Nuevo material..." HBox.hgrow="ALWAYS" />
-                                <Button mnemonicParsing="false" onAction="#agregarMaterial" text="➕" />
-                                <Button mnemonicParsing="false" onAction="#eliminarMaterial" styleClass="btn-eliminar" text="🗑️" textFill="WHITE" />
-                            </children>
-                        </HBox>
-                    </children>
-                </VBox>
-            </children>
+    <!-- ============ CATEGORÍAS ============ -->
+    <VBox spacing="10" styleClass="tarjeta" HBox.hgrow="ALWAYS" minWidth="360" prefWidth="420">
+        <Label text="Categorías de artículos" styleClass="titulo-tarjeta"/>
+        <Label text="Los rubros del catálogo: billeteras, mochilas, materas... El prefijo son los números con los que empiezan los códigos de esa categoría."
+               styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+
+        <HBox spacing="10" alignment="BOTTOM_LEFT">
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label text="Nombre" styleClass="etiqueta-campo"/>
+                <TextField fx:id="txtNuevaCategoria" promptText="Ej: Billetera" styleClass="text-field" onAction="#agregarCategoria"/>
+            </VBox>
+            <VBox spacing="4">
+                <Label text="Prefijo" styleClass="etiqueta-campo"/>
+                <TextField fx:id="txtNuevoPrefijo" promptText="Ej: 1004" prefWidth="100" styleClass="text-field" onAction="#agregarCategoria"/>
+            </VBox>
+            <Button mnemonicParsing="false" onAction="#agregarCategoria" styleClass="btn-secundario" text="Agregar"/>
         </HBox>
-    </children>
-</AnchorPane>
+
+        <ListView fx:id="listCategorias" prefHeight="300" VBox.vgrow="ALWAYS"/>
+
+        <HBox alignment="CENTER_LEFT" spacing="10">
+            <Label text="Para borrar una, elegila en la lista." styleClass="dato-ayuda" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <Button mnemonicParsing="false" onAction="#eliminarCategoria" styleClass="btn-eliminar" text="Eliminar"/>
+        </HBox>
+    </VBox>
+
+    <!-- ============ MATERIALES ============ -->
+    <VBox spacing="10" styleClass="tarjeta" HBox.hgrow="ALWAYS" minWidth="320" prefWidth="420">
+        <Label text="Materiales" styleClass="titulo-tarjeta"/>
+        <Label text="De qué está hecho cada artículo o insumo: cuero, tela, cuerina, madera..."
+               styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+
+        <HBox spacing="10" alignment="BOTTOM_LEFT">
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label text="Nombre" styleClass="etiqueta-campo"/>
+                <TextField fx:id="txtNuevoMaterial" promptText="Ej: Cuero" styleClass="text-field" onAction="#agregarMaterial"/>
+            </VBox>
+            <Button mnemonicParsing="false" onAction="#agregarMaterial" styleClass="btn-secundario" text="Agregar"/>
+        </HBox>
+
+        <ListView fx:id="listMateriales" prefHeight="300" VBox.vgrow="ALWAYS"/>
+
+        <HBox alignment="CENTER_LEFT" spacing="10">
+            <Label text="Para borrar uno, elegilo en la lista." styleClass="dato-ayuda" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <Button mnemonicParsing="false" onAction="#eliminarMaterial" styleClass="btn-eliminar" text="Eliminar"/>
+        </HBox>
+    </VBox>
+</HBox>
+</VBox>

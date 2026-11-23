@@ -9,6 +9,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <AnchorPane prefHeight="350.0" prefWidth="700.0" style="-fx-background-color: #F8F9FA;" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.nakel.frontend.controller.OpcionesImpresionController">
     <children>
@@ -36,27 +37,21 @@
                     <children>
                         <Button contentDisplay="TOP" mnemonicParsing="false" onAction="#imprimirTicket" prefHeight="160.0" prefWidth="180.0" style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-radius: 8; -fx-cursor: hand;" text="Imprimir Ticket">
                             <graphic>
-                                <Label text="🖨️" textFill="#333333">
-                                    <font><Font size="48.0" /></font>
-                                </Label>
+                                <FontIcon iconLiteral="fas-print" iconSize="48" iconColor="#155643" />
                             </graphic>
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
 
                         <Button contentDisplay="TOP" mnemonicParsing="false" onAction="#enviarCorreo" prefHeight="160.0" prefWidth="180.0" style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-radius: 8; -fx-cursor: hand;" text="Enviar por Correo">
                             <graphic>
-                                <Label text="📧" textFill="#333333">
-                                    <font><Font size="48.0" /></font>
-                                </Label>
+                                <FontIcon iconLiteral="fas-envelope" iconSize="48" iconColor="#155643" />
                             </graphic>
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
 
                         <Button contentDisplay="TOP" mnemonicParsing="false" onAction="#guardarPdf" prefHeight="160.0" prefWidth="180.0" style="-fx-background-color: #ffffff; -fx-border-color: #e0e0e0; -fx-border-radius: 8; -fx-cursor: hand;" text="Guardar PDF">
                             <graphic>
-                                <Label text="📄" textFill="#333333">
-                                    <font><Font size="48.0" /></font>
-                                </Label>
+                                <FontIcon iconLiteral="fas-file-pdf" iconSize="48" iconColor="#155643" />
                             </graphic>
                             <font><Font name="System Bold" size="14.0" /></font>
                         </Button>
@@ -68,7 +63,7 @@
 
                 <HBox alignment="CENTER_RIGHT">
                     <children>
-                        <Button mnemonicParsing="false" onAction="#cambiarImpresora" prefHeight="35.0" style="-fx-background-color: #ffffff; -fx-border-color: #B0BEC5; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-cursor: hand;" text="🖨️ Cambiar impresora de tickets" />
+                        <Button mnemonicParsing="false" onAction="#cambiarImpresora" prefHeight="35.0" style="-fx-background-color: #ffffff; -fx-border-color: #B0BEC5; -fx-border-radius: 4; -fx-text-fill: #333333; -fx-cursor: hand;" text="Cambiar impresora de tickets" />
                         <Region HBox.hgrow="ALWAYS" />
                         <Button mnemonicParsing="false" onAction="#cerrarModal" prefHeight="35.0" prefWidth="100.0" style="-fx-background-color: #B0BEC5; -fx-text-fill: white; -fx-font-weight: bold;" text="Cancelar" />
                     </children>

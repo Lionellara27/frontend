@@ -59,8 +59,32 @@ public class CajaApiService {
     // Este queda igual porque el backend no pide usuario para leer el historial
     // =============== 3. TRAER HISTORIAL PAGINADO (¡NUEVO!) ===============
     public String obtenerHistorial(int pagina, int cantidadPorPagina) {
+        return obtenerHistorial(pagina, cantidadPorPagina, 0, 0, null);
+    }
+
+    // Total de ingresos de TODAS las cajas del período (no solo de la página). null si no se pudo consultar.
+    public java.math.BigDecimal obtenerTotalHistorial(int mes, int anio) {
         try {
-            String url = API_URL + "/historial?page=" + pagina + "&size=" + cantidadPorPagina;
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/historial/total?mes=" + mes + "&anio=" + anio))
+                    .GET()
+                    .build();
+            HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+            if (respuesta.statusCode() == 200) {
+                return new java.math.BigDecimal(respuesta.body().trim());
+            }
+        } catch (Exception e) {
+            System.out.println("Error al obtener el total del historial de cajas: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // mes: 1-12 (0 = todos). anio: ej 2026 (0 = todos). orden: "campo,asc|desc" (null = más recientes primero)
+    public String obtenerHistorial(int pagina, int cantidadPorPagina, int mes, int anio, String orden) {
+        try {
+            String url = API_URL + "/historial?page=" + pagina + "&size=" + cantidadPorPagina
+                    + "&mes=" + mes + "&anio=" + anio
+                    + (orden != null && !orden.isBlank() ? "&sort=" + orden : "");
             HttpRequest peticion = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .GET()

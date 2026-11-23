@@ -12,9 +12,19 @@ public class Vale {
     // 🔥 Agregamos el ID del cliente para que coincida con el backend
     private Long idCliente;
 
+    // Por qué se emitió, y el nombre del cliente (este último solo viene en el listado de vales)
+    private String motivo;
+    private String clienteNombre;
+
     // Constructor vacío para Gson
     public Vale() {
     }
+
+    public String getMotivo() { return motivo; }
+    public void setMotivo(String motivo) { this.motivo = motivo; }
+
+    public String getClienteNombre() { return clienteNombre; }
+    public void setClienteNombre(String clienteNombre) { this.clienteNombre = clienteNombre; }
 
     // Getters y Setters
     public Long getId() { return id; }

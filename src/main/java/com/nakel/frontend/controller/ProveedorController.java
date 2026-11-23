@@ -33,6 +33,15 @@ public class ProveedorController {
     @FXML private TableColumn<Proveedor, String> colRubro;
 
     @FXML private Pagination paginadorProveedores;
+    @FXML private TableColumn<Proveedor, Long> colCod;
+    @FXML private Label lblTituloTotalProveedores;
+    @FXML private Label lblTotalProveedores;
+
+    /** Contador de abajo: total de proveedores, o cuántos encontró la búsqueda. */
+    private void mostrarTotal(long cantidad, boolean esBusqueda) {
+        lblTituloTotalProveedores.setText(esBusqueda ? "Proveedores encontrados:" : "Total de proveedores:");
+        lblTotalProveedores.setText(String.valueOf(cantidad));
+    }
 
     // 🔥 CAMBIO 1: Chau Saldo, Hola Comentarios
     @FXML private TableColumn<Proveedor, String> colComentarios;
@@ -48,6 +57,9 @@ public class ProveedorController {
     @FXML
     public void initialize() {
         System.out.println("¡Módulo de Proveedores cargado con éxito!");
+
+        // F3 = ir al buscador y buscar
+        com.nakel.frontend.util.Atajos.buscarConF3(txtBuscarProveedor, () -> buscarProveedor(null));
 
         tablaProveedores.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
@@ -93,6 +105,7 @@ public class ProveedorController {
     }
 
     private void configurarTabla() {
+        colCod.setCellValueFactory(new PropertyValueFactory<>("id"));
         colRazonSocial.setCellValueFactory(new PropertyValueFactory<>("razonSocial"));
         colNombreContacto.setCellValueFactory(new PropertyValueFactory<>("nombreContacto"));
         colTelefono.setCellValueFactory(new PropertyValueFactory<>("telefono"));
@@ -114,9 +127,10 @@ public class ProveedorController {
 
                     {
                         panelAcciones.setAlignment(javafx.geometry.Pos.CENTER);
-                        btnVer.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                        btnEditar.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                        btnEliminar.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+                        // Mismo aspecto, tachito rojo y cartelitos de ayuda que en el resto de las tablas
+                        com.nakel.frontend.util.Acciones.ver(btnVer, "Ver el detalle");
+                        com.nakel.frontend.util.Acciones.editar(btnEditar, "Editar el proveedor");
+                        com.nakel.frontend.util.Acciones.eliminar(btnEliminar, "Eliminar el proveedor");
 
                         btnVer.setOnAction(e -> mostrarDetalle(getTableView().getItems().get(getIndex())));
                         btnEditar.setOnAction(e -> editarProveedor(getTableView().getItems().get(getIndex())));
@@ -200,6 +214,12 @@ public class ProveedorController {
                     masterData.setAll(listaBackend);
                 }
 
+                // El total lo informa el backend (cuenta todas las páginas, no solo la que se ve)
+                long total = elementoParseado.isJsonObject() && elementoParseado.getAsJsonObject().has("totalElements")
+                        ? elementoParseado.getAsJsonObject().get("totalElements").getAsLong()
+                        : masterData.size();
+                mostrarTotal(total, !textoBusqueda.isEmpty());
+
             } catch (Exception e) {
                 System.out.println("❌ Error al cargar proveedores: " + e.getMessage());
                 e.printStackTrace();
@@ -207,6 +227,7 @@ public class ProveedorController {
 
         } else {
             masterData.clear();
+            mostrarTotal(0, !textoBusqueda.isEmpty());
 
             if (paginadorProveedores != null) {
                 paginadorProveedores.setPageCount(1);
@@ -271,13 +292,13 @@ public class ProveedorController {
         String comentarios = (proveedor.getComentarios() != null && !proveedor.getComentarios().trim().isEmpty()) ? proveedor.getComentarios() : "Sin anotaciones.";
 
         // Armamos la tarjeta completa para el Ojito
-        String info = "🏢 Contacto: " + contacto + "\n"
-                + "📞 Teléfono: " + telefono + "\n"
-                + "📧 Email: " + email + "\n"
-                + "📄 CUIT: " + cuit + "\n\n"
+        String info = "Contacto: " + contacto + "\n"
+                + "Teléfono: " + telefono + "\n"
+                + "Email: " + email + "\n"
+                + "CUIT: " + cuit + "\n\n"
                 + "--- ESTADO DE CUENTA ---\n"
-                + "🟢 Saldo a Favor: $" + proveedor.getSaldoFavor() + "\n"
-                + "🔴 Saldo en Contra: $" + proveedor.getSaldoContra() + "\n\n"
+                + "Saldo a Favor: " + com.nakel.frontend.util.FormatoMoneda.pesos(proveedor.getSaldoFavor()) + "\n"
+                + "Saldo en Contra: " + com.nakel.frontend.util.FormatoMoneda.pesos(proveedor.getSaldoContra()) + "\n\n"
                 + "--- COMENTARIOS ---\n"
                 + comentarios;
 

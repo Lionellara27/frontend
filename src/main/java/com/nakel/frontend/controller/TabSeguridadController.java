@@ -40,6 +40,20 @@ public class TabSeguridadController {
         configurarOjito(txtPassActual, txtPassActualVisible, btnVerActual);
         configurarOjito(txtPassNueva, txtPassNuevaVisible, btnVerNueva);
         configurarOjito(txtPassRepetir, txtPassRepetirVisible, btnVerRepetir);
+
+        ponerUsuarioDeLaSesion();
+    }
+
+    /**
+     * El usuario ya viene escrito (es el que inició sesión), arriba y abajo: así, para cambiar
+     * solo la contraseña, no hay que tipear el usuario dos veces.
+     */
+    private void ponerUsuarioDeLaSesion() {
+        String usuario = com.nakel.frontend.util.SesionActual.getUsuarioLogueado();
+        if (usuario != null && !usuario.isBlank()) {
+            txtUsuarioActual.setText(usuario);
+            txtNuevoUsuario.setText(usuario);
+        }
     }
 
     // Método que hace el truco del ojito
@@ -50,6 +64,15 @@ public class TabSeguridadController {
         // Si el botón está apretado, muestra el texto plano. Si no, muestra los puntitos.
         visible.visibleProperty().bind(boton.selectedProperty());
         oculto.visibleProperty().bind(boton.selectedProperty().not());
+
+        // Ojito vectorial (antes era un emoji): abierto = ver la clave, tachado = ocultarla
+        org.kordamp.ikonli.javafx.FontIcon ojo = new org.kordamp.ikonli.javafx.FontIcon("fas-eye");
+        ojo.setIconSize(16);
+        ojo.setIconColor(javafx.scene.paint.Color.web("#155643"));
+        boton.setText("");
+        boton.setGraphic(ojo);
+        boton.selectedProperty().addListener((obs, antes, viendo) -> ojo.setIconLiteral(viendo ? "fas-eye-slash" : "fas-eye"));
+        com.nakel.frontend.util.Acciones.ayuda(boton, "Mostrar u ocultar la contraseña");
     }
 
     @FXML
@@ -112,6 +135,9 @@ public class TabSeguridadController {
         btnVerActual.setSelected(false);
         btnVerNueva.setSelected(false);
         btnVerRepetir.setSelected(false);
+
+        // Queda escrito el usuario nuevo, listo para un próximo cambio
+        ponerUsuarioDeLaSesion();
     }
 
     // Método auxiliar para no repetir código de alertas

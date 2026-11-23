@@ -99,10 +99,9 @@ public class OpcionesImpresionController {
                     ));
 
                     if (!esRegalo) {
-                        texto.append(String.format(
-                                "      $%.2f\n",
-                                det.getSubtotal() != null ? det.getSubtotal() : 0.0
-                        ));
+                        texto.append("      ")
+                                .append(com.nakel.frontend.util.FormatoMoneda.pesos(det.getSubtotal()))
+                                .append("\n");
                     }
                 }
             }
@@ -113,10 +112,9 @@ public class OpcionesImpresionController {
                 texto.append("  Valido para cambio.\n");
                 texto.append("  Sin valor comercial.\n");
             } else {
-                texto.append(String.format(
-                        "TOTAL:              $%.2f\n",
-                        ventaActual.getTotal() != null ? ventaActual.getTotal() : 0.0
-                ));
+                // Total alineado a la derecha del ticket (28 columnas)
+                String total = com.nakel.frontend.util.FormatoMoneda.pesos(ventaActual.getTotal());
+                texto.append(String.format("TOTAL:%" + Math.max(1, 28 - 6) + "s\n", total));
             }
 
             texto.append("----------------------------\n");

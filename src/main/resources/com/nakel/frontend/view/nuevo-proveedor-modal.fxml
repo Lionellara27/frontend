@@ -15,7 +15,7 @@
         <Insets top="20" right="25" bottom="20" left="25"/>
     </padding>
 
-    <Label text="➕ Alta / Edición de Proveedor" styleClass="titulo-modulo"/>
+    <Label text="Alta / Edición de Proveedor" styleClass="titulo-modulo"/>
 
     <GridPane vgap="15" hgap="10">
 
@@ -57,7 +57,7 @@
 
     <HBox spacing="15" alignment="CENTER_RIGHT">
         <Button text="Cancelar" styleClass="btn-secundario" onAction="#cerrarModal"/>
-        <Button text="💾 Guardar" styleClass="btn-primario" onAction="#guardarProveedor"/>
+        <Button text="Guardar" styleClass="btn-primario" onAction="#guardarProveedor"/>
     </HBox>
 
 </VBox>

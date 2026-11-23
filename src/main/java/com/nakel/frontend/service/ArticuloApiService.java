@@ -432,7 +432,7 @@ public class ArticuloApiService {
                     return Integer.parseInt(respuesta.body().trim());
                 } catch (NumberFormatException e) {
                     System.out.println(
-                            "⚠️ El backend respondió correctamente, " +
+                            "El backend respondió correctamente, " +
                                     "pero no devolvió una cantidad válida."
                     );
                     return -1;
@@ -440,7 +440,7 @@ public class ArticuloApiService {
             }
 
             System.out.println(
-                    "⚠️ El servidor rechazó el aumento. Código: "
+                    "El servidor rechazó el aumento. Código: "
                             + respuesta.statusCode()
             );
 
@@ -448,7 +448,7 @@ public class ArticuloApiService {
 
         } catch (Exception e) {
             System.out.println(
-                    "❌ Error al aplicar aumento masivo: "
+                    "Error al aplicar aumento masivo: "
                             + e.getMessage()
             );
             e.printStackTrace();
@@ -478,10 +478,11 @@ public class ArticuloApiService {
     }
 
     // 🖨️ DESCARGAR REPORTE DE STOCK EN PDF
-    public String descargarReportePdf() {
+    // mayorA: null = todos los artículos; 0 = solo con stock; N = con más de N unidades.
+    public String descargarReportePdf(Integer mayorA) {
         try {
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/reporte-stock"))
+                    .uri(URI.create(API_URL + "/reporte-stock" + (mayorA != null ? "?mayorA=" + mayorA : "")))
                     .GET()
                     .build();
 

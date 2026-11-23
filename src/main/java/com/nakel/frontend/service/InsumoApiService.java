@@ -45,6 +45,49 @@ public class InsumoApiService {
         return "[]";
     }
 
+    // =============== 1.0 bis INSUMOS FILTRADOS (texto, cómo se mide, material) ===============
+    // El filtro lo hace el backend sobre TODOS los insumos, no solo sobre la página cargada.
+    // Cualquier filtro puede venir null. tipoMedicion: SUPERFICIE, UNIDAD o TIEMPO.
+    public String obtenerInsumosFiltrados(int pagina, int cantidadPorPagina, String texto, String tipoMedicion, Long idMaterial) {
+        try {
+            StringBuilder url = new StringBuilder(API_URL + "/filtrar?page=" + pagina + "&size=" + cantidadPorPagina);
+            if (texto != null && !texto.isBlank()) {
+                url.append("&texto=").append(java.net.URLEncoder.encode(texto.trim(), java.nio.charset.StandardCharsets.UTF_8));
+            }
+            if (tipoMedicion != null) url.append("&tipoMedicion=").append(tipoMedicion);
+            if (idMaterial != null) url.append("&idMaterial=").append(idMaterial);
+
+            HttpRequest peticion = HttpRequest.newBuilder().uri(URI.create(url.toString())).GET().build();
+            HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
+        } catch (Exception e) {
+            System.out.println("Error de conexión al filtrar insumos: " + e.getMessage());
+        }
+        return "[]";
+    }
+
+    // =============== 1.0 ter INSUMOS PARA LA CALCULADORA ===============
+    // Paginado, con buscador, y ordenado: horas, después unidades, después superficie.
+    public String obtenerInsumosCalculadora(int pagina, int cantidadPorPagina, String texto) {
+        try {
+            StringBuilder url = new StringBuilder(API_URL + "/calculadora?page=" + pagina + "&size=" + cantidadPorPagina);
+            if (texto != null && !texto.isBlank()) {
+                url.append("&texto=").append(java.net.URLEncoder.encode(texto.trim(), java.nio.charset.StandardCharsets.UTF_8));
+            }
+            HttpRequest peticion = HttpRequest.newBuilder().uri(URI.create(url.toString())).GET().build();
+            HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
+            if (respuesta.statusCode() == 200) {
+                return respuesta.body();
+            }
+        } catch (Exception e) {
+            System.out.println("Error de conexión al listar insumos para la calculadora: " + e.getMessage());
+        }
+        return null;
+    }
+
     // =============== 1.1 OBTENER INSUMOS (Por Defecto) ===============
     // Mantenemos este para que no se rompa tu controlador actual.
     // Por defecto, traerá la Página 0 con 20 elementos.

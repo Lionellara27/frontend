@@ -72,11 +72,11 @@ public class GeneradorPdfService {
             // ================================================================
 
             System.out.println(
-                    "🔎 fechaHora = " + venta.getFechaHora()
+                    "fechaHora = " + venta.getFechaHora()
             );
 
             System.out.println(
-                    "🔎 tipo fechaHora = "
+                    "tipo fechaHora = "
                             + (venta.getFechaHora() != null
                             ? venta.getFechaHora().getClass().getName()
                             : "NULL")
@@ -102,7 +102,7 @@ public class GeneradorPdfService {
                 } catch (Exception e) {
 
                     System.err.println(
-                            "⚠️ No se pudo interpretar fechaHora: "
+                            "No se pudo interpretar fechaHora: "
                                     + venta.getFechaHora()
                     );
 
@@ -303,20 +303,14 @@ public class GeneradorPdfService {
 
                         tabla.addCell(
                                 new Phrase(
-                                        String.format(
-                                                "$ %.2f",
-                                                det.getPrecioUnitario()
-                                        ),
+                                        com.nakel.frontend.util.FormatoMoneda.pesos(det.getPrecioUnitario()),
                                         fuenteNormal
                                 )
                         );
 
                         tabla.addCell(
                                 new Phrase(
-                                        String.format(
-                                                "$ %.2f",
-                                                det.getSubtotal()
-                                        ),
+                                        com.nakel.frontend.util.FormatoMoneda.pesos(det.getSubtotal()),
                                         fuenteNormal
                                 )
                         );
@@ -335,11 +329,7 @@ public class GeneradorPdfService {
 
                 Paragraph total =
                         new Paragraph(
-                                "TOTAL: "
-                                        + String.format(
-                                        "$ %.2f",
-                                        venta.getTotal()
-                                ),
+                                "TOTAL: " + com.nakel.frontend.util.FormatoMoneda.pesos(venta.getTotal()),
                                 fuenteTitulo
                         );
 
@@ -371,7 +361,7 @@ public class GeneradorPdfService {
             documento.close();
 
             System.out.println(
-                    "✅ ¡PDF A4 generado con éxito en "
+                    "¡PDF A4 generado con éxito en "
                             + rutaDestino
                             + "!"
             );
@@ -379,7 +369,7 @@ public class GeneradorPdfService {
         } catch (Exception e) {
 
             System.err.println(
-                    "❌ Error al generar PDF A4: "
+                    "Error al generar PDF A4: "
                             + e.getMessage()
             );
 
@@ -488,11 +478,7 @@ public class GeneradorPdfService {
 
             document.add(
                     new Paragraph(
-                            "Saldo a favor: $"
-                                    + String.format(
-                                    "%.2f",
-                                    saldo
-                            ),
+                            "Saldo a favor: " + com.nakel.frontend.util.FormatoMoneda.pesos(saldo),
                             fontTexto
                     )
             );
@@ -564,14 +550,14 @@ public class GeneradorPdfService {
             document.close();
 
             System.out.println(
-                    "✅ PDF Ticket Generado exitosamente en: "
+                    "PDF Ticket Generado exitosamente en: "
                             + rutaDestino
             );
 
         } catch (Exception e) {
 
             System.err.println(
-                    "❌ Error al generar el PDF de Cambio: "
+                    "Error al generar el PDF de Cambio: "
                             + e.getMessage()
             );
 

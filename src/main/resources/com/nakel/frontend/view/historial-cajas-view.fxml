@@ -4,7 +4,8 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox spacing="15.0" AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0"
+<VBox spacing="15.0" styleClass="modulo-container" stylesheets="@../../../../css/nakel.css"
+      AnchorPane.bottomAnchor="15.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="15.0"
       xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.nakel.frontend.controller.HistorialCajasController">
     <padding>
@@ -12,17 +13,31 @@
     </padding>
 
     <HBox alignment="CENTER_LEFT" spacing="15">
-        <Label style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" text="Historial de Cajas Diarias" />
+        <Label text="Historial de Cajas Diarias" styleClass="titulo-modulo" />
         <Pane HBox.hgrow="ALWAYS" />
-        <Button onAction="#cargarHistorial" style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;" text="🔄 Actualizar" />
+        <Button onAction="#cargarHistorial" styleClass="btn-secundario" text="Actualizar" />
     </HBox>
 
-    <TableView fx:id="tablaCajas" VBox.vgrow="ALWAYS" style="-fx-font-size: 14px;">
+    <!-- Filtros: período y orden -->
+    <HBox alignment="CENTER_LEFT" spacing="15">
+        <Label text="Mes:" style="-fx-font-weight: bold;" />
+        <ComboBox fx:id="cmbMes" prefWidth="140" styleClass="text-field" />
+
+        <Label text="Año:" style="-fx-font-weight: bold;" />
+        <ComboBox fx:id="cmbAnio" prefWidth="110" styleClass="text-field" />
+
+        <Label text="Ordenar por:" style="-fx-font-weight: bold;" />
+        <ComboBox fx:id="cmbOrden" prefWidth="220" styleClass="text-field" />
+
+        <Button onAction="#limpiarFiltros" styleClass="btn-azul" text="Limpiar" />
+    </HBox>
+
+    <TableView fx:id="tablaCajas" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
         <columns>
-            <TableColumn fx:id="colId" prefWidth="60.0" text="ID" style="-fx-alignment: CENTER;"/>
-            <TableColumn fx:id="colFecha" prefWidth="150.0" text="Fecha Apertura" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="colId" prefWidth="60.0" text="N°" style="-fx-alignment: CENTER;"/>
+            <TableColumn fx:id="colFecha" prefWidth="150.0" text="Fecha de apertura" style="-fx-alignment: CENTER;"/>
             <TableColumn fx:id="colVentas" prefWidth="90.0" text="Ventas" style="-fx-alignment: CENTER;"/>
-            <TableColumn fx:id="colTotal" prefWidth="140.0" text="Ingresos Totales" style="-fx-alignment: CENTER-RIGHT;"/>
+            <TableColumn fx:id="colTotal" minWidth="115" prefWidth="140.0" text="Ingresos totales" style="-fx-alignment: CENTER-RIGHT;"/>
             <TableColumn fx:id="colEstado" prefWidth="120.0" text="Estado" style="-fx-alignment: CENTER;"/>
             <TableColumn fx:id="colAcciones" prefWidth="90.0" text="Acciones" style="-fx-alignment: CENTER;"/>
         </columns>
@@ -32,5 +47,9 @@
     </TableView>
 
     <Pagination fx:id="paginadorCajas" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
+
+    <HBox alignment="CENTER_RIGHT" spacing="15">
+        <Label fx:id="lblResumen" text="" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;" />
+    </HBox>
 
 </VBox>

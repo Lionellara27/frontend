@@ -3,6 +3,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox spacing="20" styleClass="modulo-container"
       stylesheets="@../../../../css/nakel.css"
@@ -15,49 +16,57 @@
         <Insets top="20" right="25" bottom="20" left="25"/>
     </padding>
 
-    <Label text="➕ Alta de Nuevo Insumo" styleClass="titulo-modulo"/>
+    <Label text="Alta de Nuevo Insumo" styleClass="titulo-modulo"/>
 
     <GridPane vgap="15" hgap="10">
 
-        <Label text="Categoría:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <HBox spacing="10" GridPane.rowIndex="0" GridPane.columnIndex="1">
+        <Label text="Categoría:" GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.valignment="TOP" style="-fx-padding: 9 0 0 0;"/>
+        <VBox spacing="4" GridPane.rowIndex="0" GridPane.columnIndex="1">
+        <HBox spacing="10">
             <ComboBox fx:id="cmbCategoria" promptText="Seleccionar..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="text-field"/>
-            <Button text="+" onAction="#abrirModalNuevaCategoria" styleClass="btn-primario" prefWidth="40"/>
+            <!-- El "+" va como ícono: como texto no entraba en 40px por el relleno del botón y quedaba vacío -->
+            <Button fx:id="btnNuevaCategoria" onAction="#abrirModalNuevaCategoria" styleClass="btn-primario" prefWidth="40" minWidth="40" maxHeight="Infinity" style="-fx-padding: 0;">
+                <graphic><FontIcon iconLiteral="fas-plus" iconSize="14" iconColor="white"/></graphic>
+            </Button>
         </HBox>
+        <!-- Cómo se mide lo decide la categoría: ya no se vuelve a preguntar la unidad -->
+        <Label fx:id="lblSeMide" text="Elegí la categoría: de ella depende qué datos hay que cargar." styleClass="dato-ayuda" wrapText="true" maxWidth="280"/>
+        </VBox>
 
         <Label fx:id="lblMaterial" text="Material:" GridPane.rowIndex="1" GridPane.columnIndex="0" visible="false" managed="false"/>
         <HBox fx:id="boxMaterial" spacing="10" GridPane.rowIndex="1" GridPane.columnIndex="1" visible="false" managed="false">
             <ComboBox fx:id="cmbMaterial" promptText="Seleccionar material..." HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="text-field"/>
-            <Button text="+" onAction="#abrirModalNuevoMaterial" styleClass="btn-primario" prefWidth="40"/>
+            <Button fx:id="btnNuevoMaterial" onAction="#abrirModalNuevoMaterial" styleClass="btn-primario" prefWidth="40" minWidth="40" maxHeight="Infinity" style="-fx-padding: 0;">
+                <graphic><FontIcon iconLiteral="fas-plus" iconSize="14" iconColor="white"/></graphic>
+            </Button>
         </HBox>
 
         <Label text="Descripción:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
         <TextField fx:id="txtDescripcion" promptText="Ej: Cuero Negro, Cierre YKK..."
                    GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" styleClass="text-field"/>
 
-        <Label fx:id="lblMedidas" text="Medidas Totales (cm):" GridPane.rowIndex="3" GridPane.columnIndex="0" visible="false" managed="false"/>
+        <Label fx:id="lblMedidas" text="Medidas (cm):" GridPane.rowIndex="3" GridPane.columnIndex="0" visible="false" managed="false"/>
         <HBox fx:id="boxMedidas" spacing="10" GridPane.rowIndex="3" GridPane.columnIndex="1" visible="false" managed="false">
             <TextField fx:id="txtAnchoPlancha" promptText="Ancho" prefWidth="80" styleClass="text-field"/>
             <Label text="x" style="-fx-alignment: center; -fx-padding: 5 0 0 0;"/>
             <TextField fx:id="txtLargoPlancha" promptText="Largo" prefWidth="80" styleClass="text-field"/>
         </HBox>
 
-        <Label fx:id="lblCantidad" text="Cantidad de unidades:" GridPane.rowIndex="4" GridPane.columnIndex="0" visible="false" managed="false"/>
-        <TextField fx:id="txtCantidad" promptText="Ej: 100" GridPane.rowIndex="4" GridPane.columnIndex="1" visible="false" managed="false" styleClass="text-field"/>
+        <Label fx:id="lblCantidad" text="Cantidad comprada:" GridPane.rowIndex="3" GridPane.columnIndex="0" visible="false" managed="false"/>
+        <TextField fx:id="txtCantidad" promptText="Ej: 100" GridPane.rowIndex="3" GridPane.columnIndex="1" visible="false" managed="false" styleClass="text-field"/>
 
-        <Label text="Unidad de Medida:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="cmbUnidad" promptText="Seleccionar..."
-                  GridPane.rowIndex="5" GridPane.columnIndex="1" maxWidth="Infinity" styleClass="text-field"/>
-
-        <Label text="Costo Total ($):" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
-        <TextField fx:id="txtCosto" promptText="Ej: 15000"
-                   GridPane.rowIndex="6" GridPane.columnIndex="1" styleClass="text-field"/>
+        <!-- El título y la explicación del costo cambian según la categoría (por hora, del lote, de la pieza) -->
+        <Label fx:id="lblCosto" text="Costo ($):" GridPane.rowIndex="4" GridPane.columnIndex="0" GridPane.valignment="TOP" style="-fx-padding: 9 0 0 0;"/>
+        <VBox spacing="4" GridPane.rowIndex="4" GridPane.columnIndex="1">
+            <TextField fx:id="txtCosto" promptText="Ej: 15000" styleClass="text-field"/>
+            <Label fx:id="lblAyudaCosto" styleClass="dato-ayuda" wrapText="true" maxWidth="280"/>
+        </VBox>
 
     </GridPane>
 
     <HBox spacing="15" alignment="CENTER_RIGHT">
         <Button text="Cancelar" styleClass="btn-secundario" onAction="#cerrarModal"/>
-        <Button text="💾 Guardar Insumo" styleClass="btn-primario" onAction="#guardarInsumo"/>
+        <Button text="Guardar Insumo" styleClass="btn-primario" onAction="#guardarInsumo"/>
     </HBox>
 
 </VBox>

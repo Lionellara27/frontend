@@ -66,6 +66,9 @@ public class ArticuloController {
     public void initialize() {
         System.out.println("Módulo de Catálogo Iniciado. Cargando Filtros reales...");
 
+        // F3 = ir al buscador y buscar
+        com.nakel.frontend.util.Atajos.buscarConF3(txtBuscar, () -> buscarArticulos(null));
+
         tablaArticulos.setColumnResizePolicy(
                 TableView.CONSTRAINED_RESIZE_POLICY
         );
@@ -168,6 +171,8 @@ public class ArticuloController {
         colPrecio.setCellValueFactory(
                 new PropertyValueFactory<>("precio")
         );
+        // Se muestra como plata: 10000.0 -> $ 10.000,00
+        colPrecio.setCellFactory(com.nakel.frontend.util.FormatoMoneda.celdaPesos());
 
         // 🔹 Categoría
         colCategoria.setCellValueFactory(cellData -> {
@@ -247,17 +252,10 @@ public class ArticuloController {
                     {
                         pane.setAlignment(javafx.geometry.Pos.CENTER);
 
-                        btnVer.setStyle(
-                                "-fx-cursor: hand; -fx-background-color: transparent;"
-                        );
-
-                        btnEditar.setStyle(
-                                "-fx-cursor: hand; -fx-background-color: transparent;"
-                        );
-
-                        btnEliminar.setStyle(
-                                "-fx-cursor: hand; -fx-background-color: transparent;"
-                        );
+                        // Mismo aspecto y cartelitos de ayuda que en el resto de las tablas
+                        com.nakel.frontend.util.Acciones.ver(btnVer, "Ver el detalle");
+                        com.nakel.frontend.util.Acciones.editar(btnEditar, "Editar el artículo");
+                        com.nakel.frontend.util.Acciones.eliminar(btnEliminar, "Dar de baja el artículo");
 
                         // 👁️ Ver
                         btnVer.setOnAction(e -> {
@@ -315,7 +313,7 @@ public class ArticuloController {
         dialog.getDialogPane().getStylesheets().add(getClass().getResource("/css/nakel.css").toExternalForm());
         dialog.getDialogPane().getStyleClass().add("mostrador-container");
 
-        ButtonType btnGuardar = new ButtonType("💾 Guardar", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnGuardar = new ButtonType("Guardar", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(btnGuardar, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
@@ -324,7 +322,8 @@ public class ArticuloController {
 
         TextField txtCodigo = new TextField(); txtCodigo.setPromptText("Escriba el SKU final...");
         TextField txtNombre = new TextField(); txtNombre.setPromptText("Ej: Cartera Negra Imperial");
-        TextField txtPrecio = new TextField(); txtPrecio.setPromptText("Ej: 50000");
+        TextField txtPrecio = new TextField(); txtPrecio.setPromptText("Ej: 50.000");
+        com.nakel.frontend.util.FormatoMoneda.aplicar(txtPrecio); // 50000 -> 50.000 mientras se escribe
         TextField txtStock = new TextField(); txtStock.setPromptText("Ej: 10");
 
         ComboBox<String> cmbOrigenDialog = new ComboBox<>();
@@ -452,7 +451,7 @@ public class ArticuloController {
         Alert alerta = new Alert(Alert.AlertType.INFORMATION);
         alerta.setTitle("Detalle del Artículo");
         alerta.setHeaderText(articulo.getNombre() + " (SKU: " + articulo.getCodigo() + ")");
-        String info = "Precio: $" + articulo.getPrecio() + "\n"
+        String info = "Precio: " + com.nakel.frontend.util.FormatoMoneda.pesos(articulo.getPrecio()) + "\n"
                 + "Stock Actual: " + articulo.getStockActual() + " unidades\n"
                 + "Categoría: " + (articulo.getCategoria() != null ? articulo.getCategoria().getNombre() : "N/A") + "\n"
                 + "Material: " + (articulo.getMaterial() != null ? articulo.getMaterial().getNombre() : "N/A") + "\n"
@@ -470,7 +469,7 @@ public class ArticuloController {
         dialog.getDialogPane().getStylesheets().add(getClass().getResource("/css/nakel.css").toExternalForm());
         dialog.getDialogPane().getStyleClass().add("mostrador-container");
 
-        ButtonType btnActualizar = new ButtonType("🔄 Actualizar", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnActualizar = new ButtonType("Actualizar", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(btnActualizar, ButtonType.CANCEL);
 
         GridPane grid = new GridPane();
@@ -480,7 +479,9 @@ public class ArticuloController {
         // Campos de texto YA PRE-CARGADOS
         TextField txtCodigo = new TextField(articuloViejo.getCodigo());
         TextField txtNombre = new TextField(articuloViejo.getNombre());
-        TextField txtPrecio = new TextField(String.valueOf(articuloViejo.getPrecio()));
+        TextField txtPrecio = new TextField();
+        com.nakel.frontend.util.FormatoMoneda.aplicar(txtPrecio);
+        com.nakel.frontend.util.FormatoMoneda.poner(txtPrecio, articuloViejo.getPrecio()); // 25000.0 -> 25.000
         TextField txtStock = new TextField(String.valueOf(articuloViejo.getStockActual()));
 
         ComboBox<String> cmbOrigenDialog = new ComboBox<>();
@@ -654,7 +655,7 @@ public class ArticuloController {
             } catch (Exception e) {
 
                 System.out.println(
-                        "❌ Error al cargar artículos: " + e.getMessage()
+                        "Error al cargar artículos: " + e.getMessage()
                 );
 
                 e.printStackTrace();
@@ -745,8 +746,11 @@ public class ArticuloController {
 
     @FXML
     public void imprimirReporteStock(ActionEvent event) {
-        System.out.println("Generando PDF de stock...");
-        String rutaPdf = apiService.descargarReportePdf();
+        // Antes de armar la hoja se pregunta qué imprimir
+        Integer[] eleccion = preguntarQueStockImprimir();
+        if (eleccion == null) return; // canceló
+
+        String rutaPdf = apiService.descargarReportePdf(eleccion[0]);
 
         if (rutaPdf != null) {
             try {
@@ -761,5 +765,58 @@ public class ArticuloController {
             Alert error = new Alert(Alert.AlertType.ERROR, "Error al generar el reporte de stock.");
             error.showAndWait();
         }
+    }
+
+    /**
+     * Ventanita con tres opciones para el reporte de stock.
+     * Devuelve un arreglo de un elemento con el filtro (null = todos, 0 = con stock, N = más de N),
+     * o null si se canceló.
+     */
+    private Integer[] preguntarQueStockImprimir() {
+        ToggleGroup grupo = new ToggleGroup();
+        RadioButton rbConStock = new RadioButton("Solo los que tienen stock (más de 0)");
+        RadioButton rbTodos = new RadioButton("Todos los artículos (también los que están en 0)");
+        RadioButton rbMasDe = new RadioButton("Solo los que tienen más de");
+        rbConStock.setToggleGroup(grupo);
+        rbTodos.setToggleGroup(grupo);
+        rbMasDe.setToggleGroup(grupo);
+        rbConStock.setSelected(true);
+
+        TextField txtCantidad = new TextField("10");
+        txtCantidad.getStyleClass().add("text-field");
+        txtCantidad.setPrefWidth(70);
+        txtCantidad.disableProperty().bind(rbMasDe.selectedProperty().not());
+        // Solo números
+        txtCantidad.textProperty().addListener((obs, viejo, nuevo) -> {
+            if (nuevo != null && !nuevo.matches("\\d{0,5}")) txtCantidad.setText(viejo);
+        });
+        javafx.scene.layout.HBox filaMasDe = new javafx.scene.layout.HBox(8, rbMasDe, txtCantidad, new Label("unidades"));
+        filaMasDe.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+        javafx.scene.layout.VBox opciones = new javafx.scene.layout.VBox(14, rbConStock, rbTodos, filaMasDe);
+        opciones.getStyleClass().add("formulario-dialogo");
+        opciones.setStyle("-fx-font-size: 14px;");
+        opciones.setPadding(new javafx.geometry.Insets(6, 4, 6, 4));
+
+        Dialog<ButtonType> dialogo = new Dialog<>();
+        dialogo.setTitle("Imprimir stock");
+        dialogo.setHeaderText("¿Qué artículos querés en la hoja?");
+        ButtonType btnImprimir = new ButtonType("Imprimir", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnCancelar = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        dialogo.getDialogPane().getButtonTypes().addAll(btnImprimir, btnCancelar);
+        dialogo.getDialogPane().setContent(opciones);
+
+        // Si eligió "más de" y dejó la cantidad vacía, no se cierra
+        dialogo.getDialogPane().lookupButton(btnImprimir).addEventFilter(ActionEvent.ACTION, ev -> {
+            if (rbMasDe.isSelected() && txtCantidad.getText().isBlank()) {
+                ev.consume();
+                new Alert(Alert.AlertType.WARNING, "Escribí la cantidad (por ejemplo 10).").showAndWait();
+            }
+        });
+
+        if (dialogo.showAndWait().orElse(btnCancelar) != btnImprimir) return null;
+        if (rbTodos.isSelected()) return new Integer[]{null};
+        if (rbMasDe.isSelected()) return new Integer[]{Integer.parseInt(txtCantidad.getText().trim())};
+        return new Integer[]{0};
     }
 }

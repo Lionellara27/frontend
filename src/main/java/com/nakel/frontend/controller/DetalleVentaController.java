@@ -53,15 +53,15 @@ public class DetalleVentaController {
         // Configuramos cómo se lee cada columna de la tabla de detalles original
         colCantidad.setCellValueFactory(cell -> new SimpleStringProperty(String.valueOf(cell.getValue().getCantidad())));
         colDescripcion.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getArticulo().getNombre()));
-        colPrecioUni.setCellValueFactory(cell -> new SimpleStringProperty("$ " + cell.getValue().getPrecioUnitario()));
-        colSubtotal.setCellValueFactory(cell -> new SimpleStringProperty("$ " + cell.getValue().getSubtotal()));
+        colPrecioUni.setCellValueFactory(cell -> new SimpleStringProperty(com.nakel.frontend.util.FormatoMoneda.pesos(cell.getValue().getPrecioUnitario())));
+        colSubtotal.setCellValueFactory(cell -> new SimpleStringProperty(com.nakel.frontend.util.FormatoMoneda.pesos(cell.getValue().getSubtotal())));
 
         // 🔥 3. CONFIGURAMOS LA TABLA DE CAMBIOS (si existe en la vista)
         if (colFechaCambio != null && colResumenCambio != null) {
             // 3.A - Asignamos QUÉ dato va en cada columna (Esto ya lo tenías)
             colFechaCambio.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getFechaCambio()));
             colResumenCambio.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getResumenArticulos()));
-            colDiferenciaCambio.setCellValueFactory(cell -> new SimpleStringProperty("$ " + cell.getValue().getDiferenciaCobrada()));
+            colDiferenciaCambio.setCellValueFactory(cell -> new SimpleStringProperty(com.nakel.frontend.util.FormatoMoneda.pesos(cell.getValue().getDiferenciaCobrada())));
 
             // 3.B - CÓMO SE VE LA FECHA: Formato lindo (dd/MM/yyyy - HH:mm)
             DateTimeFormatter formatoHumano = DateTimeFormatter.ofPattern("dd/MM/yyyy - HH:mm");
@@ -112,7 +112,7 @@ public class DetalleVentaController {
         String nombreCliente = (venta.getCliente() != null) ? venta.getCliente().getNombre() : "Consumidor Final";
         lblCliente.setText("Cliente: " + nombreCliente);
 
-        lblTotal.setText(String.format("$ %.2f", venta.getTotal()));
+        lblTotal.setText(com.nakel.frontend.util.FormatoMoneda.pesos(venta.getTotal()));
 
         // Formateo de fecha
         try {
@@ -129,7 +129,7 @@ public class DetalleVentaController {
             boolean usoVale = false;
 
             for (com.nakel.frontend.model.Pago pago : venta.getPagos()) {
-                pagosInfo.append(pago.getMetodoPago()).append(" ($").append(pago.getMonto()).append(") | ");
+                pagosInfo.append(pago.getMetodoPago()).append(" (").append(com.nakel.frontend.util.FormatoMoneda.pesos(pago.getMonto())).append(") | ");
                 if (pago.getMetodoPago().toLowerCase().contains("vale")) {
                     usoVale = true;
                 }
@@ -192,7 +192,7 @@ public class DetalleVentaController {
         if (historial != null && !historial.isEmpty()) {
             // Hay cambios: mostramos el cartelito y llenamos la tabla extra
             if (lblAvisoCambios != null) {
-                lblAvisoCambios.setText("⚠️ Esta venta tiene " + historial.size() + " cambio(s) registrado(s)");
+                lblAvisoCambios.setText("Esta venta tiene " + historial.size() + " cambio(s) registrado(s)");
                 lblAvisoCambios.setVisible(true);
                 lblAvisoCambios.setManaged(true);
             }

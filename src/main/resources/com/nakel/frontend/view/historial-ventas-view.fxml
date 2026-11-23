@@ -17,7 +17,7 @@
     <HBox alignment="CENTER_LEFT" spacing="20">
         <Label text="Historial de Comprobantes y Ventas" styleClass="titulo-modulo"/>
         <Pane HBox.hgrow="ALWAYS" />
-        <Button text="🛒 NUEVA VENTA (POS)" styleClass="btn-primario" onAction="#abrirPuntoDeVenta"/>
+        <Button text="NUEVA VENTA (POS)" styleClass="btn-primario" onAction="#abrirPuntoDeVenta"/>
     </HBox>
 
     <HBox spacing="15" alignment="CENTER_LEFT">
@@ -28,10 +28,9 @@
 
         <TextField fx:id="txtBuscarVenta" promptText="Escriba aquí..." HBox.hgrow="ALWAYS" styleClass="input-busqueda"/>
 
-        <Button text="🔍 Filtrar" styleClass="btn-secundario" onAction="#buscarVenta"/>
+        <Button text="Filtrar (F3)" styleClass="btn-secundario" onAction="#buscarVenta"/>
 
-        <!-- 🔥 NUEVO 2: Botón de Limpiar conectado al método de ondita -->
-        <Button text="🧹 Limpiar" styleClass="btn-secundario" onAction="#limpiarBusqueda"/>
+        <Button text="Limpiar" styleClass="btn-azul" onAction="#limpiarBusqueda"/>
     </HBox>
 
     <TableView fx:id="tablaVentas" VBox.vgrow="ALWAYS" styleClass="tabla-estandar">
@@ -39,17 +38,19 @@
             <TableColumn fx:id="colFecha" text="Fecha" prefWidth="150"/>
             <TableColumn fx:id="colNro" text="Punto Venta - Nro" prefWidth="130"/>
             <TableColumn fx:id="colCliente" text="Cliente" prefWidth="200"/>
-            <TableColumn fx:id="colTotal" text="Total" prefWidth="100"/>
+            <TableColumn fx:id="colTotal" minWidth="115" text="Total" prefWidth="100"/>
             <TableColumn fx:id="colEstado" text="Estado AFIP" prefWidth="120"/>
-            <TableColumn fx:id="colAcciones" text="Acciones (Ver/Imprimir/Mail)" prefWidth="200"/>
+            <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="200"/>
         </columns>
     </TableView>
     <!-- 🔥 EL NUEVO PAGINADOR NATIVO DE JAVAFX -->
     <Pagination fx:id="paginadorHistorial" pageCount="1" currentPageIndex="0" VBox.vgrow="NEVER" styleClass="paginador-estandar"/>
 
     <HBox alignment="CENTER_RIGHT" spacing="15" style="-fx-padding: 10 0 0 0;">
-        <Label text="Total Facturado en pantalla:" style="-fx-font-size: 14px;"/>
-        <Label fx:id="lblTotalFacturado" text="/$ 0.00" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
+        <!-- Es el total de TODAS las ventas que cumplen el filtro (todas las páginas), sin contar presupuestos -->
+        <Label fx:id="lblCantidadVentas" text="Cantidad de comprobantes: 0" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label text="Total facturado:" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label fx:id="lblTotalFacturado" text="\$ 0,00" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2e7d32;"/>
     </HBox>
 
 </VBox>
