@@ -20,12 +20,24 @@ public class CambioApiService {
     private final HttpClient http = HttpClient.newHttpClient();
 
     // 🔥 1. Guardar un nuevo historial de cambio
+    // Motivo del último fallo de registrarCambio, para mostrarlo en pantalla
+    private String ultimoError;
+
+    public String getUltimoError() {
+        return ultimoError;
+    }
+
+    // El backend hace TODO el cambio en una sola operación: historial, stock, vale y caja.
+    // Devuelve el Cambio guardado, o null si se rechazó (el motivo queda en getUltimoError()).
     public Cambio registrarCambio(Long idVentaOriginal, Cambio nuevoCambio) {
+        ultimoError = null;
         try {
             String jsonBody = gson.toJson(nuevoCambio);
+            String usuario = com.nakel.frontend.util.SesionActual.getUsuarioLogueado();
+            String username = java.net.URLEncoder.encode(usuario != null ? usuario : "", java.nio.charset.StandardCharsets.UTF_8);
 
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/venta/" + idVentaOriginal))
+                    .uri(URI.create(API_URL + "/venta/" + idVentaOriginal + "?username=" + username))
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
                     .build();
@@ -34,11 +46,16 @@ public class CambioApiService {
 
             if (respuesta.statusCode() == 200) {
                 return gson.fromJson(respuesta.body(), Cambio.class);
-            } else {
-                System.out.println("❌ Error del Backend: " + respuesta.body());
             }
+
+            System.out.println("❌ Error del Backend: " + respuesta.body());
+            String cuerpo = respuesta.body();
+            ultimoError = (cuerpo != null && !cuerpo.isBlank() && !cuerpo.trim().startsWith("{"))
+                    ? cuerpo.trim()
+                    : "El servidor rechazó el cambio (código " + respuesta.statusCode() + ").";
         } catch (Exception e) {
             System.out.println("❌ Error de red al registrar cambio: " + e.getMessage());
+            ultimoError = "No se pudo conectar con el servidor del sistema.";
         }
         return null;
     }

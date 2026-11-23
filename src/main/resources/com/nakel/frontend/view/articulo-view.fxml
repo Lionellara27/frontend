@@ -16,7 +16,12 @@
 
     <HBox alignment="CENTER_LEFT" spacing="20">
         <Label text="Catálogo de Artículos y Stock" styleClass="titulo-modulo"/>
+
+        <!-- 🔥 Botón de imprimir conectado a tu método del controlador -->
+        <Button text="Imprimir Stock" styleClass="btn-secundario" onAction="#imprimirReporteStock"/>
+
         <Pane HBox.hgrow="ALWAYS" />
+
         <Button text="➕ NUEVO ARTÍCULO" styleClass="btn-primario" onAction="#abrirModalNuevoArticulo"/>
     </HBox>
 

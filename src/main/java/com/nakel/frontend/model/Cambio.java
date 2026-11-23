@@ -14,8 +14,14 @@ public class Cambio {
     // 🔥 2. AGREGÁ EL ATRIBUTO DE LA LISTA
     private List<ItemCambio> items;
 
+    // Cómo se cobró la diferencia (para que el backend la sume a la caja del día)
+    private List<Pago> pagos;
+
     public Cambio() {
     }
+
+    public List<Pago> getPagos() { return pagos; }
+    public void setPagos(List<Pago> pagos) { this.pagos = pagos; }
 
     // Getters y Setters que ya tenías...
     public Long getId() { return id; }

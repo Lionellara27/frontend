@@ -14,11 +14,17 @@ import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import org.kordamp.ikonli.javafx.FontIcon;
 
+import java.awt.*;
+import java.io.File;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Optional;
@@ -352,33 +358,94 @@ public class ArticuloController {
 
         dialog.getDialogPane().setContent(grid);
 
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == btnGuardar) {
-                try {
-                    Articulo nuevo = new Articulo();
-                    nuevo.setCodigo(txtCodigo.getText().trim());
-                    nuevo.setNombre(txtNombre.getText().trim());
-                    nuevo.setPrecio(Double.parseDouble(txtPrecio.getText()));
-                    nuevo.setStockActual(Integer.parseInt(txtStock.getText()));
-                    nuevo.setOrigen(cmbOrigenDialog.getValue());
-                    nuevo.setAlicuotaIva(21.0);
-                    nuevo.setCategoria(cmbCategoriaDialog.getValue());
-                    nuevo.setMaterial(cmbMaterialDialog.getValue());
-                    return nuevo;
-                } catch (Exception e) {
-                    System.out.println("⚠️ Error al validar datos del formulario");
-                    return null;
-                }
+        // El guardado se hace ANTES de que el diálogo se cierre. Si un dato está mal o el servidor
+        // rechaza (código repetido, etc.), se avisa y la ventana queda abierta con todo lo cargado.
+        // Antes el diálogo se cerraba sin decir nada y se perdía lo escrito.
+        final boolean[] guardado = {false};
+        Button botonGuardar = (Button) dialog.getDialogPane().lookupButton(btnGuardar);
+        botonGuardar.addEventFilter(ActionEvent.ACTION, ev -> {
+            Articulo nuevo = leerFormularioArticulo(new Articulo(), txtCodigo, txtNombre, txtPrecio, txtStock,
+                    cmbOrigenDialog, cmbCategoriaDialog, cmbMaterialDialog);
+            if (nuevo == null) {
+                ev.consume();
+                return;
             }
-            return null;
+            nuevo.setAlicuotaIva(21.0);
+
+            if (!apiService.guardarArticulo(nuevo)) {
+                avisarErrorArticulo("No se pudo guardar el artículo", apiService.getUltimoError());
+                ev.consume();
+                return;
+            }
+            guardado[0] = true;
         });
 
-        dialog.showAndWait().ifPresent(nuevoArticulo -> {
-            if (nuevoArticulo != null) {
-                boolean exito = apiService.guardarArticulo(nuevoArticulo);
-                if (exito) { cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0); }
-            }
-        });
+        dialog.setResultConverter(dialogButton -> null);
+        dialog.showAndWait();
+
+        if (guardado[0]) {
+            cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0);
+        }
+    }
+
+    // Lee y valida el formulario de alta/edición. Si algo está mal avisa y devuelve null (no cierra nada).
+    private Articulo leerFormularioArticulo(Articulo destino, TextField txtCodigo, TextField txtNombre,
+                                            TextField txtPrecio, TextField txtStock, ComboBox<String> cmbOrigen,
+                                            ComboBox<Categoria> cmbCategoria, ComboBox<Material> cmbMaterial) {
+        String codigo = txtCodigo.getText() == null ? "" : txtCodigo.getText().trim();
+        String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
+
+        if (codigo.isEmpty() || codigo.endsWith("-")) {
+            avisarErrorArticulo("Falta el código", "Completá el Código/SKU del artículo.");
+            return null;
+        }
+        if (nombre.isEmpty()) {
+            avisarErrorArticulo("Falta el nombre", "Escribí el nombre del artículo.");
+            return null;
+        }
+
+        double precio;
+        try {
+            // Acepta "50000", "50.000", "50000,50" y "50000.50"
+            precio = PagoMixtoController.parsearMonto(txtPrecio.getText());
+        } catch (Exception e) {
+            avisarErrorArticulo("Precio inválido", "El precio tiene que ser un número. Ejemplo: 50000 o 50000,50");
+            return null;
+        }
+        if (precio < 0) {
+            avisarErrorArticulo("Precio inválido", "El precio no puede ser negativo.");
+            return null;
+        }
+
+        int stock;
+        try {
+            stock = Integer.parseInt(txtStock.getText().trim());
+        } catch (Exception e) {
+            avisarErrorArticulo("Stock inválido", "El stock tiene que ser un número entero. Ejemplo: 10");
+            return null;
+        }
+        if (stock < 0) {
+            avisarErrorArticulo("Stock inválido", "El stock no puede ser negativo.");
+            return null;
+        }
+
+        destino.setCodigo(codigo);
+        destino.setNombre(nombre);
+        destino.setPrecio(precio);
+        destino.setStockActual(stock);
+        destino.setOrigen(cmbOrigen.getValue());
+        destino.setCategoria(cmbCategoria.getValue());
+        destino.setMaterial(cmbMaterial.getValue());
+        return destino;
+    }
+
+    private void avisarErrorArticulo(String titulo, String mensaje) {
+        Alert alerta = new Alert(Alert.AlertType.ERROR);
+        alerta.setTitle(titulo);
+        alerta.setHeaderText(null);
+        alerta.setContentText((mensaje != null ? mensaje : "Ocurrió un error.")
+                + "\n\nLos datos siguen en pantalla: corregí y volvé a guardar.");
+        alerta.showAndWait();
     }
 
     private void mostrarDetalle(Articulo articulo) {
@@ -448,40 +515,41 @@ public class ArticuloController {
 
         dialog.getDialogPane().setContent(grid);
 
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == btnActualizar) {
-                try {
-                    // Actualizamos el objeto que ya existía (mismo ID)
-                    articuloViejo.setCodigo(txtCodigo.getText().trim());
-                    articuloViejo.setNombre(txtNombre.getText().trim());
-                    articuloViejo.setPrecio(Double.parseDouble(txtPrecio.getText()));
-                    articuloViejo.setStockActual(Integer.parseInt(txtStock.getText()));
-                    articuloViejo.setOrigen(cmbOrigenDialog.getValue());
-                    articuloViejo.setCategoria(cmbCategoriaDialog.getValue());
-                    articuloViejo.setMaterial(cmbMaterialDialog.getValue());
-                    return articuloViejo;
-                } catch (Exception e) {
-                    System.out.println("⚠️ Error al validar datos del formulario");
-                    return null;
-                }
+        // Igual que en el alta: se guarda antes de cerrar y, si falla, la ventana queda abierta.
+        // Se arma una COPIA con el mismo ID: el artículo de la tabla no se toca hasta que el servidor confirme.
+        final boolean[] guardado = {false};
+        Button botonActualizar = (Button) dialog.getDialogPane().lookupButton(btnActualizar);
+        botonActualizar.addEventFilter(ActionEvent.ACTION, ev -> {
+            Articulo copia = new Articulo();
+            copia.setId(articuloViejo.getId());
+            copia.setAlicuotaIva(articuloViejo.getAlicuotaIva());
+
+            Articulo editado = leerFormularioArticulo(copia, txtCodigo, txtNombre, txtPrecio, txtStock,
+                    cmbOrigenDialog, cmbCategoriaDialog, cmbMaterialDialog);
+            if (editado == null) {
+                ev.consume();
+                return;
             }
-            return null;
+
+            if (!apiService.actualizarArticulo(editado)) { // 👈 PUT
+                avisarErrorArticulo("No se pudo actualizar el artículo", apiService.getUltimoError());
+                ev.consume();
+                return;
+            }
+            guardado[0] = true;
         });
 
-        // Llamamos al servicio para guardar (PUT)
-        dialog.showAndWait().ifPresent(artActualizado -> {
-            if (artActualizado != null) {
-                boolean exito = apiService.actualizarArticulo(artActualizado); // 👈 Llama al nuevo método PUT
-                if (exito) {
-                    cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0); // Refresca catálogo si anduvo bien
-                }
-            }
-        });
+        dialog.setResultConverter(dialogButton -> null);
+        dialog.showAndWait();
+
+        if (guardado[0]) {
+            cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0); // Refresca catálogo
+        }
     }
 
     // 🔥 SOLUCIÓN 3a: Borrado Seguro (Ataja errores de Base de Datos y Claves Foráneas)
     private void eliminarArticulo(Articulo articulo) {
-        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION, "¿Seguro que desea eliminar '" + articulo.getNombre() + "' del sistema de forma permanente?", ButtonType.YES, ButtonType.NO);
+        Alert alerta = new Alert(Alert.AlertType.CONFIRMATION, "¿Seguro que desea dar de baja '" + articulo.getNombre() + "'?\n\nDeja de aparecer en el catálogo y en el mostrador. Las ventas viejas que lo incluyen se conservan.", ButtonType.YES, ButtonType.NO);
         alerta.showAndWait().ifPresent(response -> {
             if (response == ButtonType.YES) {
                 try {
@@ -489,7 +557,7 @@ public class ArticuloController {
                     if (exito) {
                         cargarTabla(paginadorArticulos != null ? paginadorArticulos.getCurrentPageIndex() : 0);
                     } else {
-                        Alert error = new Alert(Alert.AlertType.ERROR, "No se puede eliminar el artículo porque tiene un historial de ventas asociado o hubo un error en la base de datos.\n\nPara quitarlo del catálogo, edite su stock a 0.");
+                        Alert error = new Alert(Alert.AlertType.ERROR, "No se pudo dar de baja el artículo. Revisá que el sistema esté funcionando y probá de nuevo.");
                         error.setHeaderText("Operación Rechazada por Seguridad");
                         error.showAndWait();
                     }
@@ -672,5 +740,26 @@ public class ArticuloController {
                 }
             }
         });
+    }
+
+
+    @FXML
+    public void imprimirReporteStock(ActionEvent event) {
+        System.out.println("Generando PDF de stock...");
+        String rutaPdf = apiService.descargarReportePdf();
+
+        if (rutaPdf != null) {
+            try {
+                File archivoPdf = new File(rutaPdf);
+                if (archivoPdf.exists() && Desktop.isDesktopSupported()) {
+                    Desktop.getDesktop().open(archivoPdf);
+                }
+            } catch (Exception e) {
+                System.out.println("No se pudo abrir el PDF automáticamente.");
+            }
+        } else {
+            Alert error = new Alert(Alert.AlertType.ERROR, "Error al generar el reporte de stock.");
+            error.showAndWait();
+        }
     }
 }

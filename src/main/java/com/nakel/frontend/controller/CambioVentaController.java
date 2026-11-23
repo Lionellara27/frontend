@@ -13,6 +13,53 @@ import java.util.UUID;
 public class CambioVentaController {
 
     private javafx.collections.ObservableList<DetalleVenta> masterInventario = javafx.collections.FXCollections.observableArrayList();
+
+    // Lo que el cliente se lleva NUEVO, por id de artículo. Vive aparte de la lista visible:
+    // antes la selección estaba en la lista que se vacía al buscar, y se perdía lo ya elegido.
+    private final java.util.Map<Long, DetalleVenta> seleccionNuevos = new java.util.LinkedHashMap<>();
+
+    // Arma la fila de un artículo del catálogo; si ya estaba elegido, reutiliza esa fila con su cantidad
+    private DetalleVenta filaParaCatalogo(com.nakel.frontend.model.Articulo art) {
+        DetalleVenta elegido = art.getId() != null ? seleccionNuevos.get(art.getId()) : null;
+        if (elegido != null) {
+            elegido.setArticulo(art); // refresca el stock mostrado
+            return elegido;
+        }
+        return new DetalleVenta(0, art.getPrecio(), 0.0, art);
+    }
+
+    // Guarda o quita de la selección según la cantidad que quedó
+    private void sincronizarSeleccion(DetalleVenta item) {
+        Long id = item.getArticulo() != null ? item.getArticulo().getId() : null;
+        if (id == null) return;
+        if (item.getCantidad() > 0) {
+            seleccionNuevos.put(id, item);
+        } else {
+            seleccionNuevos.remove(id);
+        }
+    }
+
+    // Recarga la tabla de la derecha manteniendo lo elegido (aunque no esté en el resultado de la búsqueda)
+    private void mostrarCatalogo(java.util.List<com.nakel.frontend.model.Articulo> articulos) {
+        masterInventario.clear();
+        java.util.Set<Long> yaAgregados = new java.util.HashSet<>();
+
+        // Primero lo que ya eligió, para que siempre lo tenga a la vista
+        for (DetalleVenta elegido : seleccionNuevos.values()) {
+            masterInventario.add(elegido);
+            yaAgregados.add(elegido.getArticulo().getId());
+        }
+        if (articulos != null) {
+            for (com.nakel.frontend.model.Articulo art : articulos) {
+                if (art.getStockActual() > 0 && !yaAgregados.contains(art.getId())) {
+                    masterInventario.add(filaParaCatalogo(art));
+                }
+            }
+        }
+        filteredInventario = new javafx.collections.transformation.FilteredList<>(masterInventario, p -> true);
+        tablaNuevos.setItems(filteredInventario);
+        tablaNuevos.refresh();
+    }
     private javafx.collections.transformation.FilteredList<DetalleVenta> filteredInventario;
 
     @FXML private Label lblTituloVenta;
@@ -69,12 +116,7 @@ public class CambioVentaController {
                         // Llama a la API buscando en todo el backend por nombre o código
                         java.util.List<com.nakel.frontend.model.Articulo> resultados = articuloApi.buscarParaVenta(newValue.trim(), 0, 100);
                         if (resultados != null) {
-                            masterInventario.clear();
-                            for (com.nakel.frontend.model.Articulo art : resultados) {
-                                if (art.getStockActual() > 0) {
-                                    masterInventario.add(new DetalleVenta(0, art.getPrecio(), 0.0, art));
-                                }
-                            }
+                            mostrarCatalogo(resultados);
                         }
                     }
                 } catch (Exception e) {
@@ -159,58 +201,86 @@ public class CambioVentaController {
 
     @FXML
     public void confirmarCambio(ActionEvent event) {
-        // Validación: No podés confirmar un cambio vacío
-        if (costoNuevosProductos == 0 && saldoAFavorCliente == ventaOriginal.getTotal()) {
+        // Validación: no se puede confirmar un cambio vacío (ni devuelve ni se lleva nada)
+        boolean hayDevueltos = tablaDevolucion.getItems().stream().anyMatch(d -> d.getCantidad() > 0);
+        boolean hayNuevos = seleccionNuevos.values().stream().anyMatch(d -> d.getCantidad() > 0);
+        if (!hayDevueltos && !hayNuevos) {
             mostrarError("Cambio Inválido", "Debe seleccionar al menos un artículo para cambiar o devolver.");
             return;
         }
 
+        recalcularCostoNuevos();
         double diferencia = costoNuevosProductos - saldoAFavorCliente;
         String resumen = generarResumenArticulos();
 
-        // Obtenemos los datos del cliente real (o Consumidor Final)
-        String nombreCliente = (ventaOriginal.getCliente() != null) ? ventaOriginal.getCliente().getNombre() : "Consumidor Final";
-        Long idCliente = (ventaOriginal.getCliente() != null) ? ventaOriginal.getCliente().getId() : null;
-
-        if (diferencia > 0) {
-            // 🔥 AHORA ESPERAMOS A QUE EL MODAL NOS DIGA SI PAGÓ O NO
-            boolean pagoExitoso = abrirModalDePago(diferencia, ventaOriginal);
-
-            if (pagoExitoso) {
-                actualizarStockEnBaseDeDatos();
-                registrarCambioEnBackend(resumen, diferencia, null); // 📝 Guardamos el rastro histórico
-
-                // 🟢 ÉXITO SIN VALE (El cliente pagó la diferencia)
-                abrirModalExitoCambio(nombreCliente, 0.0, null);
-                cerrarModal(event);
-            } else {
-                System.out.println("El usuario canceló el pago. No se guardan los cambios.");
-            }
-
-        } else if (diferencia < 0) {
-            double montoVoucher = Math.abs(diferencia);
-            com.nakel.frontend.model.Vale nuevoVale = valeApi.generarVale(montoVoucher, idCliente);
-
-            if (nuevoVale != null) {
-                actualizarStockEnBaseDeDatos();
-                registrarCambioEnBackend(resumen, diferencia, nuevoVale.getCodigo()); // 📝 Guardamos el rastro histórico
-
-                // 🟡 ÉXITO CON VALE O SALDO A FAVOR (Sobra plata)
-                abrirModalExitoCambio(nombreCliente, montoVoucher, nuevoVale.getCodigo());
-                cerrarModal(event);
-            } else {
-                mostrarError("Error de Conexión", "No se pudo generar el vale en el servidor.");
-            }
-
-        } else {
-            // Cambio mano a mano
-            actualizarStockEnBaseDeDatos();
-            registrarCambioEnBackend(resumen, 0.0, null); // 📝 Guardamos el rastro histórico
-
-            // 🟢 ÉXITO MANO A MANO (Saldo 0)
-            abrirModalExitoCambio(nombreCliente, 0.0, null);
-            cerrarModal(event);
+        // Antes de tocar nada, mostramos qué se va a hacer para evitar cambios por error
+        Alert confirmar = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmar.setTitle("Confirmar cambio");
+        confirmar.setHeaderText("¿Registrar este cambio?");
+        String textoDiferencia = diferencia > 0.009
+                ? "El cliente paga la diferencia: $ " + String.format("%.2f", diferencia)
+                : (diferencia < -0.009
+                    ? "Se le entrega un vale por: $ " + String.format("%.2f", Math.abs(diferencia))
+                    : "Cambio directo, sin diferencia.");
+        confirmar.setContentText(resumen.replace(" | ", "\n") + "\n\n" + textoDiferencia);
+        if (confirmar.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            return;
         }
+
+        String nombreCliente = (ventaOriginal.getCliente() != null) ? ventaOriginal.getCliente().getNombre() : "Consumidor Final";
+
+        // 1. Si hay diferencia a pagar, primero se cobra (todavía no se guarda nada)
+        PagoMixtoController controladorPago = null;
+        java.util.List<com.nakel.frontend.model.Pago> pagos = null;
+        if (diferencia > 0.009) {
+            controladorPago = abrirModalDePago(diferencia, ventaOriginal);
+            if (controladorPago == null || !controladorPago.isPagoCompleto()) {
+                System.out.println("El usuario canceló el pago. No se guardan los cambios.");
+                return;
+            }
+            pagos = controladorPago.getPagosRegistrados();
+        }
+
+        // 2. UNA sola llamada: el backend guarda el cambio, mueve el stock, emite el vale si sobra plata
+        //    y suma la diferencia a la caja. Si algo falla, no queda nada a medias.
+        com.nakel.frontend.model.Cambio guardado = registrarCambioEnBackend(resumen, diferencia, pagos);
+
+        if (guardado == null) {
+            String motivo = cambioApi.getUltimoError();
+            mostrarError("No se pudo registrar el cambio",
+                    (motivo != null ? motivo : "El servidor no respondió.")
+                            + "\n\nNo se movió el stock ni se generó ningún vale.");
+            return;
+        }
+
+        // 3. Con el cambio ya guardado, descontamos el vale que haya usado para pagar (solo la parte usada)
+        //    y generamos el vale por el vuelto si pagó de más.
+        if (controladorPago != null) {
+            com.nakel.frontend.model.Vale valeUsado = controladorPago.getValeAplicado();
+            if (valeUsado != null && valeUsado.getCodigo() != null && !valeUsado.getCodigo().isBlank()) {
+                if (!valeApi.consumirVale(valeUsado.getCodigo(), controladorPago.getMontoValeUsado())) {
+                    mostrarError("Atención", "El cambio se registró, pero no se pudo descontar el vale "
+                            + valeUsado.getCodigo() + ". Anotalo para que no se use dos veces.");
+                }
+            }
+            if (controladorPago.getVueltoPendiente() > 0.009) {
+                com.nakel.frontend.model.Vale valeVuelto = valeApi.generarVale(
+                        controladorPago.getVueltoPendiente(), controladorPago.getIdCliente());
+                Alert aviso = new Alert(valeVuelto != null ? Alert.AlertType.INFORMATION : Alert.AlertType.ERROR);
+                aviso.setTitle("Vuelto");
+                aviso.setHeaderText(null);
+                aviso.setContentText(valeVuelto != null
+                        ? "Se generó un vale por el vuelto de $ " + String.format("%.2f", controladorPago.getVueltoPendiente())
+                            + "\n\nCÓDIGO: " + valeVuelto.getCodigo()
+                        : "No se pudo generar el vale por el vuelto. Entregá el vuelto en mano.");
+                aviso.showAndWait();
+            }
+        }
+
+        // 4. Éxito: si sobró plata, el vale lo emitió el backend y viene en la respuesta
+        double montoVoucher = (guardado.getCodigoValeGenerado() != null) ? Math.abs(diferencia) : 0.0;
+        abrirModalExitoCambio(nombreCliente, montoVoucher, guardado.getCodigoValeGenerado());
+        cerrarModal(event);
     }
 
     // 🔥 EL DISPARADOR DEL MODAL PREMIUM
@@ -275,7 +345,7 @@ public class CambioVentaController {
             }
         }
         sb.append(" | Se lleva: ");
-        for (DetalleVenta nuev : masterInventario) {
+        for (DetalleVenta nuev : seleccionNuevos.values()) {
             if (nuev.getCantidad() > 0) {
                 sb.append(nuev.getArticulo().getNombre()).append(" (x").append(nuev.getCantidad()).append("), ");
             }
@@ -286,7 +356,8 @@ public class CambioVentaController {
     // 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
     // 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
 // 🔥 AHORA DEVUELVE BOOLEAN PARA SABER SI EL USUARIO PAGÓ DE VERDAD
-    private boolean abrirModalDePago(double montoAcobrar, Venta venta) {
+    // Devuelve el controlador del modal de pago (para leer pagos, vale usado y vuelto), o null si falló.
+    private PagoMixtoController abrirModalDePago(double montoAcobrar, Venta venta) {
         try {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/com/nakel/frontend/view/pago-mixto-modal.fxml"));
             javafx.scene.Parent root = loader.load();
@@ -304,38 +375,31 @@ public class CambioVentaController {
             // 🛑 ACÁ SE CONGELA HASTA QUE EL MODAL SE CIERRE
             stage.showAndWait();
 
-            // 🔥 LA MAGIA CON TUS MÉTODOS REALES: Si pagó, vemos si dejó un vale aplicado
-            if (controller.isPagoCompleto()) {
-                com.nakel.frontend.model.Vale valeUsado = controller.getValeAplicado();
-
-                // Si el cliente usó un vale, lo mandamos a quemar a la base de datos
-                if (valeUsado != null && valeUsado.getCodigo() != null && !valeUsado.getCodigo().isBlank()) {
-                    valeApi.consumirVale(valeUsado.getCodigo());
-                    System.out.println("🔥 Vale " + valeUsado.getCodigo() + " consumido exitosamente en el cambio.");
-                }
-            }
-
-            // Retorna TRUE si pagó todo, FALSE si cerró de la X
-            return controller.isPagoCompleto();
+            // El vale usado NO se descuenta acá: se descuenta después, cuando el cambio quedó guardado.
+            return controller;
 
         } catch (Exception e) {
             System.err.println("Error al abrir el modal de pagos: " + e.getMessage());
             mostrarError("Error visual", "No se pudo abrir la ventana de pagos.");
-            return false;
+            return null;
         }
     }
 
     // 📝 MAGIA HISTÓRICA: Le avisamos a la BD que esto pasó
 // 📝 MAGIA HISTÓRICA: Empaquetamos y avisamos a la BD
     // 📝 MAGIA HISTÓRICA: Empaquetamos y avisamos a la BD
-    private void registrarCambioEnBackend(String resumen, double diferencia, String codigoVale) {
+    private com.nakel.frontend.model.Cambio registrarCambioEnBackend(String resumen, double diferencia,
+                                                                     java.util.List<com.nakel.frontend.model.Pago> pagos) {
         try {
             // 1. Creamos el objeto Cambio usando los SETTERS EXACTOS de tu clase
             com.nakel.frontend.model.Cambio nuevoCambio = new com.nakel.frontend.model.Cambio();
 
             nuevoCambio.setResumenArticulos(resumen);
             nuevoCambio.setDiferenciaCobrada(diferencia);
-            nuevoCambio.setCodigoValeGenerado(codigoVale);
+            nuevoCambio.setPagos(pagos);
+            if (pagos != null && !pagos.isEmpty()) {
+                nuevoCambio.setMetodoPago(pagos.size() == 1 ? pagos.get(0).getMetodoPago() : "Mixto / Varios");
+            }
 
             // 🔥 2. ARMAMOS LA LISTA DE ÍTEMS PARA EL BACKEND
             java.util.List<com.nakel.frontend.model.ItemCambio> itemsDelCambio = new java.util.ArrayList<>();
@@ -353,7 +417,7 @@ public class CambioVentaController {
             }
 //
             // B) Agarramos lo que se lleva NUEVO
-            for (com.nakel.frontend.model.DetalleVenta nuev : masterInventario) {
+            for (com.nakel.frontend.model.DetalleVenta nuev : seleccionNuevos.values()) {
                 if (nuev.getCantidad() > 0) {
                     com.nakel.frontend.model.ItemCambio itemNuevo = new com.nakel.frontend.model.ItemCambio();
                     itemNuevo.setArticulo(nuev.getArticulo());
@@ -367,11 +431,12 @@ public class CambioVentaController {
             // 3. Le atamos la lista de artículos al cambio
             nuevoCambio.setItems(itemsDelCambio);
 
-            // 4. Mandamos el paquete completo al servicio
-            cambioApi.registrarCambio(ventaOriginal.getId(), nuevoCambio);
+            // 4. Mandamos el paquete completo al servicio y devolvemos lo que guardó el backend
+            return cambioApi.registrarCambio(ventaOriginal.getId(), nuevoCambio);
 
         } catch (Exception e) {
-            System.out.println("No se pudo registrar la trazabilidad: " + e.getMessage());
+            System.out.println("No se pudo registrar el cambio: " + e.getMessage());
+            return null;
         }
     }
 
@@ -380,19 +445,6 @@ public class CambioVentaController {
         Node source = (Node) event.getSource();
         Stage stage = (Stage) source.getScene().getWindow();
         stage.close();
-    }
-
-    private void actualizarStockEnBaseDeDatos() {
-        for (DetalleVenta devuelto : tablaDevolucion.getItems()) {
-            if (devuelto.getCantidad() > 0) {
-                articuloApi.restaurarStock(devuelto.getArticulo().getId(), devuelto.getCantidad());
-            }
-        }
-        for (DetalleVenta nuevo : masterInventario) {
-            if (nuevo.getCantidad() > 0) {
-                articuloApi.descontarStock(nuevo.getArticulo().getId(), nuevo.getCantidad());
-            }
-        }
     }
 
     private void configurarColumnaCantidadDevolucion() {
@@ -458,12 +510,7 @@ public class CambioVentaController {
             java.util.List<com.nakel.frontend.model.Articulo> articulosBBDD = articuloApi.buscarParaVenta("", 0, 100);
 
             if (articulosBBDD != null) {
-                masterInventario.clear();
-                for (com.nakel.frontend.model.Articulo art : articulosBBDD) {
-                    masterInventario.add(new DetalleVenta(0, art.getPrecio(), 0.0, art));
-                }
-                filteredInventario = new javafx.collections.transformation.FilteredList<>(masterInventario, p -> true);
-                tablaNuevos.setItems(filteredInventario);
+                mostrarCatalogo(articulosBBDD);
             }
         } catch (Exception e) {
             System.err.println("❌ Error al cargar catálogo en cambios: " + e.getMessage());
@@ -486,6 +533,7 @@ public class CambioVentaController {
                     if (item.getCantidad() > 0) {
                         item.setCantidad(item.getCantidad() - 1);
                         item.setSubtotal(item.getCantidad() * item.getPrecioUnitario());
+                        sincronizarSeleccion(item);
                         getTableView().refresh();
                         recalcularCostoNuevos();
                     }
@@ -496,6 +544,7 @@ public class CambioVentaController {
                     if (item.getCantidad() < item.getArticulo().getStockActual()) {
                         item.setCantidad(item.getCantidad() + 1);
                         item.setSubtotal(item.getCantidad() * item.getPrecioUnitario());
+                        sincronizarSeleccion(item);
                         getTableView().refresh();
                         recalcularCostoNuevos();
                     } else {
@@ -518,7 +567,7 @@ public class CambioVentaController {
 
     private void recalcularCostoNuevos() {
         costoNuevosProductos = 0.0;
-        for (DetalleVenta det : masterInventario) {
+        for (DetalleVenta det : seleccionNuevos.values()) {
             costoNuevosProductos += det.getSubtotal();
         }
         lblCostoNuevos.setText(String.format("$ %.2f", costoNuevosProductos));

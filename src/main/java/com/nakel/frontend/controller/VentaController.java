@@ -545,6 +545,13 @@ public class VentaController {
 
     // 🔥 1. Agregamos el Vale como segundo parámetro
     private void ejecutarProcesoDeCierreDeVenta(List<Pago> listaPagos, com.nakel.frontend.model.Vale valeUsado) {
+        ejecutarProcesoDeCierreDeVenta(listaPagos, valeUsado, null, 0.0, null);
+    }
+
+    // montoValeUsado: cuánto del vale se usó (null = todo). vueltoEnVale: vuelto que se entrega como vale
+    // (se genera recién cuando la venta quedó guardada). idClienteVale: a nombre de quién va ese vale.
+    private void ejecutarProcesoDeCierreDeVenta(List<Pago> listaPagos, com.nakel.frontend.model.Vale valeUsado,
+                                                Double montoValeUsado, double vueltoEnVale, Long idClienteVale) {
         if (tablaTicket.getItems().isEmpty()) {
             mostrarAlerta(Alert.AlertType.WARNING, "Ticket vacío", "No hay productos en el mostrador para cobrar.");
             return;
@@ -589,25 +596,60 @@ public class VentaController {
 
         boolean esRegalo = chkRegalo.isSelected();
         ventaFinal.setEsParaRegalo(esRegalo);
-        ventaFinal.setTipoComprobante(esRegalo ? "TICKET_REGALO" : "TICKET_NORMAL");
+        // El combo "Tipo de factura" antes no se leía nunca: un Presupuesto se cobraba como venta real.
+        // Ahora "Presupuesto" viaja al backend, que NO descuenta stock ni lo suma a la caja.
+        boolean esPresupuesto = cmbTipoFactura != null && "Presupuesto".equals(cmbTipoFactura.getValue());
+        if (esPresupuesto) {
+            ventaFinal.setTipoComprobante("Presupuesto");
+        } else {
+            ventaFinal.setTipoComprobante(esRegalo ? "TICKET_REGALO" : "TICKET_NORMAL");
+        }
+
         // 5. Registrar en Backend
         VentaApiService apiVentas = new VentaApiService();
         boolean exito = apiVentas.registrarVenta(ventaFinal);
 
         if (exito) {
-            // Si la venta se guardó bien y se usó un vale de cambio, lo quemamos
-            if (valeUsado != null) {
-                com.nakel.frontend.service.ValeApiService valeApi = new com.nakel.frontend.service.ValeApiService();
-                valeApi.consumirVale(valeUsado.getCodigo());
-                System.out.println("✅ Vale " + valeUsado.getCodigo() + " consumido con éxito.");
+            com.nakel.frontend.service.ValeApiService valeApi = new com.nakel.frontend.service.ValeApiService();
+            StringBuilder avisos = new StringBuilder();
+
+            // Si la venta se guardó bien y se usó un vale, descontamos SOLO lo que se usó
+            if (valeUsado != null && !esPresupuesto) {
+                boolean consumido = valeApi.consumirVale(valeUsado.getCodigo(), montoValeUsado);
+                if (!consumido) {
+                    avisos.append("\n\n⚠ ATENCIÓN: no se pudo descontar el vale ").append(valeUsado.getCodigo())
+                            .append(". Anotalo para que no se use dos veces.");
+                }
             }
 
-            mostrarAlerta(Alert.AlertType.INFORMATION, "¡Venta Exitosa!", "La transacción se registró correctamente.");
+            // Vuelto entregado como vale: se crea recién ahora, con la venta ya guardada
+            if (vueltoEnVale > 0.009 && !esPresupuesto) {
+                com.nakel.frontend.model.Vale valeVuelto = valeApi.generarVale(vueltoEnVale, idClienteVale);
+                if (valeVuelto != null) {
+                    avisos.append("\n\nVALE POR EL VUELTO: $ ").append(String.format("%.2f", vueltoEnVale))
+                            .append("\nCÓDIGO: ").append(valeVuelto.getCodigo());
+                } else {
+                    avisos.append("\n\n⚠ ATENCIÓN: no se pudo generar el vale por el vuelto de $ ")
+                            .append(String.format("%.2f", vueltoEnVale)).append(". Entregá el vuelto en mano.");
+                }
+            }
+
+            mostrarAlerta(Alert.AlertType.INFORMATION,
+                    esPresupuesto ? "Presupuesto guardado" : "¡Venta Exitosa!",
+                    (esPresupuesto
+                            ? "El presupuesto se guardó. No se descontó stock ni se sumó a la caja."
+                            : "La transacción se registró correctamente.") + avisos);
 
             // 6. Limpiar mostrador para la siguiente venta
             tablaTicket.getItems().clear();
             actualizarTotal();
             chkRegalo.setSelected(false);
+            if (cmbTipoFactura != null) cmbTipoFactura.setValue("Ticket de Venta");
+
+            // Recargamos el inventario del mostrador: sin esto quedaba el stock viejo en pantalla
+            // y se podía volver a vender una unidad que ya no existía.
+            txtCodigoBarras.clear();
+            cargarInventarioParaVenta("", 0);
 
             // 🔥 Magia: Reseteamos el combo y volvemos a clavar a "Consumidor Final" para el próximo cliente
             cmbCliente.getSelectionModel().clearSelection();
@@ -623,7 +665,12 @@ public class VentaController {
             txtCodigoBarras.requestFocus();
         } else {
 
-            mostrarAlerta(Alert.AlertType.ERROR, "Error", "No se pudo guardar la venta en la Base de Datos.");
+            // Mostramos el motivo real (ej: "Stock insuficiente de ...") y refrescamos el stock en pantalla
+            String motivo = apiVentas.getUltimoError();
+            mostrarAlerta(Alert.AlertType.ERROR, "No se pudo registrar la venta",
+                    (motivo != null ? motivo : "No se pudo guardar la venta en la Base de Datos.")
+                            + "\n\nEl ticket quedó cargado: no se perdió nada.");
+            cargarInventarioParaVenta("", 0);
         }
     }
 
@@ -638,6 +685,11 @@ public class VentaController {
     @FXML
     public void cobrarVenta(ActionEvent event) {
         String medioPago = cmbMedioPago.getValue();
+
+        if (medioPago == null || medioPago.isBlank()) {
+            mostrarAlerta(Alert.AlertType.WARNING, "Falta el medio de pago", "Elegí con qué paga el cliente antes de cobrar.");
+            return;
+        }
 
         if ("Pago Mixto".equals(medioPago)) {
             abrirVentanaPagoMixto();
@@ -725,7 +777,10 @@ public class VentaController {
                 if (btn == btnFacturar && controladorModal.isPagoCompleto()) {
                     List<Pago> pagos = controladorModal.getPagosRegistrados();
                     com.nakel.frontend.model.Vale valeAplicado = controladorModal.getValeAplicado();
-                    ejecutarProcesoDeCierreDeVenta(pagos, valeAplicado);
+                    ejecutarProcesoDeCierreDeVenta(pagos, valeAplicado,
+                            valeAplicado != null ? controladorModal.getMontoValeUsado() : null,
+                            controladorModal.getVueltoPendiente(),
+                            controladorModal.getIdCliente());
                 }
                 return null;
             });

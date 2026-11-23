@@ -21,6 +21,20 @@ public class ParametrosApiService {
     private final HttpClient http = HttpClient.newHttpClient();
     private final Gson gson = new Gson();
 
+    // Motivo del último fallo al guardar (lo que respondió el backend), para mostrarlo en pantalla
+    private String ultimoError;
+
+    public String getUltimoError() {
+        return ultimoError;
+    }
+
+    private static String mensajeDe(HttpResponse<String> respuesta) {
+        String cuerpo = respuesta.body();
+        return (cuerpo != null && !cuerpo.isBlank() && !cuerpo.trim().startsWith("{"))
+                ? cuerpo.trim()
+                : "El servidor rechazó la operación (código " + respuesta.statusCode() + ").";
+    }
+
     // ==========================================
     // CATEGORÍAS
     // ==========================================
@@ -78,11 +92,12 @@ public class ParametrosApiService {
                 return gson.fromJson(respuesta.body(), Categoria.class);
             }
 
-            throw new RuntimeException(
-                    "Error HTTP " + respuesta.statusCode() + " -> " + respuesta.body());
+            ultimoError = mensajeDe(respuesta);
+            return null;
 
         } catch (Exception e) {
             e.printStackTrace();
+            ultimoError = "No se pudo conectar con el servidor del sistema.";
             return null;
         }
     }
@@ -98,7 +113,7 @@ public class ParametrosApiService {
                 http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
         if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
-            throw new Exception("Error " + respuesta.statusCode() + ": " + respuesta.body());
+            throw new Exception(mensajeDe(respuesta));
         }
     }
 
@@ -161,11 +176,12 @@ public class ParametrosApiService {
                 return gson.fromJson(respuesta.body(), Material.class);
             }
 
-            throw new RuntimeException(
-                    "Error HTTP " + respuesta.statusCode() + " -> " + respuesta.body());
+            ultimoError = mensajeDe(respuesta);
+            return null;
 
         } catch (Exception e) {
             e.printStackTrace();
+            ultimoError = "No se pudo conectar con el servidor del sistema.";
             return null;
         }
     }
@@ -181,7 +197,7 @@ public class ParametrosApiService {
                 http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
         if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
-            throw new Exception("Error " + respuesta.statusCode() + ": " + respuesta.body());
+            throw new Exception(mensajeDe(respuesta));
         }
     }
 }

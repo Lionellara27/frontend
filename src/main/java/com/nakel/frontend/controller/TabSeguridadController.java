@@ -73,12 +73,26 @@ public class TabSeguridadController {
             return;
         }
 
+        // 3. Verificar que el usuario y la contraseña ACTUALES sean correctos.
+        //    Antes este dato se pedía pero no se comprobaba: cualquiera podía cambiar la clave.
+        if (!usuarioApiService.login(usuarioActual, actual)) {
+            mostrarAlerta(Alert.AlertType.ERROR, "Datos incorrectos",
+                    usuarioApiService.isUltimoFalloDeConexion()
+                            ? "No se pudo conectar con el servidor del sistema. Probá de nuevo en unos segundos."
+                            : "El usuario o la contraseña actual no son correctos.");
+            return;
+        }
+
         System.out.println("Mandando a cambiar credenciales al backend...");
 
-        // 3. Pegarle al Backend
+        // 4. Pegarle al Backend
         boolean exito = usuarioApiService.actualizarCredenciales(usuarioActual, nuevoUsuario, nueva);
 
         if (exito) {
+            // La sesión tiene que seguir con el nombre NUEVO: si quedaba el viejo,
+            // las ventas y la caja se mandaban con un usuario que ya no existía.
+            com.nakel.frontend.util.SesionActual.setUsuarioLogueado(nuevoUsuario);
+
             mostrarAlerta(Alert.AlertType.INFORMATION, "Éxito", "¡Usuario y contraseña actualizados correctamente!");
             limpiarCampos();
         } else {

@@ -89,7 +89,7 @@ public class EstadisticasController {
 
             if (catalogoCompleto != null) {
                 for (Articulo art : catalogoCompleto) {
-                    if (art.getStockActual() < 10) {
+                    if (art.getStockActual() == null || art.getStockActual() < 10) {
                         itemsCriticos.add(art);
                     }
                 }

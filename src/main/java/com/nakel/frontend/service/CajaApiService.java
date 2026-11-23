@@ -16,7 +16,8 @@ public class CajaApiService {
     public String obtenerCajaActual(String username) {
         try {
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/actual?username=" + username))
+                    .uri(URI.create(API_URL + "/actual?username="
+                            + java.net.URLEncoder.encode(username != null ? username : "", java.nio.charset.StandardCharsets.UTF_8)))
                     .GET()
                     .build();
             HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());

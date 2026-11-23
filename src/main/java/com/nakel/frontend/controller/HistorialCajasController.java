@@ -31,7 +31,7 @@ public class HistorialCajasController {
     @FXML private TableColumn<CajaDiaria, String> colEstado;
     @FXML private TableColumn<CajaDiaria, Void> colAcciones;
 
-    @FXML private Pagination paginadorHistorial;
+    @FXML private Pagination paginadorCajas;
 
     private final CajaApiService cajaApiService = new CajaApiService();
     private final Gson gson = new Gson();
@@ -40,8 +40,8 @@ public class HistorialCajasController {
     @FXML
     public void initialize() {
         configurarTabla();
-        if (paginadorHistorial != null) {
-            paginadorHistorial.setPageFactory(paginaIndex -> {
+        if (paginadorCajas != null) {
+            paginadorCajas.setPageFactory(paginaIndex -> {
                 cargarHistorial(paginaIndex);
                 return new javafx.scene.layout.VBox();
             });
@@ -111,17 +111,17 @@ public class HistorialCajasController {
 
                 if (elementoParseado.isJsonObject()) {
                     JsonObject respuestaServidor = elementoParseado.getAsJsonObject();
-                    if (respuestaServidor.has("totalPages") && paginadorHistorial != null) {
+                    if (respuestaServidor.has("totalPages") && paginadorCajas != null) {
                         int totalPaginas = respuestaServidor.get("totalPages").getAsInt();
-                        paginadorHistorial.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
+                        paginadorCajas.setPageCount(totalPaginas == 0 ? 1 : totalPaginas);
                     }
                     System.out.println("🔎 [FRONTEND-CAJAS] Objeto JSON detectado. Extrayendo 'content'...");
                     arregloCajas = respuestaServidor.getAsJsonArray("content");
                 } else if (elementoParseado.isJsonArray()) {
                     System.out.println("🔎 [FRONTEND-CAJAS] Arreglo plano detectado.");
                     arregloCajas = elementoParseado.getAsJsonArray();
-                    if (paginadorHistorial != null) {
-                        paginadorHistorial.setPageCount(1);
+                    if (paginadorCajas != null) {
+                        paginadorCajas.setPageCount(1);
                     }
                 } else {
                     throw new RuntimeException("Formato JSON no reconocido");
@@ -148,7 +148,7 @@ public class HistorialCajasController {
     // Sobrecarga limpia para que el botón "Actualizar" funcione sin romper nada
     @FXML
     public void cargarHistorial() {
-        cargarHistorial(paginadorHistorial != null ? paginadorHistorial.getCurrentPageIndex() : 0);
+        cargarHistorial(paginadorCajas != null ? paginadorCajas.getCurrentPageIndex() : 0);
     }
 
     // Abre el modal del detalle con los movimientos al hacer clic en el ojito

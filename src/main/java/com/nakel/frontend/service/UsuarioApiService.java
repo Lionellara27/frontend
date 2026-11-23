@@ -15,7 +15,16 @@ public class UsuarioApiService {
     private final Gson gson = new Gson();
 
     // =============== 1. LOGIN DE USUARIO (POST) ===============
+    // true cuando el último login falló porque NO se pudo hablar con el backend
+    // (no arrancó todavía o está caído), y no porque la contraseña esté mal.
+    private boolean ultimoFalloDeConexion = false;
+
+    public boolean isUltimoFalloDeConexion() {
+        return ultimoFalloDeConexion;
+    }
+
     public boolean login(String username, String password) {
+        ultimoFalloDeConexion = false;
         try {
             // Usamos tu estilo con HashMap para armar el JSON de forma segura
             Map<String, String> credenciales = new HashMap<>();
@@ -35,12 +44,18 @@ public class UsuarioApiService {
             // Si el backend devuelve 200 OK, el login es exitoso
             if (respuesta.statusCode() == 200) {
                 return true;
+            } else if (respuesta.statusCode() != 401) {
+                // Cualquier cosa que no sea "credenciales incorrectas" es un problema del servidor
+                System.out.println("⚠️ El servidor respondió " + respuesta.statusCode() + " en el login.");
+                ultimoFalloDeConexion = true;
+                return false;
             } else {
                 System.out.println("⚠️ Intento de login fallido: " + respuesta.body());
                 return false;
             }
         } catch (Exception e) {
             System.out.println("❌ Error de red al intentar loguear: " + e.getMessage());
+            ultimoFalloDeConexion = true;
             return false;
         }
     }

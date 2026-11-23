@@ -12,8 +12,6 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class OpcionesImpresionController {
 
@@ -35,18 +33,21 @@ public class OpcionesImpresionController {
 
         try {
             StringBuilder texto = new StringBuilder();
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
 
-            String fecha = ventaActual.getFechaHora() != null
-                    ? sdf.format(ventaActual.getFechaHora())
-                    : sdf.format(new Date());
+            // La fecha de la venta llega como TEXTO ("2026-11-23T15:27:50..."). Antes se la pasaba
+            // a SimpleDateFormat, que solo acepta Date, y por eso imprimir fallaba SIEMPRE.
+            String fecha = formatearFecha(ventaActual.getFechaHora());
+
+            // Ticket de regalo: no debe mostrar precios
+            boolean esRegalo = Boolean.TRUE.equals(ventaActual.getEsParaRegalo())
+                    || "TICKET_REGALO".equalsIgnoreCase(ventaActual.getTipoComprobante());
 
             texto.append("------ NAKEL SOFTWARE ------\n");
 
             String tipoImpresion = ventaActual.getTipoComprobante() != null
                     && ventaActual.getTipoComprobante().equalsIgnoreCase("Presupuesto")
                     ? "       PRESUPUESTO\n"
-                    : "      TICKET DE VENTA\n";
+                    : (esRegalo ? "     TICKET DE REGALO\n" : "      TICKET DE VENTA\n");
 
             texto.append(tipoImpresion);
             texto.append("----------------------------\n");
@@ -97,30 +98,41 @@ public class OpcionesImpresionController {
                             nombre
                     ));
 
-                    texto.append(String.format(
-                            "      $%.2f\n",
-                            det.getSubtotal()
-                    ));
+                    if (!esRegalo) {
+                        texto.append(String.format(
+                                "      $%.2f\n",
+                                det.getSubtotal() != null ? det.getSubtotal() : 0.0
+                        ));
+                    }
                 }
             }
 
             texto.append("----------------------------\n");
 
-            texto.append(String.format(
-                    "TOTAL:              $%.2f\n",
-                    ventaActual.getTotal()
-            ));
+            if (esRegalo) {
+                texto.append("  Valido para cambio.\n");
+                texto.append("  Sin valor comercial.\n");
+            } else {
+                texto.append(String.format(
+                        "TOTAL:              $%.2f\n",
+                        ventaActual.getTotal() != null ? ventaActual.getTotal() : 0.0
+                ));
+            }
 
             texto.append("----------------------------\n");
             texto.append("    Gracias por su compra!\n");
             texto.append("----------------------------\n");
             texto.append("\n\n\n\n\n");
 
-            ImpresoraService.imprimirTexto(texto.toString());
+            // Devuelve false si se canceló la elección de impresora; lanza excepción si falló
+            boolean enviado = ImpresoraService.imprimirTexto(texto.toString());
+            if (!enviado) {
+                return;
+            }
 
             mostrarInformacion(
                     "Ticket enviado",
-                    "El ticket fue enviado correctamente a la impresora."
+                    "El ticket se envió a la impresora: " + ImpresoraService.getImpresoraGuardada()
             );
 
             cerrarVentana(event);
@@ -133,6 +145,32 @@ public class OpcionesImpresionController {
                     "Error de impresión",
                     "No se pudo imprimir el ticket.\n\n" + e.getMessage()
             );
+        }
+    }
+
+    // Convierte la fecha que manda el backend (texto ISO) a "dd/MM/yyyy HH:mm"
+    private String formatearFecha(String fechaIso) {
+        java.time.format.DateTimeFormatter salida = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        if (fechaIso == null || fechaIso.isBlank()) {
+            return java.time.LocalDateTime.now().format(salida);
+        }
+        try {
+            return java.time.LocalDateTime.parse(fechaIso.trim()).format(salida);
+        } catch (Exception e) {
+            return fechaIso; // formato inesperado: la mostramos tal cual antes que fallar
+        }
+    }
+
+    // Botón "Cambiar impresora": por si se cambió la ticketera o se eligió mal
+    @FXML
+    public void cambiarImpresora(ActionEvent event) {
+        try {
+            javax.print.PrintService elegida = ImpresoraService.elegirImpresora();
+            if (elegida != null) {
+                mostrarInformacion("Impresora de tickets", "Los tickets van a salir por: " + elegida.getName());
+            }
+        } catch (Exception e) {
+            mostrarError("Impresora de tickets", e.getMessage());
         }
     }
 

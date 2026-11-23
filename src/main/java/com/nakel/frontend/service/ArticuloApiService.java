@@ -10,6 +10,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +21,20 @@ public class ArticuloApiService {
     private static final String API_URL = "http://localhost:8080/api/articulos";
     private final HttpClient http = HttpClient.newHttpClient();
     private final Gson gson = new Gson();
+
+    // Motivo del último fallo al guardar/actualizar (lo que respondió el backend), para mostrarlo en pantalla
+    private String ultimoError;
+
+    public String getUltimoError() {
+        return ultimoError;
+    }
+
+    private void anotarError(HttpResponse<String> respuesta) {
+        String cuerpo = respuesta.body();
+        ultimoError = (cuerpo != null && !cuerpo.isBlank() && !cuerpo.trim().startsWith("{"))
+                ? cuerpo.trim()
+                : "El servidor rechazó la operación (código " + respuesta.statusCode() + ").";
+    }
 
     // 🔥 Variable de memoria para el paginador del mostrador
     private int ultimasPaginasMostrador = 1;
@@ -48,8 +65,9 @@ public class ArticuloApiService {
     // 📋 NUEVO: Para llenar la tabla del catálogo (Ahora soporta Paginación)
     public List<Articulo> obtenerTodos() {
         try {
+            // Sin "size" el backend devuelve solo los primeros 50: el stock crítico quedaba incompleto
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL))
+                    .uri(URI.create(API_URL + "?page=0&size=100000"))
                     .GET()
                     .build();
 
@@ -78,6 +96,7 @@ public class ArticuloApiService {
 
     // 💾 NUEVO: Para el botón "➕ Nuevo Artículo"
     public boolean guardarArticulo(Articulo articulo) {
+        ultimoError = null;
         try {
             String jsonArticulo = gson.toJson(articulo);
 
@@ -89,16 +108,20 @@ public class ArticuloApiService {
 
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-            return respuesta.statusCode() == 200 || respuesta.statusCode() == 201;
+            if (respuesta.statusCode() == 200 || respuesta.statusCode() == 201) return true;
+            anotarError(respuesta);
+            return false;
 
         } catch (Exception e) {
             System.out.println("Error al guardar el artículo: " + e.getMessage());
+            ultimoError = "No se pudo conectar con el servidor del sistema.";
             return false;
         }
     }
 
     // 🔄 NUEVO: Actualizar artículo (Para el botón Editar ✏️)
     public boolean actualizarArticulo(Articulo articulo) {
+        ultimoError = null;
         try {
             String jsonArticulo = gson.toJson(articulo);
             HttpRequest peticion = HttpRequest.newBuilder()
@@ -109,9 +132,12 @@ public class ArticuloApiService {
 
             HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-            return respuesta.statusCode() == 200 || respuesta.statusCode() == 201;
+            if (respuesta.statusCode() == 200 || respuesta.statusCode() == 201) return true;
+            anotarError(respuesta);
+            return false;
         } catch (Exception e) {
             System.out.println("Error al actualizar el artículo: " + e.getMessage());
+            ultimoError = "No se pudo conectar con el servidor del sistema.";
             return false;
         }
     }
@@ -449,5 +475,27 @@ public class ArticuloApiService {
             this.categoriaId = categoriaId;
             this.porcentaje = porcentaje;
         }
+    }
+
+    // 🖨️ DESCARGAR REPORTE DE STOCK EN PDF
+    public String descargarReportePdf() {
+        try {
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/reporte-stock"))
+                    .GET()
+                    .build();
+
+            HttpResponse<byte[]> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofByteArray());
+
+            if (respuesta.statusCode() == 200) {
+                // Guardamos el PDF en una carpeta temporal de Windows
+                Path rutaDestino = Paths.get(System.getProperty("java.io.tmpdir"), "Reporte_Stock_Nakel.pdf");
+                Files.write(rutaDestino, respuesta.body());
+                return rutaDestino.toString();
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Error al descargar el PDF: " + e.getMessage());
+        }
+        return null;
     }
 }

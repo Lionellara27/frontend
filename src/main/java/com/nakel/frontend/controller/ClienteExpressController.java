@@ -51,7 +51,8 @@ public class ClienteExpressController {
                         return gson.fromJson(clienteNuevoJson, Cliente.class); // ¡Devuelve el cliente con su ID nuevito!
                     }
                 } else {
-                    mostrarError("Error", "No se pudo guardar el cliente en el servidor.");
+                    String motivo = api.getUltimoError();
+                    mostrarError("No se pudo guardar", motivo != null ? motivo : "No se pudo guardar el cliente en el servidor.");
                 }
                 return null;
             }

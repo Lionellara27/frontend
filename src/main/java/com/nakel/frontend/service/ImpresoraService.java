@@ -1,110 +1,121 @@
 package com.nakel.frontend.service;
 
-import com.nakel.frontend.model.DetalleVenta;
-import com.nakel.frontend.model.Venta;
-import javax.print.*;
-import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import javafx.scene.control.ChoiceDialog;
 
+import javax.print.Doc;
+import javax.print.DocFlavor;
+import javax.print.DocPrintJob;
+import javax.print.PrintService;
+import javax.print.PrintServiceLookup;
+import javax.print.SimpleDoc;
+import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.prefs.Preferences;
+
+/**
+ * Impresión de tickets en la ticketera térmica.
+ *
+ * Antes se imprimía siempre en la impresora PREDETERMINADA de Windows y, si no había ninguna
+ * o fallaba, no avisaba (la pantalla decía "ticket enviado" igual). Ahora:
+ *  - La primera vez pregunta cuál es la impresora de tickets y la recuerda en esta PC.
+ *  - Si algo falla lanza una excepción con un mensaje claro, para que la pantalla lo muestre.
+ */
 public class ImpresoraService {
 
-    // ====================================================================
-    // 🟢 1. TU MÉTODO ORIGINAL (Para imprimir el Ticket de Venta normal)
-    // ====================================================================
-    public void imprimirTicket(Venta venta) {
-        String textoTicket = armarDisenoTicket(venta);
+    // Preferencias de Windows del usuario: sobreviven a reinstalar el sistema
+    private static final Preferences PREFS = Preferences.userRoot().node("nakelsoftware");
+    private static final String CLAVE_IMPRESORA = "impresoraTickets";
 
-        try {
-            // Le decimos a Java que vamos a mandar un texto plano a imprimir
-            DocFlavor flavor = DocFlavor.BYTE_ARRAY.AUTOSENSE;
-            Doc doc = new SimpleDoc(textoTicket.getBytes(), flavor, null);
-
-            // 🔥 BUSCA LA IMPRESORA PREDETERMINADA DE WINDOWS
-            PrintService impresoraPredeterminada = PrintServiceLookup.lookupDefaultPrintService();
-
-            if (impresoraPredeterminada != null) {
-                System.out.println("🖨️ Mandando ticket a: " + impresoraPredeterminada.getName());
-                DocPrintJob job = impresoraPredeterminada.createPrintJob();
-                job.print(doc, null);
-                System.out.println("✅ ¡Impresión finalizada!");
-            } else {
-                System.out.println("❌ No hay ninguna impresora instalada/predeterminada en Windows.");
-            }
-        } catch (Exception e) {
-            System.err.println("❌ Error al imprimir: " + e.getMessage());
-        }
+    /** Nombre de la impresora de tickets guardada, o null si todavía no se eligió. */
+    public static String getImpresoraGuardada() {
+        String nombre = PREFS.get(CLAVE_IMPRESORA, null);
+        return (nombre == null || nombre.isBlank()) ? null : nombre;
     }
 
-    // 🎨 EL DISEÑO DEL TICKET (Formato 80mm - 48 caracteres de ancho)
-    private String armarDisenoTicket(Venta venta) {
-        StringBuilder sb = new StringBuilder();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-        String fecha = (venta.getFechaHora() != null) ? sdf.format(venta.getFechaHora()) : sdf.format(new Date());
-
-        sb.append("================================================\n");
-        sb.append("                 NAKEL SOFTWARE                 \n"); // Cambialo por el nombre del local
-        sb.append("================================================\n");
-        sb.append("Fecha: ").append(fecha).append("\n");
-
-        String cliente = (venta.getCliente() != null && venta.getCliente().getNombre() != null)
-                ? venta.getCliente().getNombre()
-                : "Consumidor Final";
-        sb.append("Cliente: ").append(cliente).append("\n");
-        sb.append("------------------------------------------------\n");
-        sb.append("CANT DESCRIPCION                        SUBTOTAL\n");
-        sb.append("------------------------------------------------\n");
-
-        // Recorremos los productos
-        if (venta.getDetalles() != null) {
-            for (DetalleVenta det : venta.getDetalles()) {
-                String nombre = det.getArticulo().getNombre();
-                // Ahora tenemos 80mm, dejamos que la descripción ocupe hasta 30 letras
-                if (nombre.length() > 30) {
-                    nombre = nombre.substring(0, 30);
-                }
-                // Formato: 4 espacios para cantidad, 30 para nombre, 12 para la plata
-                sb.append(String.format("%-4d %-30s $%11.2f\n", det.getCantidad(), nombre, det.getSubtotal()));
-            }
+    private static PrintService buscarPorNombre(String nombre) {
+        if (nombre == null) return null;
+        for (PrintService ps : PrintServiceLookup.lookupPrintServices(null, null)) {
+            if (ps.getName().equalsIgnoreCase(nombre)) return ps;
         }
-
-        sb.append("------------------------------------------------\n");
-        sb.append(String.format("TOTAL:                              $%11.2f\n", venta.getTotal()));
-        sb.append("================================================\n");
-        sb.append("            ¡Gracias por tu compra!             \n");
-
-        // ✂️ Estos saltos de línea son clave para que la impresora saque el papel
-        // y el CORTADOR AUTOMÁTICO actúe correctamente sin morder las letras
-        sb.append("\n\n\n\n\n");
-
-        return sb.toString();
+        return null;
     }
 
-    // ====================================================================
-    // 🔥 2. EL NUEVO MÉTODO ESTÁTICO (Para imprimir el Vale desde el Modal)
-    // ====================================================================
-    public static void imprimirTexto(String texto) {
+    /**
+     * Muestra la lista de impresoras instaladas para elegir la de tickets y la guarda.
+     * Devuelve la elegida, o null si se canceló. Lanza excepción si no hay ninguna instalada.
+     */
+    public static PrintService elegirImpresora() {
+        PrintService[] todas = PrintServiceLookup.lookupPrintServices(null, null);
+        if (todas == null || todas.length == 0) {
+            throw new IllegalStateException("No hay ninguna impresora instalada en esta computadora.");
+        }
+
+        List<String> nombres = new ArrayList<>();
+        for (PrintService ps : todas) nombres.add(ps.getName());
+
+        // Preseleccionamos la guardada; si no hay, la predeterminada de Windows
+        String sugerida = getImpresoraGuardada();
+        if (sugerida == null || !nombres.contains(sugerida)) {
+            PrintService predeterminada = PrintServiceLookup.lookupDefaultPrintService();
+            sugerida = (predeterminada != null && nombres.contains(predeterminada.getName()))
+                    ? predeterminada.getName()
+                    : nombres.get(0);
+        }
+
+        ChoiceDialog<String> dialogo = new ChoiceDialog<>(sugerida, nombres);
+        dialogo.setTitle("Impresora de tickets");
+        dialogo.setHeaderText("¿En qué impresora salen los tickets?");
+        dialogo.setContentText("Elegí la ticketera:");
+
+        Optional<String> elegida = dialogo.showAndWait();
+        if (elegida.isEmpty()) return null;
+
+        PREFS.put(CLAVE_IMPRESORA, elegida.get());
+        return buscarPorNombre(elegida.get());
+    }
+
+    // Las ticketeras térmicas no entienden UTF-8: mandamos texto simple sin acentos ni símbolos raros
+    private static String aTextoSimple(String texto) {
+        String sinSimbolos = texto
+                .replace("°", "o").replace("º", "o").replace("ª", "a")
+                .replace("¡", "").replace("¿", "")
+                .replace("ñ", "n").replace("Ñ", "N");
+        String sinAcentos = Normalizer.normalize(sinSimbolos, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+        return sinAcentos.replaceAll("[^\\x00-\\x7F]", "?");
+    }
+
+    /**
+     * Imprime texto plano en la impresora de tickets.
+     * Devuelve false si el usuario canceló la elección de impresora.
+     * Lanza IllegalStateException con un mensaje claro si no se pudo imprimir.
+     */
+    public static boolean imprimirTexto(String texto) {
+        PrintService impresora = buscarPorNombre(getImpresoraGuardada());
+
+        // Si nunca se eligió, o la guardada ya no existe (se cambió la ticketera), preguntamos
+        if (impresora == null) {
+            impresora = elegirImpresora();
+            if (impresora == null) return false;
+        }
+
         try {
-            PrintService impresora = PrintServiceLookup.lookupDefaultPrintService();
-
-            if (impresora == null) {
-                System.out.println("❌ No se encontró ninguna impresora predeterminada en Windows.");
-                return;
-            }
-
             System.out.println("🖨️ Mandando comprobante a: " + impresora.getName());
 
-            // Usamos UTF-8 para que los acentos y símbolos salgan bien
-            byte[] bytes = texto.getBytes(StandardCharsets.UTF_8);
+            byte[] bytes = aTextoSimple(texto).getBytes(StandardCharsets.US_ASCII);
             Doc doc = new SimpleDoc(bytes, DocFlavor.BYTE_ARRAY.AUTOSENSE, null);
             DocPrintJob job = impresora.createPrintJob();
-
             job.print(doc, null);
-            System.out.println("✅ ¡Impresión de texto libre finalizada!");
+
+            System.out.println("✅ ¡Impresión finalizada!");
+            return true;
 
         } catch (Exception e) {
-            System.err.println("❌ Error al imprimir texto: " + e.getMessage());
             e.printStackTrace();
+            throw new IllegalStateException("No se pudo imprimir en \"" + impresora.getName() + "\".\n"
+                    + "Revisá que esté encendida, conectada y con papel.\n\nDetalle: " + e.getMessage());
         }
     }
 }

@@ -17,7 +17,7 @@ public class ValeApiService {
     public Vale generarVale(Double monto, Long idCliente) {
         try {
             // Armamos la URL base con el monto
-            String url = API_URL + "/generar?monto=" + monto;
+            String url = API_URL + "/generar?monto=" + String.format(java.util.Locale.US, "%.2f", monto);
 
             // Si hay un cliente registrado, lo agregamos a la URL
             if (idCliente != null) {
@@ -44,7 +44,7 @@ public class ValeApiService {
     public Vale validarVale(String codigo) {
         try {
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/validar/" + codigo))
+                    .uri(URI.create(API_URL + "/validar/" + java.net.URLEncoder.encode(codigo.trim(), java.nio.charset.StandardCharsets.UTF_8)))
                     .GET()
                     .build();
 
@@ -66,9 +66,20 @@ public class ValeApiService {
 
     // 3. Quema el vale cuando la venta se confirma
     public boolean consumirVale(String codigo) {
+        return consumirVale(codigo, null);
+    }
+
+    // montoUsado: cuánto del vale se usó en esta compra. Si es menos que el valor del vale,
+    // el backend lo deja ACTIVO con el saldo restante en vez de quemarlo entero.
+    public boolean consumirVale(String codigo, Double montoUsado) {
         try {
+            String url = API_URL + "/consumir/" + java.net.URLEncoder.encode(codigo.trim(), java.nio.charset.StandardCharsets.UTF_8);
+            if (montoUsado != null) {
+                url += "?montoUsado=" + String.format(java.util.Locale.US, "%.2f", montoUsado);
+            }
+
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/consumir/" + codigo))
+                    .uri(URI.create(url))
                     .PUT(HttpRequest.BodyPublishers.noBody())
                     .build();
 

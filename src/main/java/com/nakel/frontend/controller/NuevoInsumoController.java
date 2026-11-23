@@ -204,7 +204,8 @@ public class NuevoInsumoController {
             insumoAGuardar.setNombre(txtDescripcion.getText());
 
             if (txtCosto.getText() != null && !txtCosto.getText().trim().isEmpty()) {
-                insumoAGuardar.setCostoTotal(new java.math.BigDecimal(txtCosto.getText().trim()));
+                // Acepta coma decimal y punto de miles ("15.000,50")
+                insumoAGuardar.setCostoTotal(java.math.BigDecimal.valueOf(PagoMixtoController.parsearMonto(txtCosto.getText())));
             }
 
             String tipoMedicion = cmbCategoria.getValue().getTipoMedicion();
@@ -229,8 +230,17 @@ public class NuevoInsumoController {
                 String cantStr = (txtCantidad.getText() != null) ? txtCantidad.getText().trim() : "1";
                 int cant = cantStr.isEmpty() ? 1 : Integer.parseInt(cantStr);
 
+                // Al EDITAR no hay que pisar lo que queda con el tamaño del lote (lote 100, quedaban 37 -> volvía a 100).
+                // Se respeta lo ya consumido: si el lote no cambia, el stock actual tampoco.
+                Integer loteAnterior = insumoAGuardar.getCantidadLote();
+                Integer actualAnterior = insumoAGuardar.getCantidadActual();
+                if (insumoEnEdicion != null && loteAnterior != null && actualAnterior != null) {
+                    int consumido = Math.max(0, loteAnterior - actualAnterior);
+                    insumoAGuardar.setCantidadActual(Math.max(0, cant - consumido));
+                } else {
+                    insumoAGuardar.setCantidadActual(cant);
+                }
                 insumoAGuardar.setCantidadLote(cant);
-                insumoAGuardar.setCantidadActual(cant);
 
                 // 🔥 Como es UNIDAD, forzamos a nulo el material por las dudas
                 insumoAGuardar.setMaterial(null);

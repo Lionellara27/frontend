@@ -130,7 +130,15 @@ public class ClienteApiService {
     }
 
     // =============== 3. GUARDAR CLIENTE (POST BLINDADO) ===============
+    // Motivo del último fallo al guardar (lo que respondió el backend), para mostrarlo en pantalla
+    private String ultimoError;
+
+    public String getUltimoError() {
+        return ultimoError;
+    }
+
     public boolean guardarClienteEnBaseDeDatos(Long id, String nombre, String cuit, String condicionIva, String telefono, String email) {
+        ultimoError = null;
         try {
             Map<String, Object> datosCliente = new HashMap<>();
 
@@ -156,9 +164,13 @@ public class ClienteApiService {
 
             if (respuesta.statusCode() == 400) {
                 System.out.println("⚠️ Error 400: " + respuesta.body());
+                ultimoError = (respuesta.body() != null && !respuesta.body().isBlank() && !respuesta.body().trim().startsWith("{"))
+                        ? respuesta.body().trim()
+                        : "El servidor rechazó los datos del cliente.";
                 return false;
             } else if (respuesta.statusCode() != 200 && respuesta.statusCode() != 201) {
                 System.out.println("⚠️ Error al comunicarse con el servidor (Código: " + respuesta.statusCode() + ")");
+                ultimoError = "Error del servidor (código " + respuesta.statusCode() + ").";
                 return false;
             }
 
@@ -166,6 +178,7 @@ public class ClienteApiService {
 
         } catch (Exception e) {
             System.out.println("❌ Error al guardar cliente: " + e.getMessage());
+            ultimoError = "No se pudo conectar con el servidor del sistema.";
             return false;
         }
     }
@@ -195,7 +208,11 @@ public class ClienteApiService {
 
         HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
-        if (respuesta.statusCode() == 400 || respuesta.statusCode() == 500) {
+        if (respuesta.statusCode() == 400) {
+            // El backend manda el motivo en texto claro (ej: "Ya existe un cliente con el CUIT/DNI ...")
+            throw new RuntimeException(respuesta.body() != null && !respuesta.body().isBlank()
+                    ? respuesta.body() : "El servidor rechazó los datos del cliente.");
+        } else if (respuesta.statusCode() == 500) {
             throw new RuntimeException("Error del servidor: " + respuesta.body());
         } else if (respuesta.statusCode() != 200) {
             throw new RuntimeException("Error al comunicarse con el servidor (Código: " + respuesta.statusCode() + ")");
@@ -206,7 +223,7 @@ public class ClienteApiService {
     public String buscarClientePorCuit(String cuit) {
         try {
             HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/cuit/" + cuit))
+                    .uri(URI.create(API_URL + "/cuit/" + java.net.URLEncoder.encode(cuit.trim(), java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20")))
                     .GET()
                     .build();
 
@@ -231,7 +248,10 @@ public class ClienteApiService {
         HttpResponse<String> respuesta = clienteHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
 
         if (respuesta.statusCode() != 200 && respuesta.statusCode() != 204) {
-            throw new Exception("Error " + respuesta.statusCode() + ": " + respuesta.body());
+            // Con 400 el backend explica el motivo (ej: "el cliente tiene 9 ventas registradas")
+            throw new Exception(respuesta.statusCode() == 400 && respuesta.body() != null && !respuesta.body().isBlank()
+                    ? respuesta.body()
+                    : "Error " + respuesta.statusCode() + ": " + respuesta.body());
         }
     }
 }

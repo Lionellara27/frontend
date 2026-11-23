@@ -73,6 +73,13 @@ public class LoginController {
                 e.printStackTrace();
             }
 
+        } else if (usuarioApiService.isUltimoFalloDeConexion()) {
+            // El backend tarda unos segundos en arrancar. Antes esto se informaba como
+            // "contraseña incorrecta" y confundía: la clave estaba bien, faltaba esperar.
+            mostrarAlerta("El sistema está iniciando",
+                    "El sistema todavía se está iniciando.\n\n"
+                            + "Esperá unos segundos y volvé a tocar Ingresar.\n"
+                            + "(Tu usuario y contraseña no tienen ningún problema.)");
         } else {
             mostrarAlerta("Error de Acceso", "Usuario o contraseña incorrectos.");
         }

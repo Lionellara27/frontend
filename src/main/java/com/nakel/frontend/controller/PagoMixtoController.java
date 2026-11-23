@@ -39,6 +39,28 @@ public class PagoMixtoController {
     private final com.nakel.frontend.service.ValeApiService valeApi = new com.nakel.frontend.service.ValeApiService();
     private Vale valeAplicado = null;
 
+    // Cuánto del vale se usó realmente en este cobro (puede ser menos que el valor del vale)
+    private double montoValeUsado = 0.0;
+
+    // Vuelto que se convertirá en vale. NO se crea acá: lo crea la pantalla que llamó
+    // recién cuando la venta quedó guardada, para no dejar vales sueltos si se cancela.
+    private double vueltoPendiente = 0.0;
+
+    public double getMontoValeUsado() { return montoValeUsado; }
+    public double getVueltoPendiente() { return vueltoPendiente; }
+    public Long getIdCliente() { return idCliente; }
+
+    // Acepta "1500", "1500,50", "1.500,50" y "1500.50" (formato argentino y con punto decimal)
+    static double parsearMonto(String texto) {
+        String limpio = texto.trim().replace("$", "").replace(" ", "");
+        if (limpio.contains(",")) {
+            limpio = limpio.replace(".", "").replace(",", ".");
+        } else if (limpio.matches("\\d{1,3}(\\.\\d{3})+")) {
+            limpio = limpio.replace(".", ""); // "15.000" son quince mil, no quince
+        }
+        return Double.parseDouble(limpio);
+    }
+
     @FXML
     public void initialize() {
         cmbMetodo.getItems().addAll("Efectivo", "Transferencia", "MercadoPago", "Tarjeta de Débito", "Tarjeta de Crédito");
@@ -61,6 +83,13 @@ public class PagoMixtoController {
 
         if (codigo.isEmpty()) return;
 
+        // Si ya no falta cobrar nada, aplicar un vale lo gastaría sin sentido
+        if (faltaCobrar < 0.01) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION, "El pago ya está completo: no hace falta aplicar un vale.");
+            alert.showAndWait();
+            return;
+        }
+
         Vale vale = valeApi.validarVale(codigo);
 
         if (vale != null && "ACTIVO".equalsIgnoreCase(vale.getEstado())) {
@@ -70,6 +99,7 @@ public class PagoMixtoController {
             if (montoAUsar > faltaCobrar) {
                 montoAUsar = faltaCobrar;
             }
+            this.montoValeUsado = montoAUsar;
 
             faltaCobrar -= montoAUsar;
 
@@ -77,7 +107,10 @@ public class PagoMixtoController {
             listaPagosClase.add(new Pago("Vale de Cambio", montoAUsar));
 
             if (lblDescuentoVale != null) {
-                lblDescuentoVale.setText(String.format("Vale aplicado: -$ %.2f", vale.getMonto()));
+                double saldoQueQueda = vale.getMonto() - montoAUsar;
+                lblDescuentoVale.setText(saldoQueQueda > 0.009
+                        ? String.format("Vale aplicado: -$ %.2f (le quedan $ %.2f en el vale)", montoAUsar, saldoQueQueda)
+                        : String.format("Vale aplicado: -$ %.2f", montoAUsar));
                 lblDescuentoVale.setStyle("-fx-text-fill: #388e3c; -fx-font-weight: bold;");
                 lblDescuentoVale.setVisible(true);
             }
@@ -99,28 +132,24 @@ public class PagoMixtoController {
         try {
             if (txtMonto.getText().isEmpty() || cmbMetodo.getValue() == null) return;
 
-            double monto = Double.parseDouble(txtMonto.getText());
+            double monto = parsearMonto(txtMonto.getText());
 
             if (monto <= 0) return;
 
-            // 🔥 NUEVO: Si paga con más plata de la que debe, generamos el vuelto en Vale
-            if (monto > faltaCobrar) {
+            // Si paga con más plata de la que debe, el vuelto queda como vale.
+            // El vale NO se crea todavía: se crea cuando la venta queda guardada.
+            if (monto > faltaCobrar + 0.009) {
                 double saldoAFavor = monto - faltaCobrar;
 
-                // Llamamos al Backend para crear el vale, pasándole el ID del cliente
-                Vale nuevoVale = valeApi.generarVale(saldoAFavor, this.idCliente);
-
-                if (nuevoVale != null) {
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("¡Vale Generado!");
-                    alert.setHeaderText("Saldo a favor por Vuelto");
-                    alert.setContentText("Se generó un vale por $ " + String.format("%.2f", saldoAFavor) + "\n\nCÓDIGO: " + nuevoVale.getCodigo());
-                    alert.showAndWait();
-                } else {
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "Error al intentar generar el vale por el vuelto en el servidor.");
-                    alert.showAndWait();
-                    return; // Si falla, frenamos acá
+                Alert confirmar = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmar.setTitle("Paga de más");
+                confirmar.setHeaderText("Sobran $ " + String.format("%.2f", saldoAFavor));
+                confirmar.setContentText("Al confirmar la operación se va a generar un VALE por ese vuelto.\n\n"
+                        + "Si preferís dar el vuelto en mano, tocá Cancelar y cargá el monto justo.");
+                if (confirmar.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+                    return;
                 }
+                vueltoPendiente += saldoAFavor;
 
                 // Para la caja, registramos que pagó justo lo que faltaba (así cuadra la contabilidad)
                 listaPagos.getItems().add(cmbMetodo.getValue() + " -> $ " + String.format("%.2f", faltaCobrar) + " (Abonó $" + String.format("%.2f", monto) + ")");
@@ -164,7 +193,15 @@ public class PagoMixtoController {
             return;
         }
 
-        // Magia para cerrar este modal y devolverle el control al Modal 1
+        // En el mostrador este modal vive dentro de un diálogo cuya venta se registra con el botón
+        // "Emitir Factura". Antes este botón verde solo cerraba la ventana y la venta NO se guardaba:
+        // ahora dispara ese mismo botón, así los dos hacen lo mismo.
+        if (btnFacturarPadre != null) {
+            btnFacturarPadre.fire();
+            return;
+        }
+
+        // En el flujo de cambios no hay botón padre: cerramos y el que llamó sigue con el cambio
         javafx.stage.Stage stage = (javafx.stage.Stage) btnConfirmar.getScene().getWindow();
         stage.close();
     }

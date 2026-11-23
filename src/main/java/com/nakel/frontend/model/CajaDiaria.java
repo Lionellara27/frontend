@@ -15,6 +15,9 @@ public class CajaDiaria {
     private BigDecimal totalEfectivo;
     private BigDecimal totalMercadoPago;
     private BigDecimal totalTransferencias;
+    // El backend los manda desde que existe el pago mixto; faltaban en este modelo
+    private BigDecimal totalTarjetaDebito;
+    private BigDecimal totalTarjetaCredito;
     private BigDecimal totalVentas;
 
     // 🔥 Nuevo campo de Egresos
@@ -57,6 +60,12 @@ public class CajaDiaria {
 
     public BigDecimal getTotalTransferencias() { return totalTransferencias; }
     public void setTotalTransferencias(BigDecimal totalTransferencias) { this.totalTransferencias = totalTransferencias; }
+
+    public BigDecimal getTotalTarjetaDebito() { return totalTarjetaDebito; }
+    public void setTotalTarjetaDebito(BigDecimal totalTarjetaDebito) { this.totalTarjetaDebito = totalTarjetaDebito; }
+
+    public BigDecimal getTotalTarjetaCredito() { return totalTarjetaCredito; }
+    public void setTotalTarjetaCredito(BigDecimal totalTarjetaCredito) { this.totalTarjetaCredito = totalTarjetaCredito; }
 
     public BigDecimal getTotalVentas() { return totalVentas; }
     public void setTotalVentas(BigDecimal totalVentas) { this.totalVentas = totalVentas; }

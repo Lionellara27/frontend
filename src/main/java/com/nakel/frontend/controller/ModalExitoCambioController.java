@@ -26,13 +26,14 @@ public class ModalExitoCambioController {
         this.codigoValeActual = codigoVale;
 
         lblTitulo.setText("¡Cambio Registrado con Éxito!");
-        lblMensajePrincipal.setText("Saldo a favor del cliente: $" + String.format("%.2f", saldoAFavor));
-
         if (codigoVale != null && !codigoVale.isEmpty()) {
+            lblMensajePrincipal.setText("Saldo a favor del cliente: $" + String.format("%.2f", saldoAFavor));
             lblSubtitulo.setText("Código de Vale generado:");
             lblDetalleVale.setText(codigoVale);
         } else {
-            lblSubtitulo.setText("Acreditado en la Cuenta Corriente de:");
+            // Sin vale no hay saldo a favor: antes decía "acreditado en la cuenta corriente", y no se acreditaba nada
+            lblMensajePrincipal.setText("El cambio quedó registrado y el stock actualizado.");
+            lblSubtitulo.setText("Cliente:");
             lblDetalleVale.setText(nombreCliente);
         }
     }
@@ -60,7 +61,24 @@ public class ModalExitoCambioController {
         texto.append("\n\n\n\n\n"); // 5 saltos de línea para que el papel suba y se pueda cortar
 
         // 2. Disparamos a la impresora térmica
-        com.nakel.frontend.service.ImpresoraService.imprimirTexto(texto.toString());
+        //    (antes, si no había impresora o fallaba, no avisaba nada)
+        try {
+            boolean enviado = com.nakel.frontend.service.ImpresoraService.imprimirTexto(texto.toString());
+            if (enviado) {
+                Alert ok = new Alert(Alert.AlertType.INFORMATION);
+                ok.setTitle("Comprobante enviado");
+                ok.setHeaderText(null);
+                ok.setContentText("El comprobante se envió a la impresora: "
+                        + com.nakel.frontend.service.ImpresoraService.getImpresoraGuardada());
+                ok.showAndWait();
+            }
+        } catch (Exception e) {
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setTitle("Error de impresión");
+            error.setHeaderText(null);
+            error.setContentText(e.getMessage());
+            error.showAndWait();
+        }
     }
 
     @FXML

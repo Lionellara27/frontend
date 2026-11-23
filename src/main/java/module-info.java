@@ -5,6 +5,7 @@ module com.nakel.frontend {
     requires com.google.gson;
     requires org.kordamp.ikonli.javafx;
     requires java.desktop;
+    requires java.prefs; // para recordar cuál es la impresora de tickets
     requires itextpdf;
     requires static lombok;
 

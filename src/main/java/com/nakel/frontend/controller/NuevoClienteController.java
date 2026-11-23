@@ -86,14 +86,24 @@ public class NuevoClienteController {
             // 🔀 SEPARAMOS LOS CAMINOS: ¿Es Nuevo o es Edición?
             if (this.idClienteEditando == null) {
                 // ES UN CLIENTE NUEVO (Los saldos arrancan en 0 en la base de datos automáticamente)
-                apiService.guardarClienteEnBaseDeDatos(
+                boolean guardado = apiService.guardarClienteEnBaseDeDatos(
                         null,
-                        txtNombre.getText(),
-                        txtDni.getText(),
+                        txtNombre.getText().trim(),
+                        txtDni.getText().trim(),
                         cmbTipoCliente.getValue(),
                         txtTelefono.getText() != null ? txtTelefono.getText() : "",
                         txtEmail.getText() != null ? txtEmail.getText() : ""
                 );
+
+                // Antes se ignoraba este resultado y se mostraba "¡Éxito!" aunque no se hubiera guardado.
+                // Si falló, avisamos y dejamos la ventana abierta con todo lo cargado.
+                if (!guardado) {
+                    String motivo = apiService.getUltimoError();
+                    mostrarAlerta(Alert.AlertType.ERROR, "No se pudo guardar",
+                            (motivo != null ? motivo : "No se pudo guardar el cliente.")
+                                    + "\n\nLos datos siguen en pantalla: corregí y volvé a guardar.");
+                    return;
+                }
             } else {
                 // ES UNA EDICIÓN (LAPICITO) - Usamos el método que creamos con los saldos
                 apiService.actualizarClienteEnBaseDeDatos(

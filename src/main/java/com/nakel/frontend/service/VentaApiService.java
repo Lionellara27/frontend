@@ -15,10 +15,21 @@ public class VentaApiService {
     private final Gson gson = new Gson();
     private final HttpClient http = HttpClient.newHttpClient();
 
+    // Motivo del último fallo de registrarVenta (lo que respondió el backend), para mostrarlo en pantalla
+    private String ultimoError;
+
+    public String getUltimoError() {
+        return ultimoError;
+    }
+
     public boolean registrarVenta(Venta venta) {
+        ultimoError = null;
         try {
             String jsonVenta = gson.toJson(venta);
-            String username = SesionActual.getUsuarioLogueado();
+            // El nombre de usuario se codifica: con un espacio ("Maria Jose") la URL era inválida y no se podía vender
+            String username = java.net.URLEncoder.encode(
+                    SesionActual.getUsuarioLogueado() != null ? SesionActual.getUsuarioLogueado() : "",
+                    java.nio.charset.StandardCharsets.UTF_8);
 
             HttpRequest peticion = HttpRequest.newBuilder()
                     .uri(URI.create(API_URL + "?username=" + username))
@@ -32,12 +43,21 @@ public class VentaApiService {
             );
 
             System.out.println("CÓDIGO DE RESPUESTA: " + respuesta.statusCode());
-            System.out.println("MENSAJE DEL BACKEND: " + respuesta.body());
 
-            return respuesta.statusCode() == 200 || respuesta.statusCode() == 201;
+            if (respuesta.statusCode() == 200 || respuesta.statusCode() == 201) {
+                return true;
+            }
+
+            // El backend manda el motivo en texto plano (ej: "Stock insuficiente de ...")
+            String cuerpo = respuesta.body();
+            ultimoError = (cuerpo != null && !cuerpo.isBlank() && !cuerpo.trim().startsWith("{"))
+                    ? cuerpo.trim()
+                    : "El servidor rechazó la venta (código " + respuesta.statusCode() + ").";
+            return false;
 
         } catch (Exception e) {
             System.out.println("❌ Error de red al registrar la venta: " + e.getMessage());
+            ultimoError = "No se pudo conectar con el servidor del sistema.";
             return false;
         }
     }

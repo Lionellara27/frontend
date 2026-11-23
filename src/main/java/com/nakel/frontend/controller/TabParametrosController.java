@@ -74,19 +74,44 @@ public class TabParametrosController {
             txtNuevoPrefijo.clear();
         } else {
             System.out.println("❌ ERROR: El Backend devolvió null.");
+            avisar(javafx.scene.control.Alert.AlertType.ERROR, "No se pudo guardar la categoría", apiService.getUltimoError());
         }
+    }
+
+    private void avisar(javafx.scene.control.Alert.AlertType tipo, String titulo, String mensaje) {
+        javafx.scene.control.Alert alerta = new javafx.scene.control.Alert(tipo);
+        alerta.setTitle(titulo);
+        alerta.setHeaderText(null);
+        alerta.setContentText(mensaje != null ? mensaje : "Ocurrió un error.");
+        alerta.showAndWait();
+    }
+
+    // Antes borraba con un solo clic y sin preguntar. Ahora pide confirmación.
+    private boolean confirmarBorrado(String queCosa) {
+        javafx.scene.control.Alert alerta = new javafx.scene.control.Alert(
+                javafx.scene.control.Alert.AlertType.CONFIRMATION,
+                "¿Seguro que querés eliminar " + queCosa + "?",
+                javafx.scene.control.ButtonType.YES, javafx.scene.control.ButtonType.NO);
+        alerta.setTitle("Confirmar eliminación");
+        alerta.setHeaderText(null);
+        return alerta.showAndWait().orElse(javafx.scene.control.ButtonType.NO) == javafx.scene.control.ButtonType.YES;
     }
 
     @FXML
     public void eliminarCategoria(ActionEvent event) {
         Categoria seleccion = listCategorias.getSelectionModel().getSelectedItem();
-        if (seleccion != null) {
-            try {
-                apiService.eliminarCategoria(seleccion.getId());
-                listCategorias.getItems().remove(seleccion);
-            } catch (Exception e) {
-                System.out.println("Error al eliminar: " + e.getMessage());
-            }
+        if (seleccion == null) {
+            avisar(javafx.scene.control.Alert.AlertType.INFORMATION, "Eliminar categoría", "Primero elegí una categoría de la lista.");
+            return;
+        }
+        if (!confirmarBorrado("la categoría \"" + seleccion.getNombre() + "\"")) return;
+
+        try {
+            apiService.eliminarCategoria(seleccion.getId());
+            listCategorias.getItems().remove(seleccion);
+        } catch (Exception e) {
+            // El backend no deja borrar una categoría con artículos y explica por qué
+            avisar(javafx.scene.control.Alert.AlertType.ERROR, "No se pudo eliminar", e.getMessage());
         }
     }
 
@@ -102,19 +127,25 @@ public class TabParametrosController {
         if (guardado != null) {
             listMateriales.getItems().add(guardado);
             txtNuevoMaterial.clear();
+        } else {
+            avisar(javafx.scene.control.Alert.AlertType.ERROR, "No se pudo guardar el material", apiService.getUltimoError());
         }
     }
 
     @FXML
     public void eliminarMaterial(ActionEvent event) {
         Material seleccion = listMateriales.getSelectionModel().getSelectedItem();
-        if (seleccion != null) {
-            try {
-                apiService.eliminarMaterial(seleccion.getId());
-                listMateriales.getItems().remove(seleccion);
-            } catch (Exception e) {
-                System.out.println("Error al eliminar: " + e.getMessage());
-            }
+        if (seleccion == null) {
+            avisar(javafx.scene.control.Alert.AlertType.INFORMATION, "Eliminar material", "Primero elegí un material de la lista.");
+            return;
+        }
+        if (!confirmarBorrado("el material \"" + seleccion.getNombre() + "\"")) return;
+
+        try {
+            apiService.eliminarMaterial(seleccion.getId());
+            listMateriales.getItems().remove(seleccion);
+        } catch (Exception e) {
+            avisar(javafx.scene.control.Alert.AlertType.ERROR, "No se pudo eliminar", e.getMessage());
         }
     }
 }
