@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!-- Copias de seguridad: qué es, cuándo fue la última, hacer una ahora, y la lista para volver atrás -->
+<ScrollPane fitToWidth="true" hbarPolicy="NEVER"
+            style="-fx-background: #F8F9FA; -fx-background-color: transparent;"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.nakel.frontend.controller.TabCopiasController">
+    <HBox alignment="TOP_CENTER">
+        <padding>
+            <Insets top="14" right="20" bottom="14" left="20"/>
+        </padding>
+
+        <VBox spacing="10" styleClass="tarjeta" prefWidth="640" maxWidth="700">
+            <Label text="Copias de seguridad" styleClass="titulo-tarjeta"/>
+            <Label text="El sistema guarda solo una copia de todos tus datos cada día que lo abrís. Se guardan las de los últimos 7 días y se van reemplazando: no hay que hacer nada ni se llena la computadora."
+                   styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+
+            <Label fx:id="lblAviso" visible="false" managed="false" wrapText="true" minHeight="-Infinity"
+                   style="-fx-background-color: #FDECEA; -fx-text-fill: #9C2B1E; -fx-font-size: 13px; -fx-font-weight: bold; -fx-padding: 10; -fx-background-radius: 8;"/>
+
+            <HBox spacing="12" alignment="CENTER_LEFT">
+                <Label fx:id="lblUltima" text="Consultando..." HBox.hgrow="ALWAYS" maxWidth="Infinity" wrapText="true"
+                       style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #155643;"/>
+                <Button fx:id="btnAhora" mnemonicParsing="false" onAction="#hacerCopiaAhora" styleClass="btn-primario"
+                        text="Hacer una copia ahora" minWidth="-Infinity"/>
+            </HBox>
+
+            <Separator/>
+
+            <Label text="Volver atrás" styleClass="etiqueta-formulario"/>
+            <Label text="Si se borró o se cargó mal algo importante, podés volver el sistema a como estaba uno de estos días. Usalo solo si hace falta: lo que se cargó después de ese día se pierde."
+                   styleClass="dato-ayuda" wrapText="true" minHeight="-Infinity"/>
+
+            <VBox fx:id="cajaCopias" spacing="7"/>
+        </VBox>
+    </HBox>
+</ScrollPane>

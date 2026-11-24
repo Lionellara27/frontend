@@ -45,11 +45,12 @@ public final class AyudaModulos {
                         + "• Con el ojito ves el detalle y los vales de cada uno.\n\n"
                         + "Si al vender elegís el cliente, después podés ver quién te compra más en Estadísticas.");
         AYUDAS.put("configuracion.fxml",
-                "Acá se ajusta cómo trabaja el sistema. Tiene cuatro pestañas:\n\n"
+                "Acá se ajusta cómo trabaja el sistema. Tiene cinco pestañas:\n\n"
                         + "• Precios y Dólar: subir precios por porcentaje o según el dólar.\n"
                         + "• Categorías y Materiales: los rubros y materiales del catálogo.\n"
                         + "• Vales: regalarle un vale a un cliente y ver todos los vales.\n"
-                        + "• Usuario y Contraseña: cambiar los datos para entrar al sistema.");
+                        + "• Usuario y Contraseña: cambiar los datos para entrar al sistema.\n"
+                        + "• Copias de seguridad: el sistema guarda solo una copia por día. Si se pierde algo, desde ahí se vuelve atrás.");
         AYUDAS.put("estadisticas.fxml",
                 "Te muestra cómo viene el negocio.\n\n"
                         + "• Arriba elegís el período: hoy, 7 días, el mes o un año.\n"

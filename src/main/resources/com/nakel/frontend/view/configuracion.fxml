@@ -56,6 +56,15 @@
                     <fx:include source="tab_seguridad.fxml" />
                 </content>
             </Tab>
+
+            <Tab text="Copias de seguridad">
+                <graphic>
+                    <FontIcon iconLiteral="fas-shield-alt" />
+                </graphic>
+                <content>
+                    <fx:include source="tab_copias.fxml" />
+                </content>
+            </Tab>
         </tabs>
     </TabPane>
 </VBox>
