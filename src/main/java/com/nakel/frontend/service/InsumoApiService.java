@@ -240,26 +240,6 @@ public class InsumoApiService {
         }
     }
 
-    // =============== 5. LISTA COMPLETA DIRECTA (Soporte viejo) ===============
-    public List<Insumo> obtenerListaInsumos() {
-        try {
-            HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "/lista"))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> respuesta = insumoHttp.send(peticion, HttpResponse.BodyHandlers.ofString());
-
-            if (respuesta.statusCode() == 200) {
-                Type tipo = new TypeToken<List<Insumo>>() {}.getType();
-                return gson.fromJson(respuesta.body(), tipo);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return Collections.emptyList();
-    }
-
     // =============== 6. OBTENER INSUMOS PAGINADOS YA PARSEADOS (para el ComboBox) ===============
     public List<Insumo> obtenerInsumosPaginadosComoLista(int pagina, int cantidadPorPagina) {
         try {

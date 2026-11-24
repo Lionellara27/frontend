@@ -62,38 +62,6 @@ public class ArticuloApiService {
         return null;
     }
 
-    // 📋 NUEVO: Para llenar la tabla del catálogo (Ahora soporta Paginación)
-    public List<Articulo> obtenerTodos() {
-        try {
-            // Sin "size" el backend devuelve solo los primeros 50: el stock crítico quedaba incompleto
-            HttpRequest peticion = HttpRequest.newBuilder()
-                    .uri(URI.create(API_URL + "?page=0&size=100000"))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofString());
-
-            if (respuesta.statusCode() == 200) {
-                com.google.gson.JsonElement elementoParseado = com.google.gson.JsonParser.parseString(respuesta.body());
-                com.google.gson.JsonArray arregloArticulos;
-
-                if (elementoParseado.isJsonObject() && elementoParseado.getAsJsonObject().has("content")) {
-                    arregloArticulos = elementoParseado.getAsJsonObject().getAsJsonArray("content");
-                } else if (elementoParseado.isJsonArray()) {
-                    arregloArticulos = elementoParseado.getAsJsonArray();
-                } else {
-                    return new ArrayList<>();
-                }
-
-                Type listType = new TypeToken<ArrayList<Articulo>>(){}.getType();
-                return gson.fromJson(arregloArticulos, listType);
-            }
-        } catch (Exception e) {
-            System.out.println("Error al obtener el catálogo: " + e.getMessage());
-        }
-        return new ArrayList<>();
-    }
-
     // 💾 NUEVO: Para el botón "➕ Nuevo Artículo"
     public boolean guardarArticulo(Articulo articulo) {
         ultimoError = null;
