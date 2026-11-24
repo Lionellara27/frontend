@@ -147,7 +147,14 @@ public class VentaController {
             if (paginadorInventario != null) {
                 paginadorInventario.setCurrentPageIndex(0);
             }
-            cargarInventarioParaVenta(texto, 0);
+            if (texto.isEmpty()) {
+                cargarInventarioParaVenta(texto, 0); // Enter con el casillero vacío: vuelve a mostrar todo
+            } else {
+                // Enter con algo escrito es lo que manda un lector de código de barras. Hace lo mismo que el
+                // botón "Buscar": si es el código exacto de un artículo lo agrega al ticket; si no, muestra
+                // las coincidencias. (Antes el Enter solo filtraba la lista y nunca agregaba nada.)
+                procesarBusquedaInventario();
+            }
         });
 
         // 3. Doble click → agregar
@@ -213,6 +220,18 @@ public class VentaController {
 
             filteredInventario = new FilteredList<>(masterInventario, p -> true);
             tablaInventario.setItems(filteredInventario);
+
+            // Lo que escribe un lector de código de barras es el código exacto de un artículo:
+            // ese va directo al ticket aunque la búsqueda haya traído otros parecidos.
+            // (Antes "1003-001" también traía "1003-0010" y, como había varios, no agregaba ninguno.)
+            for (Articulo candidato : resultados) {
+                if (candidato.getCodigo() != null && candidato.getCodigo().trim().equalsIgnoreCase(busqueda)) {
+                    agregarAlTicket(candidato);
+                    txtCodigoBarras.clear();
+                    txtCodigoBarras.requestFocus(); // listo para escanear el siguiente
+                    return;
+                }
+            }
 
             if (resultados.size() == 1) {
                 agregarAlTicket(resultados.get(0));

@@ -210,6 +210,18 @@
     -fx-text-fill: #6B7280;
 }
 
+/* Link al LinkedIn del desarrollador, debajo del subtítulo de bienvenida */
+.welcome-link {
+    -fx-font-size: 14px;
+    -fx-text-fill: #1976D2;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+}
+
+.welcome-link:hover {
+    -fx-underline: true;
+}
+
 
 /* =====================================================
    TARJETAS (PARA FUTURO DASHBOARD)
@@ -802,7 +814,7 @@
 }
 
 .kpi-valor {
-    -fx-font-size: 26px;
+    -fx-font-size: 22px;
     -fx-font-weight: bold;
     -fx-text-fill: #155643;
 }

@@ -41,12 +41,17 @@
                 <Label fx:id="lblTituloVentas" text="Ventas del período" styleClass="kpi-titulo"/>
                 <Label fx:id="lblVentasPeriodo" text="\$ 0,00" styleClass="kpi-valor"/>
                 <Label fx:id="lblCantidadPeriodo" text="0 ventas" styleClass="kpi-detalle"/>
-                <Label fx:id="lblVariacion" styleClass="kpi-detalle"/>
+                <Label fx:id="lblVariacion" styleClass="kpi-detalle" wrapText="true"/>
             </VBox>
             <VBox styleClass="tarjeta, tarjeta-kpi" HBox.hgrow="ALWAYS">
                 <Label text="Ticket promedio" styleClass="kpi-titulo"/>
                 <Label fx:id="lblTicketPromedio" text="\$ 0,00" styleClass="kpi-valor"/>
                 <Label text="Lo que se lleva en promedio cada venta" styleClass="kpi-detalle" wrapText="true"/>
+            </VBox>
+            <VBox styleClass="tarjeta, tarjeta-kpi" HBox.hgrow="ALWAYS">
+                <Label text="Ganancia" styleClass="kpi-titulo"/>
+                <Label fx:id="lblGanancia" text="\$ 0,00" styleClass="kpi-valor"/>
+                <Label fx:id="lblGananciaDetalle" styleClass="kpi-detalle" wrapText="true"/>
             </VBox>
             <VBox styleClass="tarjeta, tarjeta-kpi" HBox.hgrow="ALWAYS">
                 <Label text="Compra más grande" styleClass="kpi-titulo"/>
@@ -159,7 +164,7 @@
         <HBox spacing="16">
             <VBox spacing="6" styleClass="tarjeta" HBox.hgrow="ALWAYS" minWidth="380" prefWidth="400">
                 <Label text="Artículos por reponer" styleClass="titulo-tarjeta" style="-fx-text-fill: #C0392B;"/>
-                <Label text="Los que están en su stock mínimo o por debajo. El mínimo se carga en cada artículo, desde el Catálogo." styleClass="dato-ayuda" wrapText="true"/>
+                <Label text="Los que están en su stock mínimo o por debajo." styleClass="dato-ayuda" wrapText="true"/>
                 <TableView fx:id="tablaStockCritico" styleClass="tabla-compacta"/>
             </VBox>
             <VBox spacing="6" styleClass="tarjeta" HBox.hgrow="ALWAYS" minWidth="380" prefWidth="400">

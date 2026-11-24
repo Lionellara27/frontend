@@ -20,6 +20,21 @@ public class Articulo {
     // 🔥 NUEVO: Espejo del borrado lógico del backend
     private boolean activo = true;
 
+    // Cuánto le cuesta al local: precio de compra (reventa) o costo de producción. null = sin cargar.
+    private Double costo;
+    private Integer stockMinimo;
+
+    public Double getCosto() { return costo; }
+    public void setCosto(Double costo) { this.costo = costo; }
+
+    public Integer getStockMinimo() { return stockMinimo; }
+    public void setStockMinimo(Integer stockMinimo) { this.stockMinimo = stockMinimo; }
+
+    /** Ganancia por unidad (precio menos costo), o null si el costo todavía no se cargó. */
+    public Double getGanancia() {
+        return (costo == null || precio == null) ? null : precio - costo;
+    }
+
 
     public Articulo() {}
 

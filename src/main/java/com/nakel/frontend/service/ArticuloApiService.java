@@ -477,6 +477,30 @@ public class ArticuloApiService {
         }
     }
 
+    // 🏷️ DESCARGAR ETIQUETAS CON CÓDIGO DE BARRAS (hoja A4 de 24 etiquetas)
+    // "parametros" es lo que va después del "?": idArticulo, categoriaId, soloConStock, copias, cantidad, conPrecio.
+    // Devuelve la ruta del PDF, o null si falló (el motivo queda en getUltimoError()).
+    public String descargarEtiquetasPdf(String parametros) {
+        ultimoError = null;
+        try {
+            HttpRequest peticion = HttpRequest.newBuilder()
+                    .uri(URI.create(API_URL + "/etiquetas?" + parametros))
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> respuesta = http.send(peticion, HttpResponse.BodyHandlers.ofByteArray());
+            if (respuesta.statusCode() == 200) {
+                Path rutaDestino = Paths.get(System.getProperty("java.io.tmpdir"), "Etiquetas_Nakel.pdf");
+                Files.write(rutaDestino, respuesta.body());
+                return rutaDestino.toString();
+            }
+            // El backend explica por qué no pudo (ej: "No hay artículos para imprimir con esa selección")
+            ultimoError = new String(respuesta.body(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            ultimoError = "No se pudo conectar con el sistema.";
+        }
+        return null;
+    }
+
     // 🖨️ DESCARGAR REPORTE DE STOCK EN PDF
     // mayorA: null = todos los artículos; 0 = solo con stock; N = con más de N unidades.
     public String descargarReportePdf(Integer mayorA) {

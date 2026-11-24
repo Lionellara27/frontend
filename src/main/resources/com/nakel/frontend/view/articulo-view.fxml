@@ -19,6 +19,7 @@
 
         <!-- 🔥 Botón de imprimir conectado a tu método del controlador -->
         <Button text="Imprimir Stock" styleClass="btn-secundario" onAction="#imprimirReporteStock"/>
+        <Button text="Imprimir Etiquetas" styleClass="btn-secundario" onAction="#imprimirEtiquetas"/>
 
         <Pane HBox.hgrow="ALWAYS" />
 
@@ -46,6 +47,8 @@
             <TableColumn fx:id="colOrigen" text="Origen" prefWidth="120"/>
             <TableColumn fx:id="colStock" text="Stock" prefWidth="70"/>
             <TableColumn fx:id="colPrecio" minWidth="115" text="Precio Venta" prefWidth="100"/>
+            <!-- Ganancia por unidad (precio menos costo). "Sin costo" si todavía no se cargó cuánto costó. -->
+            <TableColumn fx:id="colGanancia" minWidth="125" text="Ganancia" prefWidth="130" sortable="false"/>
 
             <TableColumn fx:id="colAcciones" text="Acciones" prefWidth="120"/>
         </columns>

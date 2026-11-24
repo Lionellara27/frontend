@@ -154,13 +154,29 @@ public class MainController {
         VBox bienvenida = new VBox(15);
         bienvenida.setAlignment(Pos.CENTER);
 
-        Label titulo = new Label("Panel Principal");
+        Label titulo = new Label("Bienvenida a Nakel ERP");
         titulo.getStyleClass().add("welcome-title");
 
-        Label subtitulo = new Label("Bienvenida a Nakel ERP");
+        Label subtitulo = new Label("Desarrollado por Lionel Lara");
         subtitulo.getStyleClass().add("welcome-subtitle");
 
-        bienvenida.getChildren().addAll(titulo, subtitulo);
+        // Link al LinkedIn del desarrollador: se abre en el navegador de la computadora
+        final String linkedin = "https://www.linkedin.com/in/lionellara270/";
+        Hyperlink enlace = new Hyperlink("linkedin.com/in/lionellara270");
+        enlace.getStyleClass().add("welcome-link");
+        enlace.setOnAction(e -> {
+            enlace.setVisited(false); // que no cambie de color después del clic
+            // En un hilo aparte: abrir el navegador puede tardar y no tiene que congelar la pantalla
+            new Thread(() -> {
+                try {
+                    java.awt.Desktop.getDesktop().browse(java.net.URI.create(linkedin));
+                } catch (Exception ex) {
+                    System.out.println("No se pudo abrir el navegador: " + ex.getMessage());
+                }
+            }, "abrir-linkedin").start();
+        });
+
+        bienvenida.getChildren().addAll(titulo, subtitulo, enlace);
 
         if(areaContenido != null) {
             areaContenido.getChildren().clear();

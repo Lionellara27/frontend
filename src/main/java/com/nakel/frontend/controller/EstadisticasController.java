@@ -50,6 +50,8 @@ public class EstadisticasController {
     @FXML private Label lblCantidadPeriodo;
     @FXML private Label lblVariacion;
     @FXML private Label lblTicketPromedio;
+    @FXML private Label lblGanancia;
+    @FXML private Label lblGananciaDetalle;
     @FXML private Label lblMayorCompra;
     @FXML private Label lblMayorCompraDetalle;
     @FXML private Label lblVentasHoy;
@@ -121,7 +123,7 @@ public class EstadisticasController {
         });
 
         armarTabla(tablaTopArticulos, "Todavía no hay artículos vendidos en este período.",
-                new String[]{"Código", "Artículo", "Unidades", "Total"}, new double[]{105, 205, 85, 150}, 2, 3);
+                new String[]{"Artículo", "Unidades", "Total", "Ganancia"}, new double[]{200, 75, 130, 130}, 1, 2, 3);
         armarTabla(tablaTopClientes, "No hay ventas a clientes con nombre en este período.",
                 new String[]{"Cliente", "Total gastado", "Compras", "Promedio por compra"}, new double[]{220, 130, 80, 150}, 1, 2, 3);
         armarTabla(tablaStockCritico, "No hay artículos por reponer.",
@@ -192,9 +194,26 @@ public class EstadisticasController {
         double total = numero(r, "totalVentas");
         long cantidad = (long) numero(r, "cantidadVentas");
         lblTituloVentas.setText("Ventas · " + periodo);
-        lblVentasPeriodo.setText(FormatoMoneda.pesos(total));
+        lblVentasPeriodo.setText(pesosTarjeta(total));
         lblCantidadPeriodo.setText(cantidad + (cantidad == 1 ? " venta" : " ventas"));
-        lblTicketPromedio.setText(FormatoMoneda.pesos(numero(r, "ticketPromedio")));
+        lblTicketPromedio.setText(pesosTarjeta(numero(r, "ticketPromedio")));
+
+        // Ganancia: precio menos costo, solo de lo vendido que tiene el costo cargado
+        double conCosto = numero(r, "vendidoConCosto");
+        double sinCosto = numero(r, "vendidoSinCosto");
+        if (conCosto <= 0) {
+            lblGanancia.setText("Sin datos");
+            lblGanancia.setStyle("-fx-text-fill: #9AA4AE;");
+            long faltan = (long) numero(r, "articulosSinCosto");
+            lblGananciaDetalle.setText(total <= 0 ? "No hubo ventas en el período"
+                    : "Lo vendido no tiene el costo cargado" + (faltan > 0 ? " (" + faltan + " artículos sin costo)" : ""));
+        } else {
+            double ganancia = numero(r, "ganancia");
+            lblGanancia.setText(pesosTarjeta(ganancia));
+            lblGanancia.setStyle(ganancia < 0 ? "-fx-text-fill: #C0392B;" : "");
+            lblGananciaDetalle.setText("Margen " + unDecimal.format(numero(r, "margenGanancia")) + " %"
+                    + (sinCosto > 0 ? "  ·  no incluye " + FormatoMoneda.pesos(sinCosto) + " vendidos sin costo cargado" : ""));
+        }
 
         // Comparación contra el período anterior
         double anterior = numero(r, "totalAnterior");
@@ -210,15 +229,15 @@ public class EstadisticasController {
         JsonElement mayor = r.get("mayorCompra");
         if (mayor != null && mayor.isJsonObject()) {
             JsonObject m = mayor.getAsJsonObject();
-            lblMayorCompra.setText(FormatoMoneda.pesos(numero(m, "total")));
+            lblMayorCompra.setText(pesosTarjeta(numero(m, "total")));
             lblMayorCompraDetalle.setText(texto(m, "cliente") + " · " + texto(m, "fecha") + " · Ticket #" + (long) numero(m, "idVenta"));
         } else {
-            lblMayorCompra.setText(FormatoMoneda.pesos(0));
+            lblMayorCompra.setText(pesosTarjeta(0));
             lblMayorCompraDetalle.setText("Sin ventas en el período");
         }
 
         long hoy = (long) numero(r, "cantidadHoy");
-        lblVentasHoy.setText(FormatoMoneda.pesos(numero(r, "ventasHoy")));
+        lblVentasHoy.setText(pesosTarjeta(numero(r, "ventasHoy")));
         lblCantidadHoy.setText(hoy + (hoy == 1 ? " venta" : " ventas"));
 
         // --- Gráfico de barras: evolución ---
@@ -299,15 +318,17 @@ public class EstadisticasController {
             JsonObject o = e.getAsJsonObject();
             if (origenes.length() > 0) origenes.append("\n");
             origenes.append(nombreOrigen(texto(o, "nombre"))).append(": ").append(FormatoMoneda.pesos(numero(o, "total")))
-                    .append(" (").append(enteros.format(numero(o, "unidades"))).append(" u.)");
+                    .append(" (").append(enteros.format(numero(o, "unidades"))).append(" u.)")
+                    .append(numero(o, "conCosto") > 0 ? "  ·  ganancia " + FormatoMoneda.pesos(numero(o, "ganancia")) : "");
         }
         lblOrigenes.setText(origenes.toString());
 
         ObservableList<String[]> filas = FXCollections.observableArrayList();
         for (JsonElement e : r.getAsJsonArray("topArticulos")) {
             JsonObject a = e.getAsJsonObject();
-            filas.add(new String[]{texto(a, "codigo"), texto(a, "nombre"),
-                    enteros.format(numero(a, "unidades")), FormatoMoneda.pesos(numero(a, "total"))});
+            filas.add(new String[]{texto(a, "nombre"),
+                    enteros.format(numero(a, "unidades")), FormatoMoneda.pesos(numero(a, "total")),
+                    numero(a, "conCosto") > 0 ? FormatoMoneda.pesos(numero(a, "ganancia")) : "Sin costo"});
         }
         cargar(tablaTopArticulos, filas, 10);
     }
@@ -349,14 +370,14 @@ public class EstadisticasController {
     private void pintarInventario(JsonObject r) {
         lblTotalProductos.setText(enteros.format(numero(r, "productosActivos")));
         lblUnidadesStock.setText(enteros.format(numero(r, "unidadesEnStock")) + " unidades en stock");
-        lblValorStock.setText(FormatoMoneda.pesos(numero(r, "valorStock")));
+        lblValorStock.setText(pesosTarjeta(numero(r, "valorStock")));
 
         long criticos = (long) numero(r, "cantidadStockCritico");
         lblStockCritico.setText(String.valueOf(criticos));
         lblStockCritico.setStyle("-fx-text-fill: " + (criticos > 0 ? "#C0392B" : "#2E9E6B") + ";");
 
         long vales = (long) numero(r, "cantidadVales");
-        lblVales.setText(FormatoMoneda.pesos(numero(r, "totalVales")));
+        lblVales.setText(pesosTarjeta(numero(r, "totalVales")));
         lblValesDetalle.setText(vales + (vales == 1 ? " vale vigente" : " vales vigentes"));
 
         ObservableList<String[]> reponer = FXCollections.observableArrayList();
@@ -430,6 +451,11 @@ public class EstadisticasController {
         cartel.setStyle("-fx-font-size: 13px;");
         cartel.setShowDelay(javafx.util.Duration.millis(150));
         Tooltip.install(nodo, cartel);
+    }
+
+    /** Importe para las tarjetas de números grandes: redondeado a pesos, sin centavos, para que no se corte. */
+    private String pesosTarjeta(double valor) {
+        return FormatoMoneda.pesos(Math.round(valor)).replace(",00", "");
     }
 
     /** "$ 1,2 M", "$ 500 mil", "$ 800": para los ejes de los gráficos. */
